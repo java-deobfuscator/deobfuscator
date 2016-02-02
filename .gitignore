@@ -1,5 +1,7 @@
 /target
 /bin
+/src/debug/
 .classpath
 .project
-
+/.settings
+*.jar
