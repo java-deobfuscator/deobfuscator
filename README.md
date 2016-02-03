@@ -45,3 +45,7 @@ Official transformers are linked via the `Transformers` class.
 [DashO](https://www.preemptive.com/products/dasho/overview)  
 [DexGuard](https://www.guardsquare.com/dexguard)  
 Generic obfuscation
+
+## Licensing
+
+Java Deobfuscator is licensed under the Apache 2.0 license.

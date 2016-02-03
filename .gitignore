@@ -3,5 +3,7 @@
 /src/debug/
 .classpath
 .project
+deobfuscator.iml
 /.settings
+/.idea
 *.jar
