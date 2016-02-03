@@ -74,6 +74,9 @@ public class StringEncryptionTransformer extends Transformer {
                 MethodNode node = it.next();
                 if (node.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                     method = true;
+                } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
+                    method = false;
+                    break;
                 }
             }
             Iterator<FieldNode> fieldIt = classNode.fields.iterator();
