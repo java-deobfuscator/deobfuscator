@@ -50,7 +50,7 @@ If you wish to use one of the default transformers, then you may remove the `com
 Official transformers are linked via the `Transformers` class.
 
 | Transformer | Canonical Name |  Description |
-| --- | --- |
+| --- | --- | --- |
 | Allatori.STRING_ENCRYPTION | allatori.StringEncryptionTransformer | Decrypts strings encrypted by Allatori |
 | DashO.STRING_ENCRYPTION | dasho.StringEncryptionTransformer | Decrypts strings encrypted by DashO |
 | Stringer.STRING_ENCRYPTION | stringer.StringEncryptionTransformer | Decrypts strings encrypted by Stringer |
