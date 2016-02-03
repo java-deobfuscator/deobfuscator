@@ -19,15 +19,67 @@
     </section>
 
     <section class="main-content">
-      <h3>
-<a id="java-deobfuscator" class="anchor" href="#java-deobfuscator" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Java Deobfuscator</h3>
+      <h1>
+<a id="java-deobfuscator" class="anchor" href="#java-deobfuscator" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Java Deobfuscator</h1>
 
 <p>Java Deobfuscator is the most advanced deobfuscator available, and it's free to use. It can remove transformations by some of the most popular obfuscators such as <a href="https://jfxstore.com/stringer">Stringer</a> and <a href="http://zelix.com">Zelix Klassmaster</a>.</p>
 
-<h3>
-<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h3>
+<h2>
+<a id="downloads" class="anchor" href="#downloads" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Downloads</h2>
 
-<p>Java Deobfuscator does not have a CLI yet. Instead, you'll need to clone the repository and manually execute the deobfuscator. Below is some sample code which will remove synthetic and bridge modifiers from every method and field.</p>
+<p>The latest build can be downloaded from my <a href="https://ci.samczsun.com/job/Deobfuscator/">CI Server</a></p>
+
+<h2>
+<a id="what-can-the-deobfuscator-do" class="anchor" href="#what-can-the-deobfuscator-do" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>What can the deobfuscator do?</h2>
+
+<p>The deobfuscator supports deobfuscation of transformations such as string literal encryption, or reflection obfuscation. These transformations have been hard coded for a specific obfuscator, but generic deobfuscators are also available.</p>
+
+<h2>
+<a id="what-cant-the-deobfuscator-do" class="anchor" href="#what-cant-the-deobfuscator-do" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>What can't the deobfuscator do?</h2>
+
+<p>Things like method names, class names, etc cannot be deobfuscated because there renaming is irreversible. The information needed to deobfuscate is removed.</p>
+
+<h2>
+<a id="cli" class="anchor" href="#cli" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CLI</h2>
+
+<p>If you don't want to import the project, you can always use the command line interface. There are four arguments that are taken.</p>
+
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-input</td>
+<td>The JAR to deobfuscate</td>
+</tr>
+<tr>
+<td>-output</td>
+<td>The file to write to</td>
+</tr>
+<tr>
+<td>-transformer</td>
+<td>A canonical name of the transformer class</td>
+</tr>
+<tr>
+<td>-path</td>
+<td>A dependency of the JAR being deobfuscated</td>
+</tr>
+</tbody>
+</table>
+
+<p>You may specify multiple transformers, and they will be applied in the order given. Order does matter as sometimes one transformation depends on another not being present.</p>
+
+<p>If you wish to use one of the default transformers, then you may remove the <code>com.javadeobfuscator.deobfuscator.transformers</code> prefix.</p>
+
+<h2>
+<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Examples</h2>
+
+<h3>
+<a id="as-a-library" class="anchor" href="#as-a-library" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>As a library</h3>
 
 <div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">SomeRandomDeobfuscator</span> {
     <span class="pl-k">public</span> <span class="pl-k">static</span> <span class="pl-k">void</span> <span class="pl-en">main</span>(<span class="pl-k">String</span>[] <span class="pl-v">args</span>) <span class="pl-k">throws</span> <span class="pl-smi">Throwable</span> {
@@ -41,38 +93,52 @@
 }</pre></div>
 
 <h3>
-<a id="supported-obfuscators" class="anchor" href="#supported-obfuscators" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Supported Obfuscators</h3>
+<a id="cli-1" class="anchor" href="#cli-1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CLI</h3>
+
+<p><code>java -jar deobfuscator.jar -input input.jar -output output.jar -transformer general.SyntheticBridgeTransformer -path path/to/rt.jar</code></p>
+
+<h2>
+<a id="transformers" class="anchor" href="#transformers" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transformers</h2>
+
+<p>Official transformers are linked via the <code>Transformers</code> class.</p>
 
 <table>
 <thead>
 <tr>
 <th>Transformer</th>
+<th>Canonical Name</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Allatori.STRING_ENCRYPTION</td>
+<td>allatori.StringEncryptionTransformer</td>
 <td>Decrypts strings encrypted by Allatori</td>
 </tr>
 <tr>
 <td>DashO.STRING_ENCRYPTION</td>
+<td>dasho.StringEncryptionTransformer</td>
 <td>Decrypts strings encrypted by DashO</td>
 </tr>
 <tr>
 <td>Stringer.STRING_ENCRYPTION</td>
+<td>stringer.StringEncryptionTransformer</td>
 <td>Decrypts strings encrypted by Stringer</td>
 </tr>
 <tr>
 <td>Stringer.INVOKEDYNAMIC</td>
+<td>stringer.InvokedynamicTransformer</td>
 <td>Decrypts invokedynamic obfuscated calls by Stringer</td>
 </tr>
 <tr>
 <td>Stringer.REFLECTION_OBFUSCATION</td>
+<td>stringer.ReflectionObfuscationTransformer</td>
 <td>Decrypts reflection obfuscated calls by Stringer</td>
 </tr>
 <tr>
 <td>General.SYNTHETIC_BRIDGE</td>
+<td>general.SyntheticBridgeTransformer</td>
 <td>Removes synthetic and bridge modifiers from all methods and fields</td>
 </tr>
 </tbody>
