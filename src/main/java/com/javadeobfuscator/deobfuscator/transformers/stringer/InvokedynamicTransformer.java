@@ -98,7 +98,6 @@ public class InvokedynamicTransformer extends Transformer {
                             WrappedClassNode wrappedClassNode = classes.get(bootstrap.getOwner());
                             ClassNode bootstrapClassNode = wrappedClassNode.classNode;
                             MethodNode bootstrapMethodNode = bootstrapClassNode.methods.stream().filter(mn -> mn.name.equals(bootstrap.getName()) && mn.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
-
                             List<StackObject> args = new ArrayList<>();
                             args.add(new StackObject(Object.class, null)); //Lookup
                             args.add(new StackObject(Object.class, dyn.name)); //dyn method name

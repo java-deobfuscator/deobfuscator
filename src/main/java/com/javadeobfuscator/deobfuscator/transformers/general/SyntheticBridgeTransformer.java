@@ -30,6 +30,8 @@ public class SyntheticBridgeTransformer extends Transformer {
     @Override
     public void transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+            classNode.access &= ~Opcodes.ACC_SYNTHETIC;
+            classNode.access &= ~Opcodes.ACC_BRIDGE;
             classNode.methods.forEach(methodNode -> {
                 methodNode.access &= ~Opcodes.ACC_SYNTHETIC;
                 methodNode.access &= ~Opcodes.ACC_BRIDGE;

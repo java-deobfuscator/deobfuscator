@@ -63,6 +63,9 @@ public class MethodExecutor {
         }
         if (args != null) {
             for (StackObject arg : args) {
+                if (arg.type == double.class || arg.type == long.class) {
+                    locals.add(arg);
+                }
                 locals.add(arg);
             }
         }
@@ -112,10 +115,10 @@ public class MethodExecutor {
         //System.out.println("Executing " + classNode.classNode.name + " " + method.name + method.desc);
         while (true) {
             try {
-                //System.out.println("\t" + stack);
-                //System.out.println("\t" + locals);
-                //System.out.println();
-                //System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
+//                    System.out.println("\t" + stack);
+//                    System.out.println("\t" + locals);
+//                    System.out.println();
+//                    System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
                 switch (now.getOpcode()) {
                 case NOP:
                     break;

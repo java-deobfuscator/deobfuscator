@@ -65,6 +65,7 @@ public class JavaClass {
             if (primitive == null) {
                 this.wrappedClassNode = context.dictionary.get(elementType.getInternalName());
                 if (this.wrappedClassNode == null) {
+                    System.out.println("Could not find classnode " + this.name);
                     throw new NoClassDefFoundError(this.name);
                 }
                 this.classNode = this.wrappedClassNode.classNode;
