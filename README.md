@@ -7,7 +7,7 @@ This is an all-in-one Java deobfuscator which will deobfuscate code obfuscated b
 
 The deobfuscator supports deobfuscation of transformations such as string literal encryption, or reflection obfuscation. These transformations have been hard coded for a specific obfuscator, but generic deobfuscators are also available.
 
-## What can't he deobfuscator do?
+## What can't the deobfuscator do?
 
 Things like method names, class names, etc cannot be deobfuscated because there renaming is irreversible. The information needed to deobfuscate is removed.
 
