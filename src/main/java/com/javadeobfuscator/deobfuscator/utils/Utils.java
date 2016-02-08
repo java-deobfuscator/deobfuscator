@@ -24,40 +24,69 @@ import java.io.StringWriter;
 import java.util.LinkedList;
 import java.util.Map;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Printer;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Textifier;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisitor;
 
 public class Utils {
+    public static AbstractInsnNode getNextFollowGoto(AbstractInsnNode node) {
+        AbstractInsnNode next = node.getNext();
+        while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {
+            next = next.getNext();
+        }
+        if (next.getOpcode() == GOTO) {
+            JumpInsnNode cast = (JumpInsnNode) next;
+            next = cast.label;
+            while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {
+                next = next.getNext();
+            }
+        }
+        return next;
+    }
+
+    public static AbstractInsnNode getNext(AbstractInsnNode node) {
+        AbstractInsnNode next = node.getNext();
+        while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {
+            next = next.getNext();
+        }
+        return next;
+    }
+
+    public static AbstractInsnNode getPrevious(AbstractInsnNode node) {
+        AbstractInsnNode prev = node.getPrevious();
+        while (prev instanceof LabelNode || prev instanceof LineNumberNode || prev instanceof FrameNode) {
+            prev = prev.getPrevious();
+        }
+        return prev;
+    }
+
     public static int iconstToInt(int opcode) {
         int operand = Integer.MIN_VALUE;
         switch (opcode) {
-        case Opcodes.ICONST_0:
-            operand = 0;
-            break;
-        case Opcodes.ICONST_1:
-            operand = 1;
-            break;
-        case Opcodes.ICONST_2:
-            operand = 2;
-            break;
-        case Opcodes.ICONST_3:
-            operand = 3;
-            break;
-        case Opcodes.ICONST_4:
-            operand = 4;
-            break;
-        case Opcodes.ICONST_5:
-            operand = 5;
-            break;
-        case Opcodes.ICONST_M1:
-            operand = -1;
-            break;
+            case ICONST_0:
+                operand = 0;
+                break;
+            case ICONST_1:
+                operand = 1;
+                break;
+            case ICONST_2:
+                operand = 2;
+                break;
+            case ICONST_3:
+                operand = 3;
+                break;
+            case ICONST_4:
+                operand = 4;
+                break;
+            case ICONST_5:
+                operand = 5;
+                break;
+            case ICONST_M1:
+                operand = -1;
+                break;
         }
         return operand;
     }
@@ -105,7 +134,7 @@ public class Utils {
         }
         return total;
     }
-    
+
     public static String descFromTypes(Type[] types) {
         StringBuilder descBuilder = new StringBuilder("(");
         for (Type type : types) {
@@ -116,7 +145,7 @@ public class Utils {
     }
 
     public static void sneakyThrow(Throwable t) {
-        Utils.<Error> sneakyThrow0(t);
+        Utils.<Error>sneakyThrow0(t);
     }
 
     @SuppressWarnings("unchecked")
@@ -133,5 +162,50 @@ public class Utils {
         printer.print(new PrintWriter(sw));
         printer.getText().clear();
         return sw.toString().trim();
+    }
+
+    public static boolean isTerminating(AbstractInsnNode next) {
+        switch (next.getOpcode()) {
+            case RETURN:
+            case ARETURN:
+            case IRETURN:
+            case FRETURN:
+            case DRETURN:
+            case LRETURN:
+            case ATHROW:
+            case TABLESWITCH:
+            case LOOKUPSWITCH:
+            case GOTO:
+                return true;
+        }
+        return false;
+    }
+
+    public static boolean willPushToStack(int opcode) {
+        switch (opcode) {
+            case ACONST_NULL:
+            case ICONST_M1:
+            case ICONST_0:
+            case ICONST_1:
+            case ICONST_2:
+            case ICONST_3:
+            case ICONST_4:
+            case ICONST_5:
+            case FCONST_0:
+            case FCONST_1:
+            case FCONST_2:
+            case BIPUSH:
+            case SIPUSH:
+            case LDC:
+            case GETSTATIC:
+            case ILOAD:
+            case LLOAD:
+            case FLOAD:
+            case DLOAD:
+            case ALOAD: {
+                return true;
+            }
+        }
+        return false;
     }
 }

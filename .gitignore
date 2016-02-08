@@ -7,3 +7,5 @@ deobfuscator.iml
 /.settings
 /.idea
 *.jar
+*.txt
+*.ser

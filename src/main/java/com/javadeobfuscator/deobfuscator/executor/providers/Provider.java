@@ -24,23 +24,23 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public interface Provider {
 
-    public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
+    Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
 
-    public boolean instanceOf(StackObject target, Type type, Context context);
+    boolean instanceOf(StackObject target, Type type, Context context);
     
-    public boolean checkEquality(StackObject first, StackObject second, Context context);
+    boolean checkEquality(StackObject first, StackObject second, Context context);
 
-    public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
+    void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
 
-    public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
+    Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
 
-    public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
+    boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
 
-    public boolean canCheckInstanceOf(StackObject target, Type type, Context context);
+    boolean canCheckInstanceOf(StackObject target, Type type, Context context);
     
-    public boolean canCheckEquality(StackObject first, StackObject second, Context context);
+    boolean canCheckEquality(StackObject first, StackObject second, Context context);
 
-    public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
+    boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
 
-    public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
+    boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
 }
