@@ -56,7 +56,10 @@ Official transformers are linked via the `Transformers` class.
 | Stringer.STRING_ENCRYPTION | stringer.StringEncryptionTransformer | Decrypts strings encrypted by Stringer |
 | Stringer.INVOKEDYNAMIC | stringer.InvokedynamicTransformer | Decrypts invokedynamic obfuscated calls by Stringer |
 | Stringer.REFLECTION_OBFUSCATION | stringer.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Stringer |
+| Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
+| Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
 | General.SYNTHETIC_BRIDGE | general.SyntheticBridgeTransformer | Removes synthetic and bridge modifiers from all methods and fields |
+| General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer| Optimizes the code |
 
 ## Downloads
 
