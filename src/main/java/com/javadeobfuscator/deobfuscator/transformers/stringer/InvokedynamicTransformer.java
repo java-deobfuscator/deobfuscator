@@ -116,7 +116,7 @@ public class InvokedynamicTransformer extends Transformer {
 
             @Override
             public boolean canCheckcast(StackObject target, Type type, Context context) {
-                return type.getDescriptor().equals("[C");
+                return true;
             }
 
             @Override
@@ -143,27 +143,32 @@ public class InvokedynamicTransformer extends Transformer {
                             for (Object o : dyn.bsmArgs) {
                                 args.add(new StackObject(Object.class, o));
                             }
-                            Context context = new Context(provider);
-                            context.dictionary = this.classpath;
+                            try {
+                                Context context = new Context(provider);
+                                context.dictionary = this.classpath;
 
-                            JavaMethodHandle result = MethodExecutor.execute(wrappedClassNode, bootstrapMethodNode, args, null, context);
-                            String clazz = result.clazz.replace('.', '/');
-                            AbstractInsnNode replacement = null;
-                            switch (result.type) {
-                                case "virtual":
-                                    replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
-                                    break;
-                                case "static":
-                                    replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);
-                                    break;
-                            }
-                            methodNode.instructions.insert(abstractInsnNode, replacement);
-                            methodNode.instructions.remove(abstractInsnNode);
-                            total.incrementAndGet();
-                            int x = (int) ((total.get() * 1.0d / expected) * 100);
-                            if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
-                                System.out.println("[Stringer] [InvokedynamicTransformer] Done " + x + "%");
-                                alerted[x - 1] = true;
+                                JavaMethodHandle result = MethodExecutor.execute(wrappedClassNode, bootstrapMethodNode, args, null, context);
+                                String clazz = result.clazz.replace('.', '/');
+                                AbstractInsnNode replacement = null;
+                                switch (result.type) {
+                                    case "virtual":
+                                        replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
+                                        break;
+                                    case "static":
+                                        replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);
+                                        break;
+                                }
+                                methodNode.instructions.insert(abstractInsnNode, replacement);
+                                methodNode.instructions.remove(abstractInsnNode);
+                                total.incrementAndGet();
+                                int x = (int) ((total.get() * 1.0d / expected) * 100);
+                                if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                    System.out.println("[Stringer] [InvokedynamicTransformer] Done " + x + "%");
+                                    alerted[x - 1] = true;
+                                }
+                            } catch (Throwable t) {
+                                System.out.println(classNode.name);
+                                throw t;
                             }
                         }
                     }

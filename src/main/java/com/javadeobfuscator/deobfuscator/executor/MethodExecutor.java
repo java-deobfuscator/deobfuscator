@@ -34,6 +34,7 @@ import com.google.common.base.Throwables;
 import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchComparisonHandlerException;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchHandlerException;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchMethodHandlerException;
 import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
@@ -936,6 +937,8 @@ public class MethodExecutor {
                     }
                 }
                 now = now.getNext();
+            } catch (NoSuchHandlerException e) {
+                throw e;
             } catch (Throwable t) { //TODO Actually implement
 //                t.printStackTrace(System.out);
                 if (method.tryCatchBlocks != null) {
