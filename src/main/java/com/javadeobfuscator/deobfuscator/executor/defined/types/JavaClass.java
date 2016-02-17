@@ -184,18 +184,15 @@ public class JavaClass {
             for (MethodNode m : possibleMethods) {
                 returnTypes.add(Type.getReturnType(m.desc));
             }
-            Collections.sort(returnTypes, new Comparator<Type>() {
-                @Override
-                public int compare(Type o1, Type o2) {
-                    String s1 = o1.getInternalName();
-                    String s2 = o2.getInternalName();
-                    if (isAssignableFrom(s1, s2)) {
-                        return 1;
-                    } else if (isAssignableFrom(s2, s1)) {
-                        return -1;
-                    }
-                    return 0;
+            Collections.sort(returnTypes, (o1, o2) -> {
+                String s1 = o1.getInternalName();
+                String s2 = o2.getInternalName();
+                if (isAssignableFrom(s1, s2)) {
+                    return 1;
+                } else if (isAssignableFrom(s2, s1)) {
+                    return -1;
                 }
+                return 0;
             });
             MethodNode target = possibleMethods.stream().filter(mn -> mn.desc.endsWith(returnTypes.get(0).getDescriptor())).findFirst().orElse(null);
             return new JavaMethod(this, target);
@@ -294,8 +291,9 @@ public class JavaClass {
         if (type == null) {
             if (other.type != null)
                 return false;
-        } else if (!type.equals(other.type))
+        } else if (!type.equals(other.type)) {
             return false;
+        }
         return true;
     }
 

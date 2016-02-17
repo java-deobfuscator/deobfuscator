@@ -197,6 +197,13 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/util/regex/Pattern", new HashMap<String, Function3<StackObject, List<StackObject>, Context, Object>>() {{
             put("compile(Ljava/lang/String;)Ljava/util/regex/Pattern;", (targetObject, args, context) -> Pattern.compile(args.get(0).as(String.class)));
         }});
+        put("java/lang/BootstrapMethodError", new HashMap<String, Function3<StackObject, List<StackObject>, Context, Object>>() {{
+            put("<init>()V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/BootstrapMethodError");
+                targetObject.initialize(new BootstrapMethodError());
+                return null;
+            });
+        }});
     }};
     //@formatter:on
 

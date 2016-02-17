@@ -27,7 +27,9 @@ public interface Provider {
     Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
 
     boolean instanceOf(StackObject target, Type type, Context context);
-    
+
+    boolean checkcast(StackObject target, Type type, Context context);
+
     boolean checkEquality(StackObject first, StackObject second, Context context);
 
     void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
@@ -37,6 +39,8 @@ public interface Provider {
     boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
 
     boolean canCheckInstanceOf(StackObject target, Type type, Context context);
+
+    boolean canCheckcast(StackObject target, Type type, Context context);
     
     boolean canCheckEquality(StackObject first, StackObject second, Context context);
 

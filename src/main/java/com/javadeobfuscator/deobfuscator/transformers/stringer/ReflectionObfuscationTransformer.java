@@ -33,6 +33,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.PrimitiveFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
+import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
@@ -127,6 +128,38 @@ public class ReflectionObfuscationTransformer extends Transformer {
             }
         });
 
+        provider.register(new ComparisonProvider() {
+            @Override
+            public boolean instanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean checkcast(StackObject target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckcast(StackObject target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+        });
+
         Set<ClassNode> initted = new HashSet<>();
 
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
@@ -159,7 +192,6 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                     }
                                     Context context = new Context(provider);
                                     context.dictionary = this.classpath;
-
                                     MethodExecutor.execute(wrappedTarget, method, args, null, context);
                                     JavaMethod result = myMethod.get();
                                     

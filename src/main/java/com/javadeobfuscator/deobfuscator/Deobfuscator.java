@@ -31,6 +31,7 @@ import java.util.zip.ZipOutputStream;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassWriter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.JSRInlinerAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
@@ -98,6 +99,12 @@ public class Deobfuscator {
                     ClassReader reader = new ClassReader(in);
                     ClassNode node = new ClassNode();
                     reader.accept(node, ClassReader.SKIP_FRAMES);
+                    for (int i = 0; i < node.methods.size(); i++) {
+                        MethodNode methodNode = node.methods.get(i);
+                        JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
+                        methodNode.accept(adapter);
+                        node.methods.set(i, adapter);
+                    }
                     WrappedClassNode wr = new WrappedClassNode(node, reader.getItemCount());
                     classes.put(node.name, wr);
                 } catch (IllegalArgumentException x) {
@@ -234,17 +241,22 @@ public class Deobfuscator {
         try {
             node.accept(writer);
         } catch (RuntimeException e) {
-            e.printStackTrace();
-            if (e.getMessage().contains("JSR/RET")) {
-                System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
-                writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
-                node.accept(writer);
-            } else if (e.getMessage().contains("No class in path")) {
-                System.out.println("Could not find class in classpath so COMPUTE_MAXS instead");
-                System.out.println(e.getMessage());
-                writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
-                node.accept(writer);
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("JSR/RET")) {
+                    System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
+                    writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+                    node.accept(writer);
+                } else if (e.getMessage().contains("No class in path")) {
+                    System.out.println("Could not find class in classpath so COMPUTE_MAXS instead");
+                    System.out.println(e.getMessage());
+                    writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+                    node.accept(writer);
+                } else {
+                    e.printStackTrace();
+                    throw e;
+                }
             } else {
+                e.printStackTrace();
                 throw e;
             }
         }

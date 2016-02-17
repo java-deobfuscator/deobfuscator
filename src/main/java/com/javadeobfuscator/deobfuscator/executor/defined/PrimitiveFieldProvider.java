@@ -23,6 +23,9 @@ import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 
 public class PrimitiveFieldProvider extends FieldProvider {
     public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+        if (!fieldName.equals("TYPE")) {
+            throw new IllegalStateException();
+        }
         switch (className) {
         case "java/lang/Integer":
             return new JavaClass("int", context);
@@ -40,6 +43,8 @@ public class PrimitiveFieldProvider extends FieldProvider {
             return new JavaClass("double", context);
         case "java/lang/Long":
             return new JavaClass("long", context);
+        case "java/lang/Void":
+            return new JavaClass("void", context);
         default:
             throw new IllegalStateException();
         }
@@ -50,6 +55,9 @@ public class PrimitiveFieldProvider extends FieldProvider {
     }
 
     public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+        if (!fieldName.equals("TYPE")) {
+            return false;
+        }
         switch (className) {
         case "java/lang/Integer":
         case "java/lang/Byte":
@@ -59,6 +67,7 @@ public class PrimitiveFieldProvider extends FieldProvider {
         case "java/lang/Character":
         case "java/lang/Double":
         case "java/lang/Long":
+        case "java/lang/Void":
             return true;
         default:
             return false;

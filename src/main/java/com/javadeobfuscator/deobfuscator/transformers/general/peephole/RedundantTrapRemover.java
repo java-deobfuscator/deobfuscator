@@ -41,9 +41,10 @@ public class RedundantTrapRemover extends Transformer {
                     Iterator<TryCatchBlockNode> iterator = methodNode.tryCatchBlocks.iterator();
                     while (iterator.hasNext()) {
                         TryCatchBlockNode tcbn = iterator.next();
-                        AbstractInsnNode nextInsn = Utils.getNext(tcbn.handler);
-                        if (nextInsn.getOpcode() == Opcodes.ATHROW) {
+                        AbstractInsnNode nextInsn = Utils.getNext(tcbn.handler.getPrevious());
+                        if (nextInsn != null && nextInsn.getOpcode() == Opcodes.ATHROW) {
                             iterator.remove();
+                            redudantTraps.incrementAndGet();
                         }
                     }
                 }

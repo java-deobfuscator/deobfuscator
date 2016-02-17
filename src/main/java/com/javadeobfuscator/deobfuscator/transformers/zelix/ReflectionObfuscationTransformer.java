@@ -17,9 +17,7 @@
 package com.javadeobfuscator.deobfuscator.transformers.zelix;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
-import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
-import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.*;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
@@ -76,41 +74,20 @@ public class ReflectionObfuscationTransformer extends Transformer {
 
         DelegatingProvider provider = new DelegatingProvider();
 
-        provider.register(new FieldProvider() {
-            @Override
-            public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
-                fields.put(className + fieldName + fieldDesc, value);
-            }
-
-            @Override
-            public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
-                if (className.startsWith("java/lang/") && fieldName.equals("TYPE")) {
-                    try {
-                        Class<?> clazz = (Class<?>) Class.forName(className.replace('/', '.')).getField("TYPE").get(null);
-                        return clazz.getCanonicalName();
-                    } catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException | ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                }
-                return fields.get(className + fieldName + fieldDesc);
-            }
-
-            @Override
-            public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
-                return true;
-            }
-
-            @Override
-            public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
-                return true;
-            }
-        });
+        provider.register(new PrimitiveFieldProvider());
+        provider.register(new MappedFieldProvider());
         provider.register(new JVMMethodProvider());
+        provider.register(new JVMComparisonProvider());
         provider.register(new MappedMethodProvider(classes));
         provider.register(new ComparisonProvider() {
             @Override
             public boolean instanceOf(StackObject target, Type type, Context context) {
                 return type.getDescriptor().equals("java/lang/String") && target.value instanceof String;
+            }
+
+            @Override
+            public boolean checkcast(StackObject target, Type type, Context context) {
+                return false;
             }
 
             @Override
@@ -124,6 +101,11 @@ public class ReflectionObfuscationTransformer extends Transformer {
             }
 
             @Override
+            public boolean canCheckcast(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
             public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
                 return false;
             }
@@ -132,29 +114,26 @@ public class ReflectionObfuscationTransformer extends Transformer {
         Set<ClassNode> initted = new HashSet<>();
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
-                if (methodNode.tryCatchBlocks != null) {
-                    Iterator<TryCatchBlockNode> tryCatchBlocks = methodNode.tryCatchBlocks.iterator();
-                    while (tryCatchBlocks.hasNext()) {
-                        TryCatchBlockNode next = tryCatchBlocks.next();
-                        if (next.type != null && next.type.contains("java/lang/reflect")) {
-                            AbstractInsnNode nextInsn = next.handler;
-                            while (nextInsn.getType() == AbstractInsnNode.LABEL || nextInsn.getType() == AbstractInsnNode.LINE) {
-                                nextInsn = nextInsn.getNext();
-                            }
-                            if (nextInsn.getOpcode() == Opcodes.INVOKEVIRTUAL && ((MethodInsnNode) nextInsn).name.equals("getTargetException")) {
-                                nextInsn = nextInsn.getNext();
-                                while (nextInsn.getType() == AbstractInsnNode.LABEL || nextInsn.getType() == AbstractInsnNode.LINE) {
-                                    nextInsn = nextInsn.getNext();
-                                }
-                                if (nextInsn.getOpcode() == Opcodes.ATHROW) {
-                                    methodNode.instructions.remove(nextInsn.getPrevious());
-                                    methodNode.instructions.remove(nextInsn);
-                                    tryCatchBlocks.remove();
-                                }
-                            }
-                        }
-                    }
+                /*
+                NOTE: We can't remove reflection try/catch blocks until we remove the reflection, otherwise we may throw the wrong exceptions
+                For example:
+
+                try {
+                    new File("something").delete();
+                } catch (IOException e) {
                 }
+
+                is turned into
+
+                try {
+                    try {
+                        ReflectionObfuscation(5464891915L).invoke(new File("something"));
+                    } catch (InvocationTargetException e) {
+                        throw e.getTargetException();
+                    }
+                } catch (IOException e) {
+                }
+                 */
                 AbstractInsnNode current = methodNode.instructions.getFirst();
                 int i = 0;
                 while (i < methodNode.instructions.size()) {

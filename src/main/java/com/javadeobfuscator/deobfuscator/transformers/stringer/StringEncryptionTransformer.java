@@ -32,8 +32,11 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode;
@@ -111,7 +114,8 @@ public class StringEncryptionTransformer extends Transformer {
                             MethodInsnNode m = (MethodInsnNode) ldc.getNext();
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
-                                if (m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                Type type = Type.getType(m.desc);
+                                if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                     FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
                                     if (signature != null) {
@@ -137,26 +141,37 @@ public class StringEncryptionTransformer extends Transformer {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new MappedFieldProvider());
         provider.register(new JVMMethodProvider());
-        provider.register(new MethodProvider() {
-            public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
-                WrappedClassNode wrappedClassNode = classes.get(className);
-                if (wrappedClassNode != null) {
-                    ClassNode classNode = wrappedClassNode.classNode;
-                    MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElseGet(null);
-                    if (methodNode != null) {
-                        List<StackObject> argsClone = new ArrayList<>();
-                        for (StackObject arg : args) {
-                            argsClone.add(arg.copy());
-                        }
-                        return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? null : targetObject.value, context);
-                    }
-                }
-                throw new IllegalArgumentException("Could not find class");
+        provider.register(new MappedMethodProvider(classes));
+
+        provider.register(new ComparisonProvider() {
+            @Override
+            public boolean instanceOf(StackObject target, Type type, Context context) {
+                return false;
             }
 
-            public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
-                WrappedClassNode wrappedClassNode = classes.get(className);
-                return wrappedClassNode != null;
+            @Override
+            public boolean checkcast(StackObject target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckcast(StackObject target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+                return false;
             }
         });
 
@@ -173,7 +188,8 @@ public class StringEncryptionTransformer extends Transformer {
                             MethodInsnNode m = (MethodInsnNode) ldc.getNext();
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
-                                if (m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                Type type = Type.getType(m.desc);
+                                if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                     FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
                                     if (signature != null) {

@@ -38,6 +38,11 @@ public class DelegatingProvider implements Provider {
     }
 
     @Override
+    public boolean checkcast(StackObject target, Type type, Context context) {
+        return providers.stream().filter(provider -> provider.canCheckcast(target, type, context)).findFirst().get().checkcast(target, type, context);
+    }
+
+    @Override
     public boolean checkEquality(StackObject first, StackObject second, Context context) {
         return providers.stream().filter(provider -> provider.canCheckEquality(first, second, context)).findFirst().get().checkEquality(first, second, context);
     }
@@ -60,6 +65,11 @@ public class DelegatingProvider implements Provider {
     @Override
     public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
         return providers.stream().filter(provider -> provider.canCheckInstanceOf(target, type, context)).findFirst().isPresent();
+    }
+
+    @Override
+    public boolean canCheckcast(StackObject target, Type type, Context context) {
+        return providers.stream().filter(provider -> provider.canCheckcast(target, type, context)).findFirst().isPresent();
     }
 
     @Override

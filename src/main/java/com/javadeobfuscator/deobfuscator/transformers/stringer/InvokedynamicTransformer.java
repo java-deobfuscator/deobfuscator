@@ -28,9 +28,11 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.DisabledFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
+import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Handle;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.InvokeDynamicInsnNode;
@@ -86,6 +88,42 @@ public class InvokedynamicTransformer extends Transformer {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new DisabledFieldProvider());
         provider.register(new JVMMethodProvider());
+        provider.register(new ComparisonProvider() {
+            @Override
+            public boolean instanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean checkcast(StackObject target, Type type, Context context) {
+                if (type.getDescriptor().equals("[C")) {
+                    if (!(target.value instanceof char[])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckcast(StackObject target, Type type, Context context) {
+                return type.getDescriptor().equals("[C");
+            }
+
+            @Override
+            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+        });
 
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
@@ -107,17 +145,17 @@ public class InvokedynamicTransformer extends Transformer {
                             }
                             Context context = new Context(provider);
                             context.dictionary = this.classpath;
-                            
+
                             JavaMethodHandle result = MethodExecutor.execute(wrappedClassNode, bootstrapMethodNode, args, null, context);
                             String clazz = result.clazz.replace('.', '/');
                             AbstractInsnNode replacement = null;
                             switch (result.type) {
-                            case "virtual":
-                                replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
-                                break;
-                            case "static":
-                                replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);
-                                break;
+                                case "virtual":
+                                    replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
+                                    break;
+                                case "static":
+                                    replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);
+                                    break;
                             }
                             methodNode.instructions.insert(abstractInsnNode, replacement);
                             methodNode.instructions.remove(abstractInsnNode);

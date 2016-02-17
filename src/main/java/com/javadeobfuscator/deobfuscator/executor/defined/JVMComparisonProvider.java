@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
@@ -33,7 +34,7 @@ public class JVMComparisonProvider extends ComparisonProvider {
 
     @Override
     public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
-        return true;
+        return first.value instanceof JavaClass && second.value instanceof JavaClass;
     }
 
     @Override
@@ -42,7 +43,17 @@ public class JVMComparisonProvider extends ComparisonProvider {
     }
 
     @Override
+    public boolean checkcast(StackObject target, Type type, Context context) {
+        return false;
+    }
+
+    @Override
     public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+        return false;
+    }
+
+    @Override
+    public boolean canCheckcast(StackObject target, Type type, Context context) {
         return false;
     }
 }

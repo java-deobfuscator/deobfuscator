@@ -28,6 +28,11 @@ public abstract class MethodProvider implements Provider {
     }
 
     @Override
+    public boolean canCheckcast(StackObject target, Type type, Context context) {
+        return false;
+    }
+
+    @Override
     public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
         return false;
     }
@@ -60,5 +65,10 @@ public abstract class MethodProvider implements Provider {
     @Override
     public boolean checkEquality(StackObject first, StackObject second, Context context) {
         throw new IllegalStateException("Cannot check equality on MethodProvider");
+    }
+
+    @Override
+    public boolean checkcast(StackObject target, Type type, Context context) {
+        throw new IllegalStateException("Cannot check cast on MethodProvider");
     }
 }

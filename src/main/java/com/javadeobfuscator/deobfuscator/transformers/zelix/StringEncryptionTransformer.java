@@ -21,7 +21,10 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchHandlerException;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchMethodHandlerException;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
@@ -47,14 +50,13 @@ public class StringEncryptionTransformer extends Transformer {
         WrappedClassNode wrapped = new WrappedClassNode(decryptorClassNode, 0);
         classes.put(decryptorClassNode.name, wrapped);
         classpath.put(decryptorClassNode.name, wrapped);
+        AtomicInteger currentDecryptorId = new AtomicInteger(0);
         {
-            AtomicInteger current = new AtomicInteger(0);
             classNodes().stream().map(n -> n.classNode).forEach(classNode -> {
                 MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                 if (clinit != null) {
                     Map<LabelNode, LabelNode> mapping = new HashMap<>();
                     InsnList insns = clinit.instructions;
-
                     for (int i = 0; i < insns.size(); i++) {
                         AbstractInsnNode node = insns.get(i);
                         if (node instanceof LabelNode) {
@@ -65,11 +67,14 @@ public class StringEncryptionTransformer extends Transformer {
                         AbstractInsnNode node = insns.get(i);
                         if (node instanceof MethodInsnNode) {
                             MethodInsnNode cast = (MethodInsnNode) node;
-                            if (cast.owner.equals("java/lang/String") && cast.name.equals("toCharArray")) {
+                            if (cast.owner.equals("java/lang/String") && cast.name.equals("toCharArray")) { //FIXME check if it's valid
                                 List<AbstractInsnNode> everything = new ArrayList<>();
                                 everything.add(cast);
                                 AbstractInsnNode next = cast.getNext();
                                 while (true) {
+                                    if (next == null) {
+                                        break;
+                                    }
                                     everything.add(next);
                                     if (next instanceof MethodInsnNode) {
                                         MethodInsnNode cast1 = (MethodInsnNode) next;
@@ -81,7 +86,7 @@ public class StringEncryptionTransformer extends Transformer {
                                 }
                                 insns.remove(next.getNext());
                                 insns.remove(next.getNext());
-                                MethodNode decryptorNode = new MethodNode(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC, "DECRYPTOR_METHOD_" + current.getAndIncrement(), "(Ljava/lang/String;)Ljava/lang/String;", null, null);
+                                MethodNode decryptorNode = new MethodNode(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC, "DECRYPTOR_METHOD_" + currentDecryptorId.getAndIncrement(), "(Ljava/lang/String;)Ljava/lang/String;", null, null);
                                 clinit.instructions.insertBefore(cast, new MethodInsnNode(Opcodes.INVOKESTATIC, decryptorClassNode.name, decryptorNode.name, decryptorNode.desc, false));
                                 decryptorNode.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
                                 for (AbstractInsnNode everyth : everything) {
@@ -95,7 +100,7 @@ public class StringEncryptionTransformer extends Transformer {
                                     MethodInsnNode castnext = (MethodInsnNode) cast.getNext();
                                     if (castnext.desc.equals("([C)Ljava/lang/String;")) {
                                         if (cast.owner.equals(classNode.name) && castnext.owner.equals(classNode.name)) {
-                                            MethodNode decryptorNode = new MethodNode(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC, "DECRYPTOR_METHOD_" + current.getAndIncrement(), "(Ljava/lang/String;)Ljava/lang/String;", null, null);
+                                            MethodNode decryptorNode = new MethodNode(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC, "DECRYPTOR_METHOD_" + currentDecryptorId.getAndIncrement(), "(Ljava/lang/String;)Ljava/lang/String;", null, null);
                                             decryptorNode.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
                                             decryptorNode.instructions.add(cast.clone(null));
                                             decryptorNode.instructions.add(castnext.clone(null));
@@ -141,6 +146,7 @@ public class StringEncryptionTransformer extends Transformer {
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
         provider.register(new MappedMethodProvider(classes));
+        provider.register(new MappedFieldProvider());
 
         classNodes().forEach(wrappedClassNode -> {
             MethodNode clinit = wrappedClassNode.classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
@@ -172,15 +178,203 @@ public class StringEncryptionTransformer extends Transformer {
                         }
                     }
                 } while (modified);
+
+                {
+                    try {
+                        Context context = new Context(provider);
+                        context.push(wrappedClassNode.classNode.name, clinit.name, wrappedClassNode.constantPoolSize);
+                        context.dictionary = classpath;
+                        MethodExecutor.execute(wrappedClassNode, clinit, new ArrayList<>(), null, context);
+                    } catch (NoSuchHandlerException e) {
+                    } catch (Throwable t) {
+                        t.printStackTrace(System.out);
+                        System.out.println(wrappedClassNode.classNode.name);
+                    }
+                }
             }
+
+            wrappedClassNode.getClassNode().methods.forEach(methodNode -> {
+                boolean modified = false;
+                do {
+                    modified = false;
+                    for (int index = 0; index < methodNode.instructions.size(); index++) {
+                        AbstractInsnNode current = methodNode.instructions.get(index);
+                        if (current.getOpcode() == Opcodes.SIPUSH) {
+                            IntInsnNode sipush1 = (IntInsnNode) current;
+                            AbstractInsnNode next = Utils.getNext(sipush1);
+                            if (next.getOpcode() == Opcodes.SIPUSH) {
+                                IntInsnNode sipush2 = (IntInsnNode) next;
+                                next = Utils.getNext(sipush2);
+                                if (next instanceof MethodInsnNode) {
+                                    MethodInsnNode m = (MethodInsnNode) next;
+                                    String strCl = m.owner;
+                                    if (m.desc.equals("(II)Ljava/lang/String;") && m.owner.equals(wrappedClassNode.classNode.name)) {
+                                        Context context = new Context(provider);
+                                        context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
+                                        ClassNode innerClassNode = classes.get(strCl).classNode;
+                                        MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
+                                        List<StackObject> stack = new ArrayList<>();
+                                        stack.add(new StackObject(int.class, sipush1.operand));
+                                        stack.add(new StackObject(int.class, sipush2.operand));
+                                        Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, stack, null, context);
+                                        InsnList replace = new InsnList();
+                                        replace.add(new LdcInsnNode(o));
+                                        methodNode.instructions.insert(m, replace);
+                                        methodNode.instructions.remove(m);
+                                        methodNode.instructions.remove(sipush2);
+                                        methodNode.instructions.remove(sipush1);
+                                        {
+                                            List<MethodNode> r = remove.get(classpath.get(m.owner).classNode);
+                                            if (r == null) {
+                                                r = new ArrayList<>();
+                                                remove.put(classpath.get(m.owner).classNode, r);
+                                            }
+                                            r.add(decrypterNode);
+                                        }
+                                        modified = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } while (modified);
+            });
         });
+
         for (int i = 0; i < 3; i++) {
             new PeepholeOptimizer(classes, classpath).transform();
         }
-        classpath.remove(decryptorClassNode.name);
-        classes.remove(decryptorClassNode.name);
-        remove.forEach((cn, mn) -> {
-            cn.methods.removeAll(mn);
+
+        /**
+         * Cleanup the ZKM 8 decryption code
+         */
+        classNodes().stream().map(n -> n.classNode).forEach(classNode -> {
+            MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+            if (clinit != null) {
+                AbstractInsnNode last = null;
+                for (int i = 0; i < clinit.instructions.size(); i++) { //Remove each block of string decryption
+                    AbstractInsnNode now = clinit.instructions.get(i);
+                    if (now.getOpcode() == Opcodes.LDC) {
+                        if (now.getNext().getOpcode() == Opcodes.DUP) {
+                            if (now.getNext().getNext().getOpcode() == Opcodes.ASTORE) {
+                                if (now.getNext().getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL) { //1337
+                                    List<AbstractInsnNode> block = new ArrayList<>();
+                                    while (true) {
+                                        block.add(now);
+                                        if (now.getOpcode() == Opcodes.GOTO) {
+                                            while (now.getNext() instanceof LabelNode) {
+                                                block.add(now.getNext());
+                                                now = now.getNext();
+                                            }
+                                            break;
+                                        }
+                                        now = now.getNext();
+                                    }
+                                    if (block.size() < 45) {
+                                        i = clinit.instructions.indexOf(block.get(block.size() - 1));
+                                        last = block.get(block.size() - 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (last != null) {
+                    while (last.getOpcode() != Opcodes.ALOAD) {
+                        last = last.getNext();
+                    }
+                    Map<LabelNode, LabelNode> mapping = new HashMap<>();
+                    InsnList insns = clinit.instructions;
+                    for (int i = 0; i < insns.size(); i++) {
+                        AbstractInsnNode node = insns.get(i);
+                        if (node instanceof LabelNode) {
+                            mapping.put((LabelNode) node, new LabelNode());
+                        }
+                    }
+                    List<AbstractInsnNode> cloneList = new ArrayList<>();
+                    AbstractInsnNode node = insns.get(0);
+                    while (true) {
+                        if (node == null) {
+                            break;
+                        }
+                        cloneList.add(node);
+                        if (node == last) {
+                            break;
+                        }
+                        node = node.getNext();
+                    }
+                    MethodNode decryptorNode = new MethodNode(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC, "DECRYPTOR_METHOD_" + currentDecryptorId.getAndIncrement(), "()[Ljava/lang/String;", null, null);
+                    clinit.instructions.insert(clinit.instructions.getFirst(), new MethodInsnNode(Opcodes.INVOKESTATIC, decryptorClassNode.name, decryptorNode.name, decryptorNode.desc, false));
+                    for (AbstractInsnNode everyth : cloneList) {
+                        decryptorNode.instructions.add(everyth.clone(mapping));
+                        clinit.instructions.remove(everyth);
+                    }
+                    decryptorNode.instructions.add(new InsnNode(Opcodes.ARETURN));
+                    decryptorClassNode.methods.add(decryptorNode);
+                }
+            }
         });
+
+
+        classNodes().forEach(wrappedClassNode -> {
+            MethodNode clinit = wrappedClassNode.classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+            if (clinit != null) {
+                boolean modified = false;
+                do {
+                    modified = false;
+                    for (int index = 0; index < clinit.instructions.size(); index++) {
+                        AbstractInsnNode current = clinit.instructions.get(index);
+                        if (current instanceof MethodInsnNode) {
+                            MethodInsnNode m = (MethodInsnNode) current;
+                            String strCl = m.owner;
+                            if (m.desc.equals("()[Ljava/lang/String;")) {
+                                Context context = new Context(provider);
+                                context.push(wrappedClassNode.classNode.name, clinit.name, wrappedClassNode.constantPoolSize);
+                                ClassNode innerClassNode = classes.get(strCl).classNode;
+                                MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
+                                Object[] o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(), null, context);
+                                InsnList insert = new InsnList();
+                                insert.add(new LdcInsnNode(o.length));
+                                insert.add(new TypeInsnNode(Opcodes.ANEWARRAY, "java/lang/String"));
+                                for (int i = 0; i < o.length; i++) {
+                                    insert.add(new InsnNode(Opcodes.DUP));
+                                    insert.add(new LdcInsnNode(i));
+                                    if (o[i] == null) {
+                                        insert.add(new InsnNode(Opcodes.ACONST_NULL));
+                                    } else {
+                                        insert.add(new LdcInsnNode(o[i]));
+                                    }
+                                    insert.add(new InsnNode(Opcodes.AASTORE));
+                                }
+                                if (m.getNext().getOpcode() != Opcodes.PUTSTATIC) {
+                                    clinit.instructions.insert(m, insert);
+                                    clinit.instructions.remove(m);
+                                } else {
+                                    AbstractInsnNode a = m;
+                                    List<AbstractInsnNode> delete = new ArrayList<>();
+                                    while (true) {
+                                        if (a == null) break;
+                                        delete.add(a);
+                                        if (a.getOpcode() == Opcodes.ANEWARRAY) {
+                                            delete.add(a.getNext());
+                                            break;
+                                        }
+                                        a = a.getNext();
+                                    }
+                                    delete.forEach(clinit.instructions::remove);
+                                }
+                                modified = true;
+                            }
+                        }
+                    }
+                } while (modified);
+            }
+        });
+
+//        classpath.remove(decryptorClassNode.name);
+//        classes.remove(decryptorClassNode.name);
+//        remove.forEach((cn, mn) -> {
+//            cn.methods.removeAll(mn);
+//        });
     }
 }

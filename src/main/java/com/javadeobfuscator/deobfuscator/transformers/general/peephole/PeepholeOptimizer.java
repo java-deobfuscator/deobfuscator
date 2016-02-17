@@ -20,11 +20,12 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 public class PeepholeOptimizer extends Transformer {
-    private static final Set<Class<? extends Transformer>> PEEPHOLE_TRANSFORMERS = new HashSet<>();
+    private static final Set<Class<? extends Transformer>> PEEPHOLE_TRANSFORMERS = new LinkedHashSet<>();
 
     public PeepholeOptimizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
