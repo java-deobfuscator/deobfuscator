@@ -850,6 +850,7 @@ public class MethodExecutor {
                         } else {
                             Utils.sneakyThrow(new RuntimeException(throwable == null ? "" : throwable.toString()));
                         }
+                        context.pop();
                         return null;
                     }
                     case CHECKCAST: {
@@ -947,11 +948,13 @@ public class MethodExecutor {
                             List<StackObject> stackClone = new ArrayList<>();
                             stackClone.add(new StackObject(Object.class, t));
                             List<StackObject> localsClone = new ArrayList<>(locals);
+                            context.pop();
                             return execute(classNode, method, tcbn.handler, stackClone, localsClone, context);
                         }
                     }
                 }
                 Utils.sneakyThrow(t);
+                context.pop();
                 return null;
             }
         }
