@@ -87,6 +87,13 @@ public class ReflectionObfuscationTransformer extends Transformer {
 
             @Override
             public boolean checkcast(StackObject target, Type type, Context context) {
+                if (type.getInternalName().equals("java/lang/String")) {
+                    return target.value instanceof String;
+                } else if (type.getInternalName().equals("java/lang/Class")) {
+                    return target.value instanceof JavaClass || target.value instanceof Type; //TODO consolidate types
+                } else if (type.getInternalName().equals("java/lang/reflect/Method")) {
+                    return target.value instanceof JavaMethod;
+                }
                 return false;
             }
 
@@ -102,7 +109,9 @@ public class ReflectionObfuscationTransformer extends Transformer {
 
             @Override
             public boolean canCheckcast(StackObject target, Type type, Context context) {
-                return false;
+                return type.getInternalName().equals("java/lang/String")
+                        || type.getInternalName().equals("java/lang/Class")
+                        || type.getInternalName().equals("java/lang/reflect/Method");
             }
 
             @Override

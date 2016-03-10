@@ -25,8 +25,10 @@ import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchHandlerException;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchMethodHandlerException;
+import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.transformers.general.peephole.PeepholeOptimizer;
@@ -147,6 +149,37 @@ public class StringEncryptionTransformer extends Transformer {
         provider.register(new JVMComparisonProvider());
         provider.register(new MappedMethodProvider(classes));
         provider.register(new MappedFieldProvider());
+        provider.register(new ComparisonProvider() {
+            @Override
+            public boolean instanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean checkcast(StackObject target, Type type, Context context) {
+                return target.value instanceof char[];
+            }
+
+            @Override
+            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckcast(StackObject target, Type type, Context context) {
+                return type.toString().equals("[C");
+            }
+
+            @Override
+            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+                return false;
+            }
+        });
 
         classNodes().forEach(wrappedClassNode -> {
             MethodNode clinit = wrappedClassNode.classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
