@@ -454,7 +454,7 @@ public class CheckMethodAdapter extends MethodVisitor {
                         throw new RuntimeException(
                                 "Data flow checking option requires valid, non zero maxLocals and maxStack values.");
                     }
-                    e.printStackTrace();
+//                    e.printStackTrace();
                     StringWriter sw = new StringWriter();
                     PrintWriter pw = new PrintWriter(sw, true);
                     CheckClassAdapter.printAnalyzerResult(this, a, pw);
@@ -1013,7 +1013,7 @@ public class CheckMethodAdapter extends MethodVisitor {
             }
             if (end.intValue() <= start.intValue()) {
                 throw new IllegalStateException(
-                        "Emty try catch block handler range");
+                        "Empty try catch block handler range in " + ((MethodNode) this.mv).name);
             }
         }
         checkUnsignedShort(maxStack, "Invalid max stack");

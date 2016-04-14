@@ -123,6 +123,9 @@ public class MethodExecutor {
 //                System.out.println("\t" + locals);
 //                System.out.println();
 //                System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
+                if (now == null) {
+                    throw new NoSuchHandlerException("d") {};
+                }
                 switch (now.getOpcode()) {
                     case NOP:
                         break;

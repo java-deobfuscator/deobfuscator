@@ -16,6 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
+import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.PopFrame;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -23,6 +28,7 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,21 +37,78 @@ public class LdcPopRemover extends Transformer {
         super(classes, classpath);
     }
 
+    private boolean willTakeTwoSlots(int opcode) {
+        switch (opcode) {
+            case Opcodes.DLOAD:
+            case Opcodes.LLOAD:
+            case Opcodes.DCONST_0:
+            case Opcodes.DCONST_1:
+            case Opcodes.LCONST_0:
+            case Opcodes.LCONST_1:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     @Override
     public void transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
-            classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
+        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+            classNode.methods.stream().filter(Utils::notAbstractOrNative).forEach(methodNode -> {
+//                AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
+//                Map<AbstractInsnNode, List<Frame>> frames = result.getFrames();
+//                Map<Frame, AbstractInsnNode> reverse = result.getMapping();
+//                for (Map.Entry<AbstractInsnNode, List<Frame>> entry : frames.entrySet()) {
+//                    boolean takesTwo = willTakeTwoSlots(entry.getKey().getOpcode());
+//                    if (entry.getValue() != null) {
+//                        boolean allValid = true;
+//                        for (Frame frame : entry.getValue()) {
+//                            if (!(frame instanceof LdcFrame)) {
+//                                allValid = false;
+//                                break;
+//                            }
+//                            for (Frame child : frame.getChildren()) {
+//                                if (child instanceof PopFrame) {
+//                                    if (!takesTwo && child.getOpcode() == Opcodes.POP2) {
+//                                        allValid = false;
+//                                        break;
+//                                    } else if (takesTwo && child.getOpcode() != Opcodes.POP2) {
+//                                        allValid = false;
+//                                        break;
+//                                    }
+//                                } else {
+//                                    allValid = false;
+//                                    break;
+//                                }
+//                            }
+//                        }
+//                        if (allValid) {
+//                            for (Frame frame : entry.getValue()) {
+//                                System.out.println(classNode.name + " " + methodNode.name + methodNode.desc);
+//                                System.out.println(frame);
+//                                System.out.println(frame.getChildren());
+//                                for (Frame child : frame.getChildren()) {
+//                                    methodNode.instructions.remove(reverse.get(child));
+//                                }
+//                                System.out.println();
+//                            }
+//                            methodNode.instructions.remove(entry.getKey());
+//                            counter.incrementAndGet();
+//                        }
+//                    }
+//                }
                 boolean modified = false;
                 do {
                     modified = false;
                     for (int i = 0; i < methodNode.instructions.size(); i++) {
                         AbstractInsnNode node = methodNode.instructions.get(i);
                         if (Utils.willPushToStack(node.getOpcode())) {
-                            AbstractInsnNode next = Utils.getNext(node);
+                            AbstractInsnNode next = node.getNext();
                             if (next.getOpcode() == Opcodes.POP) {
                                 methodNode.instructions.remove(next);
                                 methodNode.instructions.remove(node);
+                                counter.incrementAndGet();
                                 modified = true;
                             }
                         }

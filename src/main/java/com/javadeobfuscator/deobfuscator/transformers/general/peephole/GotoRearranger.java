@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Label;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -36,10 +37,12 @@ public class GotoRearranger extends Transformer {
         AtomicInteger counter = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
+                Set<LabelNode> never = new HashSet<>();
                 boolean modified = false;
                 outer:
                 do {
                     modified = false;
+                    Map<LabelNode, LabelNode> clone = new HashMap<>();
                     Map<LabelNode, Integer> jumpCount = new HashMap<>();
                     Consumer<LabelNode> con = (labelNode) -> {
                         if (jumpCount.containsKey(labelNode)) {
@@ -56,13 +59,23 @@ public class GotoRearranger extends Transformer {
                         } else if (node instanceof TableSwitchInsnNode) {
                             TableSwitchInsnNode cast = (TableSwitchInsnNode) node;
                             con.accept(cast.dflt);
-                            cast.labels.forEach(con::accept);
+                            cast.labels.forEach(con);
                         } else if (node instanceof LookupSwitchInsnNode) {
                             LookupSwitchInsnNode cast = (LookupSwitchInsnNode) node;
                             con.accept(cast.dflt);
-                            cast.labels.forEach(con::accept);
+                            cast.labels.forEach(con);
+                        } else if (node instanceof LabelNode) {
+                            clone.put((LabelNode) node,(LabelNode)  node);
                         }
                     }
+                    if (methodNode.tryCatchBlocks != null) {
+                        methodNode.tryCatchBlocks.forEach(tryCatchBlockNode -> {
+                            jumpCount.put(tryCatchBlockNode.start, 999);
+                            jumpCount.put(tryCatchBlockNode.end, 999);
+                            jumpCount.put(tryCatchBlockNode.handler, 999);
+                        });
+                    }
+                    never.forEach(n -> jumpCount.put(n, 999));
 
                     for (int i = 0; i < methodNode.instructions.size(); i++) {
                         AbstractInsnNode node = methodNode.instructions.get(i);
@@ -104,7 +117,13 @@ public class GotoRearranger extends Transformer {
                                             }
                                             next = next.getNext();
                                         }
+                                        InsnList replace = new InsnList();
                                         InsnList list = new InsnList();
+                                        LabelNode ln = new LabelNode();
+                                        replace.add(new JumpInsnNode(Opcodes.GOTO, ln));
+                                        list.add(ln);
+                                        never.add(ln);
+                                        methodNode.instructions.insertBefore(remove.get(0), replace);
                                         remove.forEach(methodNode.instructions::remove);
                                         remove.forEach(list::add);
                                         methodNode.instructions.insert(node, list);

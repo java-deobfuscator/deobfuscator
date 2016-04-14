@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,12 +45,34 @@ public class PrimitiveUtils {
         nameToPrimitive.put("short", Short.TYPE);
         nameToPrimitive.put("void", Void.TYPE);
     }
-    
+
     public static Class<?> getPrimitiveByName(String name) {
         return nameToPrimitive.get(name);
     }
-    
+
     public static Object getDefaultValue(Class<?> primitive) {
         return defaultPrimitiveValues.get(primitive);
+    }
+
+    public static Class<?> getPrimitiveByNewArrayId(int id) {
+        switch (id) {
+            case Opcodes.T_BOOLEAN:
+                return boolean.class;
+            case Opcodes.T_CHAR:
+                return char.class;
+            case Opcodes.T_FLOAT:
+                return float.class;
+            case Opcodes.T_DOUBLE:
+                return double.class;
+            case Opcodes.T_BYTE:
+                return byte.class;
+            case Opcodes.T_SHORT:
+                return short.class;
+            case Opcodes.T_INT:
+                return int.class;
+            case Opcodes.T_LONG:
+                return long.class;
+        }
+        throw new IllegalArgumentException("Unknown type " + id);
     }
 }

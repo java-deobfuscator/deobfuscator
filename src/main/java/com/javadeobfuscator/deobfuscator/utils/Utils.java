@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Modifier;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -32,6 +33,11 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Textifier;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisitor;
 
 public class Utils {
+
+    public static boolean notAbstractOrNative(MethodNode methodNode) {
+        return !Modifier.isNative(methodNode.access) && !Modifier.isNative(methodNode.access);
+    }
+
     public static AbstractInsnNode getNextFollowGoto(AbstractInsnNode node) {
         AbstractInsnNode next = node.getNext();
         while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {

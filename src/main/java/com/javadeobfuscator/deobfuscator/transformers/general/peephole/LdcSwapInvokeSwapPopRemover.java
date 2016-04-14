@@ -55,6 +55,7 @@ public class LdcSwapInvokeSwapPopRemover extends Transformer {
                                             methodNode.instructions.remove(next1);
                                             methodNode.instructions.remove(swap);
                                             methodNode.instructions.remove(node);
+                                            counter.incrementAndGet();
                                             modified = true;
                                         }
                                     }

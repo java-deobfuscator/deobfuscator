@@ -127,6 +127,7 @@ public class UnconditionalSwitchRemover extends Transformer {
                                         replace.add(new JumpInsnNode(Opcodes.GOTO, go));
                                         insns.insertBefore(node, replace);
                                         insns.remove(node);
+                                        counter.incrementAndGet();
                                     }
                                 }
                             }

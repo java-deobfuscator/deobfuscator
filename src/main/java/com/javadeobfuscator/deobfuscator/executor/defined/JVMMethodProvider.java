@@ -110,6 +110,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
+            put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.toString());
         }});
         put("java/lang/RuntimeException", new HashMap<String, Function3<StackObject, List<StackObject>, Context, Object>>() {{
             put("<init>(Ljava/lang/String;)V", (targetObject, args, context) -> {

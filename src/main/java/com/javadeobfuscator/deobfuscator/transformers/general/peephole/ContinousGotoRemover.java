@@ -44,6 +44,7 @@ public class ContinousGotoRemover extends Transformer {
                         AbstractInsnNode b = Utils.getNext(((JumpInsnNode) node).label);
                         if (a == b) {
                             methodNode.instructions.remove(node);
+                            counter.incrementAndGet();
                         }
                     }
                 }

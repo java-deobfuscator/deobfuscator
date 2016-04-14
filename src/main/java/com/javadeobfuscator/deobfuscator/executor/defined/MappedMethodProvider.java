@@ -44,7 +44,7 @@ public class MappedMethodProvider extends MethodProvider {
         WrappedClassNode wrappedClassNode = classpath.get(className);
         if (wrappedClassNode != null) {
             ClassNode classNode = wrappedClassNode.classNode;
-            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElseGet(null);
+            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
             if (methodNode != null) {
                 List<StackObject> argsClone = new ArrayList<>();
                 for (StackObject arg : args) {
@@ -53,6 +53,6 @@ public class MappedMethodProvider extends MethodProvider {
                 return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? null : targetObject.value, context);
             }
         }
-        throw new IllegalArgumentException("Could not find class");
+        throw new IllegalArgumentException("Could not find class " + className);
     }
 }

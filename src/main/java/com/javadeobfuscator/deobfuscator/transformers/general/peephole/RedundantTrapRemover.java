@@ -18,12 +18,15 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FrameNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,9 +45,24 @@ public class RedundantTrapRemover extends Transformer {
                     while (iterator.hasNext()) {
                         TryCatchBlockNode tcbn = iterator.next();
                         AbstractInsnNode nextInsn = Utils.getNext(tcbn.handler.getPrevious());
-                        if (nextInsn != null && nextInsn.getOpcode() == Opcodes.ATHROW) {
+                        if (nextInsn.getOpcode() == Opcodes.ATHROW) {
                             iterator.remove();
                             redudantTraps.incrementAndGet();
+                        } else if (tcbn.start.getNext() == tcbn.end) {
+                            iterator.remove();
+                        }
+                    }
+                    iterator = methodNode.tryCatchBlocks.iterator();
+                    while (iterator.hasNext()) {
+                        TryCatchBlockNode tcbn = iterator.next();
+                        AbstractInsnNode start = tcbn.start;
+                        while (start.getOpcode() == -1) {
+                            if (start == tcbn.end) {
+                                iterator.remove();
+                                System.out.println("Removing empty trap"); //fixme located inside GotoUnconditionalJumpRemover
+                                break;
+                            }
+                            start = start.getNext();
                         }
                     }
                 }

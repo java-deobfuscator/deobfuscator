@@ -16,9 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
@@ -58,7 +56,14 @@ public class Deobfuscator {
     }
 
     public Deobfuscator withClasspath(File file) {
-        this.classpathFiles.add(file);
+        if (file.isDirectory()) {
+            File[] files = file.listFiles((dir, name) -> name.endsWith(".jar"));
+            if (files != null) {
+                classpathFiles.addAll(Arrays.asList(files));
+            }
+        } else {
+            this.classpathFiles.add(file);
+        }
         return this;
     }
 
@@ -139,7 +144,7 @@ public class Deobfuscator {
                                     caller = new ArrayList<>();
                                     callers.put(targetMethod, caller);
                                 }
-                                caller.add(new SimpleEntry<WrappedClassNode, MethodNode>(wrappedClassNode, methodNode));
+                                caller.add(new SimpleEntry<>(wrappedClassNode, methodNode));
                             }
                         }
                     }
@@ -147,18 +152,31 @@ public class Deobfuscator {
             });
         });
 
+        System.out.println();
+        System.out.println("Reading complete. Transforming");
+        System.out.println();
+
+
         for (Class<? extends Transformer> transformerClass : transformers) {
             Transformer transformer = transformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath);
             transformer.transform();
         }
+
+        System.out.println();
+        System.out.println("Transforming complete. Writing to file");
+        System.out.println();
+
         classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
-            byte[] b = toByteArray(classNode);
             try {
-                zipOut.putNextEntry(new ZipEntry(classNode.name + ".class"));
-                zipOut.write(b);
-                zipOut.closeEntry();
+                byte[] b = toByteArray(classNode);
+                if (b != null) {
+                    zipOut.putNextEntry(new ZipEntry(classNode.name + ".class"));
+                    zipOut.write(b);
+                    zipOut.closeEntry();
+                }
             } catch (Throwable t) {
-                Utils.sneakyThrow(t);
+                System.out.println("Uncaught error");
+                t.printStackTrace(System.out);
             }
         });
         zipOut.close();
@@ -168,7 +186,7 @@ public class Deobfuscator {
     public ClassNode assureLoaded(String ref) {
         WrappedClassNode clazz = classpath.get(ref);
         if (clazz == null) {
-            throw new IllegalArgumentException("No class in path " + ref);
+            throw new NoClassInPathException(ref);
         }
         return clazz.classNode;
     }
@@ -239,37 +257,41 @@ public class Deobfuscator {
         }
         ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
         try {
-            node.accept(writer);
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null) {
-                if (e.getMessage().contains("JSR/RET")) {
-                    System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
+            try {
+                node.accept(writer);
+            } catch (RuntimeException e) {
+                if (e instanceof NoClassInPathException) {
+                    NoClassInPathException ex = (NoClassInPathException) e;
+                    System.out.println("Error: " + ex.className + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
                     writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                     node.accept(writer);
-                } else if (e.getMessage().contains("No class in path")) {
-                    System.out.println("Could not find class in classpath so COMPUTE_MAXS instead");
-                    System.out.println(e.getMessage());
-                    writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
-                    node.accept(writer);
+                } else if (e.getMessage() != null) {
+                    if (e.getMessage().contains("JSR/RET")) {
+                        System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
+                        writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+                        node.accept(writer);
+                    } else {
+                        throw e;
+                    }
                 } else {
-                    e.printStackTrace();
                     throw e;
                 }
-            } else {
-                e.printStackTrace();
-                throw e;
             }
-        }
-        byte[] classBytes = writer.toByteArray();
+            byte[] classBytes = writer.toByteArray();
 
-        ClassReader cr = new ClassReader(classBytes);
-        try {
-            cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
+            ClassReader cr = new ClassReader(classBytes);
+            try {
+                cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
+            } catch (Throwable t) {
+                System.out.println("Error: " + node.name + " failed verification");
+                t.printStackTrace(System.out);
+            }
+            return classBytes;
         } catch (Throwable t) {
-            System.out.println(node.name);
-            throw t;
+            System.out.println("Error while writing " + node.name);
+            t.printStackTrace(System.out);
         }
-        return classBytes;
+        return null;
     }
 
     public class CustomClassWriter extends ClassWriter {
@@ -342,6 +364,14 @@ public class Deobfuscator {
                 return true;
             }
             return false;
+        }
+    }
+
+    class NoClassInPathException extends RuntimeException {
+        String className;
+
+        public NoClassInPathException(String className) {
+            this.className = className;
         }
     }
 }
