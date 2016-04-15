@@ -35,7 +35,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisit
 public class Utils {
 
     public static boolean notAbstractOrNative(MethodNode methodNode) {
-        return !Modifier.isNative(methodNode.access) && !Modifier.isNative(methodNode.access);
+        return !Modifier.isNative(methodNode.access) && !Modifier.isAbstract(methodNode.access);
     }
 
     public static AbstractInsnNode getNextFollowGoto(AbstractInsnNode node) {
