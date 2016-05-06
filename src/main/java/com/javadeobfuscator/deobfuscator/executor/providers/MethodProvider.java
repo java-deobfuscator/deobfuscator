@@ -16,8 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.executor.providers;
 
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public abstract class MethodProvider implements Provider {

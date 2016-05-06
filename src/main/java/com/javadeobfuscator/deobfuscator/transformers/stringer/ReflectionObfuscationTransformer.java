@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.DictionaryMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;

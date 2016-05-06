@@ -18,8 +18,8 @@ package com.javadeobfuscator.deobfuscator.executor.providers;
 
 import java.util.List;
 
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 
 public abstract class ComparisonProvider implements Provider {
     @Override

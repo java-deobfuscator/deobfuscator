@@ -19,49 +19,39 @@ package com.javadeobfuscator.deobfuscator.executor;
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchComparisonHandlerException;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchHandlerException;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchMethodHandlerException;
-import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.*;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.IincInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.IntInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.JumpInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LdcInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LookupSwitchInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MultiANewArrayInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TableSwitchInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TryCatchBlockNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TypeInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.VarInsnNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class MethodExecutor {
+    private static final boolean DEBUG;
+    private static final boolean DEBUG_PRINT_EXCEPTIONS;
+    private static final List<String> DEBUG_CLASSES;
+    private static final List<String> DEBUG_METHODS_WITH_DESC;
+
+    static {
+        DEBUG = false;
+        DEBUG_PRINT_EXCEPTIONS = false;
+        DEBUG_CLASSES = Arrays.asList();
+        DEBUG_METHODS_WITH_DESC = Arrays.asList();
+    }
+
     public static <T> T execute(WrappedClassNode classNode, MethodNode method, List<StackObject> args, Object instance, Context context) {
         if (context == null)
             throw new IllegalArgumentException("Null context");
-        List<StackObject> stack = new ArrayList<>();
-        List<StackObject> locals = new ArrayList<>();
+        List<StackObject> stack = new LinkedList<>();
+        List<StackObject> locals = new LinkedList<>();
         if (!Modifier.isStatic(method.access)) {
             locals.add(new StackObject(Object.class, instance));
         }
@@ -110,21 +100,24 @@ public class MethodExecutor {
         stack.add(0, new StackObject(prim, action.apply((T) obj2, (T) obj1)));
     }
 
-    @SuppressWarnings({
-            "unchecked",
-            "unused"
-    })
+    /*
+     * Main executor. This will go through each instruction and execute the instruction using a switch statement
+     */
     private static <T> T execute(WrappedClassNode classNode, MethodNode method, AbstractInsnNode now, List<StackObject> stack, List<StackObject> locals, Context context) {
         context.push(classNode.classNode.name, method.name, classNode.constantPoolSize);
-//        System.out.println("Executing " + classNode.classNode.name + " " + method.name + method.desc);
+        if (DEBUG) {
+            System.out.println("Executing " + classNode.classNode.name + " " + method.name + method.desc);
+        }
         while (true) {
             try {
-//                System.out.println("\t" + stack);
-//                System.out.println("\t" + locals);
-//                System.out.println();
-//                System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
+                if (DEBUG && (DEBUG_CLASSES.isEmpty() || DEBUG_CLASSES.contains(classNode.classNode.name)) && (DEBUG_METHODS_WITH_DESC.isEmpty() || DEBUG_METHODS_WITH_DESC.contains(method.name + method.desc))) {
+                    System.out.println("\t" + stack);
+                    System.out.println("\t" + locals);
+                    System.out.println();
+                    System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
+                }
                 if (now == null) {
-                    throw new NoSuchHandlerException("d") {};
+                    throw new FallingOffCodeException();
                 }
                 switch (now.getOpcode()) {
                     case NOP:
@@ -353,16 +346,16 @@ public class MethodExecutor {
                         doMath(stack, int.class, Long.class, (x, y) -> x.compareTo(y));
                         break;
                     case FCMPL:
-                        doMath(stack, int.class, Float.class, (x, y) -> Float.isNaN((Float) x) || Float.isNaN((Float) y) ? -1 : x.compareTo(y));
+                        doMath(stack, int.class, Float.class, (x, y) -> Float.isNaN(x) || Float.isNaN(y) ? -1 : x.compareTo(y));
                         break;
                     case FCMPG:
-                        doMath(stack, int.class, Float.class, (x, y) -> Float.isNaN((Float) x) || Float.isNaN((Float) y) ? 1 : x.compareTo(y));
+                        doMath(stack, int.class, Float.class, (x, y) -> Float.isNaN(x) || Float.isNaN(y) ? 1 : x.compareTo(y));
                         break;
                     case DCMPL:
-                        doMath(stack, int.class, Double.class, (x, y) -> Double.isNaN((Double) x) || Double.isNaN((Double) y) ? -1 : x.compareTo(y));
+                        doMath(stack, int.class, Double.class, (x, y) -> Double.isNaN(x) || Double.isNaN(y) ? -1 : x.compareTo(y));
                         break;
                     case DCMPG:
-                        doMath(stack, int.class, Double.class, (x, y) -> Double.isNaN((Double) x) || Double.isNaN((Double) y) ? 1 : x.compareTo(y));
+                        doMath(stack, int.class, Double.class, (x, y) -> Double.isNaN(x) || Double.isNaN(y) ? 1 : x.compareTo(y));
                         break;
                     case LADD:
                         doMath(stack, long.class, Long.class, (x, y) -> x + y);
@@ -508,7 +501,7 @@ public class MethodExecutor {
                     case IFEQ: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) == 0) {
+                        if (o.as(int.class) == 0) {
                             now = cast.label;
                         }
                         break;
@@ -516,7 +509,7 @@ public class MethodExecutor {
                     case IFNE: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) != 0) {
+                        if (o.as(int.class) != 0) {
                             now = cast.label;
                         }
                         break;
@@ -524,7 +517,7 @@ public class MethodExecutor {
                     case IFLT: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) < 0) {
+                        if (o.as(int.class) < 0) {
                             now = cast.label;
                         }
                         break;
@@ -532,7 +525,7 @@ public class MethodExecutor {
                     case IFGE: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) >= 0) {
+                        if (o.as(int.class) >= 0) {
                             now = cast.label;
                         }
                         break;
@@ -540,7 +533,7 @@ public class MethodExecutor {
                     case IFGT: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) > 0) {
+                        if (o.as(int.class) > 0) {
                             now = cast.label;
                         }
                         break;
@@ -548,7 +541,7 @@ public class MethodExecutor {
                     case IFLE: {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) <= 0) {
+                        if (o.as(int.class) <= 0) {
                             now = cast.label;
                         }
                         break;
@@ -566,7 +559,7 @@ public class MethodExecutor {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
                         StackObject o1 = stack.remove(0);
-                        if (castToPrimitive(o.value, int.class) != castToPrimitive(o1.value, int.class)) {
+                        if (o.as(int.class) != o1.as(int.class)) {
                             now = cast.label;
                         }
                         break;
@@ -575,7 +568,7 @@ public class MethodExecutor {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
                         StackObject o1 = stack.remove(0);
-                        if (castToPrimitive(o1.value, int.class) < castToPrimitive(o.value, int.class)) {
+                        if (o1.as(int.class) < o.as(int.class)) {
                             now = cast.label;
                         }
                         break;
@@ -584,7 +577,7 @@ public class MethodExecutor {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0).cast(int.class);
                         StackObject o1 = stack.remove(0).cast(int.class);
-                        if (castToPrimitive(o1.value, int.class) >= castToPrimitive(o.value, int.class)) {
+                        if (o1.as(int.class) >= o.as(int.class)) {
                             now = cast.label;
                         }
                         break;
@@ -593,7 +586,7 @@ public class MethodExecutor {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
                         StackObject o1 = stack.remove(0);
-                        if (castToPrimitive(o1.value, int.class) > castToPrimitive(o.value, int.class)) {
+                        if (o1.as(int.class) > o.as(int.class)) {
                             now = cast.label;
                         }
                         break;
@@ -602,7 +595,7 @@ public class MethodExecutor {
                         JumpInsnNode cast = (JumpInsnNode) now;
                         StackObject o = stack.remove(0);
                         StackObject o1 = stack.remove(0);
-                        if (castToPrimitive(o1.value, int.class) <= castToPrimitive(o.value, int.class)) {
+                        if (o1.as(int.class) <= o.as(int.class)) {
                             now = cast.label;
                         }
                         break;
@@ -657,7 +650,7 @@ public class MethodExecutor {
                     }
                     case TABLESWITCH: {
                         StackObject obj = stack.remove(0);
-                        int x = castToPrimitive(obj.value, int.class);
+                        int x = obj.as(int.class);
                         TableSwitchInsnNode cast = (TableSwitchInsnNode) now;
                         if (x < cast.labels.size() && x >= 0) {
                             now = cast.labels.get(x);
@@ -668,7 +661,7 @@ public class MethodExecutor {
                     }
                     case LOOKUPSWITCH: {
                         StackObject obj = stack.remove(0);
-                        Integer x = (Integer) castToPrimitive(obj.value, int.class);
+                        Integer x = obj.as(int.class);
                         LookupSwitchInsnNode cast = (LookupSwitchInsnNode) now;
                         if (cast.keys.indexOf(x) != -1) {
                             now = cast.labels.get(cast.keys.indexOf(x));
@@ -801,7 +794,7 @@ public class MethodExecutor {
                         break;
                     }
                     case NEWARRAY: {
-                        int len = castToPrimitive(stack.remove(0).value, int.class);
+                        int len = stack.remove(0).as(int.class);
                         IntInsnNode cast = (IntInsnNode) now;
                         Object add = null;
                         switch (cast.operand) {
@@ -836,7 +829,7 @@ public class MethodExecutor {
                         break;
                     }
                     case ANEWARRAY: {
-                        int len = castToPrimitive(stack.remove(0).value, int.class);
+                        int len = stack.remove(0).as(int.class);
                         stack.add(0, new StackObject(Object.class, new Object[len]));
                         break;
                     }
@@ -851,7 +844,7 @@ public class MethodExecutor {
                         if (throwable instanceof Throwable) {
                             Utils.sneakyThrow((Throwable) throwable);
                         } else {
-                            Utils.sneakyThrow(new RuntimeException(throwable == null ? "" : throwable.toString()));
+                            throw new ExecutionException("Expected a throwable on stack");
                         }
                         context.pop();
                         return null;
@@ -893,7 +886,7 @@ public class MethodExecutor {
                         MultiANewArrayInsnNode cast = (MultiANewArrayInsnNode) now;
                         List<Integer> sizes = new ArrayList<>();
                         for (int i = 0; i < cast.dims; i++) {
-                            sizes.add(0, castToPrimitive(stack.remove(0).value, int.class));
+                            sizes.add(0, stack.remove(0).as(int.class));
                         }
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
@@ -937,236 +930,102 @@ public class MethodExecutor {
                         break;
                     }
                     default: {
-                        throw new IllegalArgumentException(now.getOpcode() + " ");
+                        throw new ExecutionException("Unknown opcode " + now.getClass().getSimpleName() + " " + now.getOpcode() + " ");
                     }
                 }
                 now = now.getNext();
-            } catch (NoSuchHandlerException e) {
+            } catch (ExecutionException e) {
                 throw e;
-            } catch (Throwable t) { //TODO Actually implement
-//                t.printStackTrace(System.out);
+            } catch (Throwable t) {
+                if (DEBUG_PRINT_EXCEPTIONS) {
+                    t.printStackTrace(System.out);
+                }
                 if (method.tryCatchBlocks != null) {
+                    /*
+                     * Handlers appear to be executed in the order that they appear
+                     * This means that the first valid one we encounter should be ok
+                     */
                     for (TryCatchBlockNode tcbn : method.tryCatchBlocks) {
                         if (method.instructions.indexOf(tcbn.start) <= method.instructions.indexOf(now) && method.instructions.indexOf(now) < method.instructions.indexOf(tcbn.end)) {
-                            List<StackObject> stackClone = new ArrayList<>();
-                            stackClone.add(new StackObject(Object.class, t));
-                            List<StackObject> localsClone = new ArrayList<>(locals);
-                            context.pop();
-                            return execute(classNode, method, tcbn.handler, stackClone, localsClone, context);
+                            if (tcbn.type == null || tcbn.type.equals("java/lang/Throwable")) {
+                                List<StackObject> stackClone = new ArrayList<>();
+                                stackClone.add(new StackObject(Object.class, t));
+                                List<StackObject> localsClone = new ArrayList<>(locals);
+                                context.pop();
+                                return execute(classNode, method, tcbn.handler, stackClone, localsClone, context);
+                            } else {
+                                WrappedClassNode wr = context.dictionary.get(Type.getType(t.getClass()).getInternalName());
+                                if (wr.classNode != null) {
+                                    ClassNode cn = wr.classNode;
+                                    boolean ok = false;
+                                    while (cn != null) {
+                                        if (cn.name.equals(tcbn.type)) {
+                                            ok = true;
+                                            break;
+                                        }
+                                        if (cn.superName == null) {
+                                            break;
+                                        }
+                                        wr = context.dictionary.get(cn.superName);
+                                        if (wr != null) {
+                                            cn = wr.classNode;
+                                        }
+                                    }
+                                    if (ok) {
+                                        List<StackObject> stackClone = new ArrayList<>();
+                                        stackClone.add(new StackObject(Object.class, t));
+                                        List<StackObject> localsClone = new ArrayList<>(locals);
+                                        context.pop();
+                                        return execute(classNode, method, tcbn.handler, stackClone, localsClone, context);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                Utils.sneakyThrow(t);
+                Utils.sneakyThrow(new ExecutionException(t));
                 context.pop();
                 return null;
             }
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> T castToPrimitive(Object start, Class<T> prim) {
-        try {
-            if (start == null) {
-                return (T) PrimitiveUtils.getDefaultValue(Primitives.unwrap(prim));
-            }
-            if (start instanceof Boolean) {
-                start = ((Boolean) start) ? 1 : 0;
-            }
-            if (start instanceof Character) {
-                start = (int) ((Character) start).charValue();
-            }
-            if (prim == char.class) {
-                return (T) Character.valueOf((char) ((Number) start).intValue());
-            }
-            switch (prim.getName()) {
-                case "int":
-                    return (T) (Object) ((Number) start).intValue();
-                case "long":
-                    return (T) (Object) ((Number) start).longValue();
-                case "short":
-                    return (T) (Object) ((Number) start).shortValue();
-                case "double":
-                    return (T) (Object) ((Number) start).doubleValue();
-                case "float":
-                    return (T) (Object) ((Number) start).floatValue();
-                case "byte":
-                    return (T) (Object) ((Number) start).byteValue();
-                case "boolean":
-                    return (T) (Object) (((Number) start).intValue() != 0 ? true : false);
-                default:
-                    throw new IllegalArgumentException(prim.getName());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+    /*
+     * Actually I'm not sure what this is good for. Java's primitives are wonky
+     */
+    static <T> T castToPrimitive(Object start, Class<T> prim) {
+        if (start == null) {
+            throw new ExecutionException("Starting object should not be null");
         }
-        return (T) start;
-    }
-
-    public static class MultiBoolean {
-        public List<AtomicBoolean> consider = new ArrayList<>();
-        public List<MultiBoolean> considerOthers = new ArrayList<>();
-        public AtomicBoolean thisBoolean = new AtomicBoolean(false);
-
-        public MultiBoolean() {
-            consider.add(thisBoolean);
+        if (start instanceof Boolean) {
+            // Boolean does not extend Number
+            // As booleans are stored as integers, this should be converted here
+            // fixme maybe convert it at the root?
+            start = ((Boolean) start) ? 1 : 0;
+        } else if (start instanceof Character) {
+            // Character does not extend Number
+            start = (int) (Character) start;
         }
-
-        public boolean and() {
-            boolean result = true;
-            for (AtomicBoolean b : consider) {
-                result = result && b.get();
-            }
-            for (MultiBoolean b : considerOthers) {
-                result = result && b.and();
-            }
-            return result;
+        if (prim == char.class) {
+            return (T) Character.valueOf((char) ((Number) start).intValue());
         }
-
-        public boolean or() {
-            boolean result = false;
-            for (AtomicBoolean b : consider) {
-                result = result || b.get();
-            }
-            for (MultiBoolean b : considerOthers) {
-                result = result || b.or();
-            }
-            return result;
-        }
-    }
-
-    public static class StackObject {
-        public Class<?> type;
-        public Object value;
-
-        public Type initType = null;
-        public boolean isUninitialized = false;
-
-        public boolean isldc = false;
-        public AtomicReference<MultiBoolean> used = new AtomicReference<>(new MultiBoolean());
-
-        public StackObject(Class<?> type, Object value) {
-            if (Primitives.unwrap(type) != type) {
-                throw new IllegalArgumentException();
-            }
-            this.type = type;
-            this.value = value;
-        }
-
-        public StackObject(Class<?> type, Object value, boolean ldc) {
-            if (Primitives.unwrap(type) != type) {
-                throw new IllegalArgumentException();
-            }
-            this.type = type;
-            this.value = value;
-            this.isldc = ldc;
-        }
-
-        public StackObject(Type type) {
-            this.isUninitialized = true;
-            this.initType = type;
-            this.value = this;
-            this.type = Object.class;
-        }
-
-        public StackObject copy() {
-            if (this.isUninitialized) {
-                return this;
-            }
-            StackObject clone = new StackObject(type, value);
-            clone.used.set(this.used.get());
-            return clone;
-        }
-
-        public <T> T as(Class<T> prim) {
-            if (Primitives.wrap(prim) != prim) {
-                return castToPrimitive(value, prim);
-            }
-            if (value == null)
-                return null;
-            if (prim.isInstance(value)) {
-                return prim.cast(value);
-            } else {
-                throw new IllegalArgumentException("Expected type " + prim.getCanonicalName() + " but got " + value.getClass().getCanonicalName());
-            }
-        }
-
-        public StackObject cast(Class<?> prim) {
-            if (value == null) {
-                throw new NullPointerException();
-            }
-            try {
-                Object start = value;
-                if (start instanceof Boolean) {
-                    start = ((Boolean) start) ? 1 : 0;
-                }
-                if (start instanceof Character) {
-                    start = (int) ((Character) start).charValue();
-                }
-                if (prim == char.class) {
-                    start = Character.valueOf((char) ((Number) start).intValue());
-                }
-                String type = prim.getName();
-                Method unbox = start.getClass().getMethod(type + "Value");
-                StackObject result = new StackObject(prim, unbox.invoke(start));
-                result.used.set(this.used.get());
-                return result;
-            } catch (Exception e) {
-                e.printStackTrace(System.out);
-            }
-            throw new IllegalStateException();
-        }
-
-        public static StackObject forPrimitive(Class<?> prim) {
-            if (prim == null) {
-                throw new NullPointerException();
-            }
-            return new StackObject(prim, PrimitiveUtils.getDefaultValue(prim));
-        }
-
-        public String toString() {
-            return initType != null ? "UninitType[" + initType + "]" : value == null ? "Null object" : value.toString();
-        }
-
-        public void initialize(Object value) {
-            this.initType = null;
-            this.isUninitialized = false;
-            this.value = value;
-        }
-    }
-
-    public static class Context { //FIXME clinit classes
-        private List<StackTraceElement> context = new ArrayList<>();
-
-        public Provider provider;
-        public Map<String, WrappedClassNode> dictionary;
-
-        public Context(Provider provider) {
-            this.provider = provider;
-        }
-
-        public StackTraceElement at(int index) {
-            return context.get(index);
-        }
-
-        public StackTraceElement pop() {
-            return context.remove(0);
-        }
-
-        public void push(String clazz, String method, int constantPoolSize) {
-            clazz = clazz.replace('/', '.');
-            context.add(0, new StackTraceElement(clazz, method, null, constantPoolSize));
-        }
-
-        public int size() {
-            return context.size();
-        }
-
-        public StackTraceElement[] getStackTrace() {
-            StackTraceElement[] orig = new StackTraceElement[size()];
-            for (int i = 0; i < size(); i++) {
-                orig[i] = at(i);
-            }
-            return orig;
+        switch (prim.getName()) {
+            case "int":
+                return (T) (Object) ((Number) start).intValue();
+            case "long":
+                return (T) (Object) ((Number) start).longValue();
+            case "short":
+                return (T) (Object) ((Number) start).shortValue();
+            case "double":
+                return (T) (Object) ((Number) start).doubleValue();
+            case "float":
+                return (T) (Object) ((Number) start).floatValue();
+            case "byte":
+                return (T) (Object) ((Number) start).byteValue();
+            case "boolean":
+                return (T) (Object) (((Number) start).intValue() != 0);
+            default:
+                throw new ExecutionException("Unknown primitive destination " + prim.getName());
         }
     }
 }

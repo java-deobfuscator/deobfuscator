@@ -17,9 +17,8 @@
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
-import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;

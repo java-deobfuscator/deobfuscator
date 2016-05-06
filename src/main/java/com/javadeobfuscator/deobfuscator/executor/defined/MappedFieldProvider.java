@@ -19,8 +19,8 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 
 public class MappedFieldProvider extends FieldProvider {

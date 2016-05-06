@@ -26,26 +26,17 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
-import com.sun.org.apache.bcel.internal.generic.INVOKEINTERFACE;
-import com.sun.org.apache.bcel.internal.generic.INVOKESPECIAL;
-import com.sun.org.apache.bcel.internal.generic.INVOKEVIRTUAL;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.INVOKESTATIC;
 
 public class ReflectionObfuscationTransformer extends Transformer {
     static Map<String, String> PRIMITIVES = new HashMap<>();

@@ -23,8 +23,8 @@ import java.util.regex.Pattern;
 
 import org.jooq.lambda.function.Function3;
 
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstantPool;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;

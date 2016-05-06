@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.executor.exceptions;
 
-public abstract class NoSuchHandlerException extends RuntimeException{
+public abstract class NoSuchHandlerException extends ExecutionException {
     public NoSuchHandlerException(String msg) {
         super(msg);
     }

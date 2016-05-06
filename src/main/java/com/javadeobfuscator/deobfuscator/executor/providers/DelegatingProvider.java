@@ -19,8 +19,8 @@ package com.javadeobfuscator.deobfuscator.executor.providers;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.Context;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public class DelegatingProvider implements Provider {
