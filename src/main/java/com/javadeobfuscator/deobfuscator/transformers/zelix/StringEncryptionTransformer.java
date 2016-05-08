@@ -22,7 +22,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
@@ -30,6 +30,9 @@ import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchHandlerException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaShort;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
@@ -162,32 +165,32 @@ public class StringEncryptionTransformer extends Transformer {
         provider.register(new MappedFieldProvider());
         provider.register(new ComparisonProvider() {
             @Override
-            public boolean instanceOf(StackObject target, Type type, Context context) {
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean checkcast(StackObject target, Type type, Context context) {
-                return target.value instanceof char[];
+            public boolean checkcast(JavaValue target, Type type, Context context) {
+                return target.value() instanceof char[];
             }
 
             @Override
-            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckcast(StackObject target, Type type, Context context) {
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
                 return type.toString().equals("[C");
             }
 
             @Override
-            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
         });
@@ -227,7 +230,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             context.push(wrappedClassNode.classNode.name, clinit.name, wrappedClassNode.constantPoolSize);
                                             ClassNode innerClassNode = classes.get(cast.owner).classNode;
                                             MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(cast.name) && mn.desc.equals(cast.desc)).findFirst().orElse(null);
-                                            String o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(new StackObject(Object.class, ent.getKey().cst)), null, context);
+                                            String o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(new JavaObject(ent.getKey().cst, "java/lang/String")), null, context);
                                             ent.getKey().cst = o;
                                         }
                                     }
@@ -272,9 +275,9 @@ public class StringEncryptionTransformer extends Transformer {
                                         context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
                                         ClassNode innerClassNode = classes.get(strCl).classNode;
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
-                                        List<StackObject> stack = new ArrayList<>();
-                                        stack.add(new StackObject(int.class, sipush1.operand));
-                                        stack.add(new StackObject(int.class, sipush2.operand));
+                                        List<JavaValue> stack = new ArrayList<>();
+                                        stack.add(new JavaShort((short) sipush1.operand));
+                                        stack.add(new JavaShort((short) sipush2.operand));
                                         Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, stack, null, context);
                                         InsnList replace = new InsnList();
                                         replace.add(new LdcInsnNode(o));

@@ -17,42 +17,43 @@
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public class JVMComparisonProvider extends ComparisonProvider {
     @Override
-    public boolean checkEquality(StackObject first, StackObject second, Context context) {
-        if (first.value instanceof JavaClass && second.value instanceof JavaClass) {
-            return first.as(JavaClass.class).equals(second.value);
+    public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
+        if (first.value() instanceof JavaClass && second.value() instanceof JavaClass) {
+            return first.as(JavaClass.class).equals(second.value());
         }
         return first == second;
     }
 
     @Override
-    public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
-        return first.value instanceof JavaClass && second.value instanceof JavaClass;
+    public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
+        return first.value() instanceof JavaClass && second.value() instanceof JavaClass;
     }
 
     @Override
-    public boolean instanceOf(StackObject target, Type type, Context context) {
+    public boolean instanceOf(JavaValue target, Type type, Context context) {
         return false;
     }
 
     @Override
-    public boolean checkcast(StackObject target, Type type, Context context) {
+    public boolean checkcast(JavaValue target, Type type, Context context) {
         return false;
     }
 
     @Override
-    public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+    public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
         return false;
     }
 
     @Override
-    public boolean canCheckcast(StackObject target, Type type, Context context) {
+    public boolean canCheckcast(JavaValue target, Type type, Context context) {
         return false;
     }
 }

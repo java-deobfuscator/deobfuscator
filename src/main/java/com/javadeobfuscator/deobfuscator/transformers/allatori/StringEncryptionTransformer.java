@@ -17,14 +17,16 @@
 package com.javadeobfuscator.deobfuscator.transformers.allatori;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LdcInsnNode;
@@ -61,7 +63,7 @@ public class StringEncryptionTransformer extends Transformer {
                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
                                     try {
-                                        Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new StackObject(Object.class, ldc.cst)), null, context);
+                                        Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(ldc.cst)), null, context);
                                         ldc.cst = o;
                                         methodNode.instructions.remove(ldc.getNext());
                                     } catch (Throwable t) {

@@ -21,10 +21,12 @@ import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.IntInsnNode;
@@ -71,7 +73,7 @@ public class StringEncryptionTransformer extends Transformer {
                                     }
                                     if (intConstant != Integer.MAX_VALUE) {
                                         try {
-                                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new StackObject(Object.class, ldc.cst), new StackObject(int.class, intConstant)), null, context);
+                                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new JavaObject(ldc, "java/lang/String"), new JavaInteger(intConstant)), null, context);
                                             ldc.cst = o;
                                             methodNode.instructions.remove(ldc.getNext());
                                             methodNode.instructions.remove(ldc.getNext());

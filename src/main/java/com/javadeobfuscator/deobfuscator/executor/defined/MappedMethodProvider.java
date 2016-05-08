@@ -18,8 +18,9 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
@@ -33,23 +34,23 @@ public class MappedMethodProvider extends MethodProvider {
         this.classpath = classpath;
     }
 
-    public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
+    public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         WrappedClassNode wrappedClassNode = classpath.get(className);
         return wrappedClassNode != null;
     }
 
     @Override
-    public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
+    public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         WrappedClassNode wrappedClassNode = classpath.get(className);
         if (wrappedClassNode != null) {
             ClassNode classNode = wrappedClassNode.classNode;
             MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
             if (methodNode != null) {
-                List<StackObject> argsClone = new ArrayList<>();
-                for (StackObject arg : args) {
+                List<JavaValue> argsClone = new ArrayList<>();
+                for (JavaValue arg : args) {
                     argsClone.add(arg.copy());
                 }
-                return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? null : targetObject.value, context);
+                return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? null : targetObject.value(), context);
             }
         }
         throw new IllegalArgumentException("Could not find class " + className);

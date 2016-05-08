@@ -19,32 +19,33 @@ package com.javadeobfuscator.deobfuscator.executor.providers;
 import java.util.List;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public interface Provider {
 
-    Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
+    Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context);
 
-    boolean instanceOf(StackObject target, Type type, Context context);
+    boolean instanceOf(JavaValue target, Type type, Context context);
 
-    boolean checkcast(StackObject target, Type type, Context context);
+    boolean checkcast(JavaValue target, Type type, Context context);
 
-    boolean checkEquality(StackObject first, StackObject second, Context context);
+    boolean checkEquality(JavaValue first, JavaValue second, Context context);
 
-    void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
+    void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context);
 
-    Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
+    Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context);
 
-    boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context);
+    boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context);
 
-    boolean canCheckInstanceOf(StackObject target, Type type, Context context);
+    boolean canCheckInstanceOf(JavaValue target, Type type, Context context);
 
-    boolean canCheckcast(StackObject target, Type type, Context context);
+    boolean canCheckcast(JavaValue target, Type type, Context context);
     
-    boolean canCheckEquality(StackObject first, StackObject second, Context context);
+    boolean canCheckEquality(JavaValue first, JavaValue second, Context context);
 
-    boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context);
+    boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context);
 
-    boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context);
+    boolean canSetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context);
 }

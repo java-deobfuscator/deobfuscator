@@ -19,36 +19,37 @@ package com.javadeobfuscator.deobfuscator.executor.providers;
 import java.util.List;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+;
 
 public abstract class ComparisonProvider implements Provider {
     @Override
-    public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
+    public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         return false;
     }
 
     @Override
-    public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         return false;
     }
 
     @Override
-    public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public boolean canSetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         return false;
     }
 
     @Override
-    public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
+    public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         throw new IllegalStateException("Cannot invoke method on ComparisonProvider");
     }
 
     @Override
-    public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         throw new IllegalStateException("Cannot set field on ComparisonProvider");
     }
 
     @Override
-    public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         throw new IllegalStateException("Cannot get field on ComparisonProvider");
     }
 }

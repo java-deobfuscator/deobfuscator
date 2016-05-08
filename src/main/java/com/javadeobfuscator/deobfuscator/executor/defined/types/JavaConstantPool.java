@@ -24,6 +24,7 @@ public class JavaConstantPool {
     }
     
     public int getSize() {
+        System.out.println("Returning cpool size"  + clazz.getWrappedClassNode().constantPoolSize);
         return clazz.getWrappedClassNode().constantPoolSize;
     }
 }

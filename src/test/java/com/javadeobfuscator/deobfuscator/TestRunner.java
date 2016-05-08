@@ -2,15 +2,16 @@ package com.javadeobfuscator.deobfuscator;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.ReflectiveProvider;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
@@ -80,6 +81,7 @@ public class TestRunner {
                 if (compiled.exists() && !compiled.delete()) {
                     throw new AssertionError("Could not delete existing compiled testcase");
                 }
+                String out = "";
                 try {
                     Process process = Runtime.getRuntime().exec(new String[]{
                             "py",
@@ -87,13 +89,14 @@ public class TestRunner {
                             file.getAbsolutePath()
                     }, new String[0], testcases);
                     process.waitFor();
+                    out = readProcess(process);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
                 if (!compiled.exists()) {
-                    throw new AssertionError("Failed to compile " + file.getName());
+                    throw new AssertionError("Failed to compile " + file.getName() + " " + out);
                 }
 
                 try {
@@ -103,108 +106,103 @@ public class TestRunner {
 
                     DelegatingProvider provider = new DelegatingProvider();
                     provider.register(new JVMComparisonProvider());
-                    provider.register(new MethodProvider() {
+                    provider.register(new ComparisonProvider() {
                         @Override
-                        public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
-                            if (jre.containsKey(className)) {
-                                try {
-                                    Class<?> clazz = Class.forName(className.replace("/", "."));
-                                    List<Class<?>> l = BytecodeDescriptor.parseMethod(methodDesc, ClassLoader.getSystemClassLoader());
-                                    l.remove(l.size() - 1);
-                                    Class<?>[] clazzes = l.toArray(new Class<?>[0]);
+                        public boolean instanceOf(JavaValue target, Type type, Context context) {
+                            return false;
+                        }
 
-                                    if (methodName.equals("<init>")) {
-                                        Constructor<?> method = clazz.getDeclaredConstructor(clazzes);
-                                        method.setAccessible(true);
-                                        List<Object> ar = new ArrayList<>();
-                                        for (StackObject o : args) {
-                                            ar.add(o.value);
-                                        }
-                                        targetObject.value = method.newInstance(ar.toArray());
-                                        return null;
-                                    } else {
-                                        Method method = clazz.getDeclaredMethod(methodName, clazzes);
-                                        method.setAccessible(true);
-                                        Object instance = targetObject.value;
-                                        List<Object> ar = new ArrayList<>();
-                                        for (StackObject o : args) {
-                                            ar.add(o.value);
-                                        }
-                                        return method.invoke(instance, ar.toArray());
-                                    }
-                                } catch (Throwable e) {
-                                    throw new ExecutionException(e);
+                        @Override
+                        public boolean checkcast(JavaValue target, Type type, Context context) {
+                            if (type.getDescriptor().equals("[B")) {
+                                if (!(target.value() instanceof byte[])) {
+                                    return false;
+                                }
+                            } else if (type.getDescriptor().equals("[I")) {
+                                if (!(target.value() instanceof int[])) {
+                                    return false;
                                 }
                             }
-                            return null;
+                            return true;
                         }
 
                         @Override
-                        public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
-                            return jre.containsKey(className);
-                        }
-                    });
-                    provider.register(new FieldProvider() {
-                        @Override
-                        public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+                        public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
+                            return false;
                         }
 
                         @Override
-                        public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
-                            if (jre.containsKey(className)) {
-                                try {
-                                    Class<?> clazz = Class.forName(className.replace("/", "."));
-                                    Field f = clazz.getDeclaredField(fieldName);
-                                    return f.get(targetObject == null ? null : targetObject.value);
-                                } catch (Throwable e) {
-                                    throw new ExecutionException(e);
-                                }
-                            }
-                            return null;
+                        public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
+                            return false;
                         }
 
                         @Override
-                        public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
-                            return jre.containsKey(className);
+                        public boolean canCheckcast(JavaValue target, Type type, Context context) {
+                            return true;
                         }
 
                         @Override
-                        public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+                        public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                             return false;
                         }
                     });
+                    provider.register(new ReflectiveProvider(jre));
+
                     provider.register(new MappedFieldProvider());
                     Context context = new Context(provider);
                     context.dictionary = new HashMap<>();
                     context.dictionary.putAll(jre);
                     context.dictionary.put(classNode.name, new WrappedClassNode(classNode, reader.getItemCount()));
+                    context.push(classNode.name, "main", 0);
                     provider.register(new MappedMethodProvider(context.dictionary));
 
                     MethodNode main = classNode.methods.stream().filter(mn -> mn.name.equals("test") && mn.desc.equals("(Ljava/io/PrintStream;)V")).findFirst().get();
 
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     PrintStream ps = new PrintStream(baos);
-                    MethodExecutor.execute(context.dictionary.get(classNode.name), main, Arrays.asList(new StackObject(Object.class, ps)), null, context);
+                    ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
+                    PrintStream ps1 = new PrintStream(baos1);
+                    try {
+                        System.out.println("Running");
+                        MethodExecutor.execute(context.dictionary.get(classNode.name), main, Arrays.asList(JavaValue.valueOf(ps)), null, context);
+                    } catch (RuntimeException ex) {
+                        if (ex.getCause() != null) {
+                            ps1.print("Exception in thread \"main\" ");
+                            ex.getCause().printStackTrace(ps1);
+                        } else {
+                            throw ex;
+                        }
+                    }
                     String actual = baos.toString("UTF-8");
+                    String actualErr = baos1.toString("UTF-8");
                     System.out.println("Program execution completed");
-                    
+
                     Process p1 = Runtime.getRuntime().exec(
-                            new String[] {
+                            new String[]{
                                     "java",
                                     compiled.getName().replace(".class", "")
                             }
                             , new String[0], testcases
                     );
                     String s = IOUtils.toString(p1.getInputStream());
-                    if (s.equals(actual)) {
+                    String s1 = IOUtils.toString(p1.getErrorStream());
+                    if (s.equals(actual) && s1.equals(actualErr)) {
                         System.out.println("Tests matched");
                     } else {
                         System.out.println("Error: Test did not match");
-                        System.out.println("------------");
+                        System.out.println("++++++++++++++++");
+                        System.out.println("Expected output");
+                        System.out.println("++++++++++++++++");
                         System.out.println(s);
                         System.out.println("------------");
+                        System.out.println(s1);
+                        System.out.println("++++++++++++++++");
+                        System.out.println("Actual Output");
+                        System.out.println("++++++++++++++++");
                         System.out.println(actual);
-                        System.out.println("------------");
+                        System.out.println("-----------");
+                        System.out.println(actualErr);
+                        System.out.println("++++++++++++++++");
                         assertTrue(false);
                     }
                 } finally {

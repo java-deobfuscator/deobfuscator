@@ -24,15 +24,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.DisabledFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Handle;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.Method;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.InvokeDynamicInsnNode;
@@ -90,14 +93,14 @@ public class InvokedynamicTransformer extends Transformer {
         provider.register(new JVMMethodProvider());
         provider.register(new ComparisonProvider() {
             @Override
-            public boolean instanceOf(StackObject target, Type type, Context context) {
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean checkcast(StackObject target, Type type, Context context) {
+            public boolean checkcast(JavaValue target, Type type, Context context) {
                 if (type.getDescriptor().equals("[C")) {
-                    if (!(target.value instanceof char[])) {
+                    if (!(target.value() instanceof char[])) {
                         return false;
                     }
                 }
@@ -105,22 +108,22 @@ public class InvokedynamicTransformer extends Transformer {
             }
 
             @Override
-            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckcast(StackObject target, Type type, Context context) {
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
         });
@@ -136,12 +139,12 @@ public class InvokedynamicTransformer extends Transformer {
                             WrappedClassNode wrappedClassNode = classes.get(bootstrap.getOwner());
                             ClassNode bootstrapClassNode = wrappedClassNode.classNode;
                             MethodNode bootstrapMethodNode = bootstrapClassNode.methods.stream().filter(mn -> mn.name.equals(bootstrap.getName()) && mn.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
-                            List<StackObject> args = new ArrayList<>();
-                            args.add(new StackObject(Object.class, null)); //Lookup
-                            args.add(new StackObject(Object.class, dyn.name)); //dyn method name
-                            args.add(new StackObject(Object.class, null)); //dyn method type
+                            List<JavaValue> args = new ArrayList<>();
+                            args.add(JavaValue.valueOf(null)); //Lookup
+                            args.add(JavaValue.valueOf(dyn.name)); //dyn method name
+                            args.add(JavaValue.valueOf(null)); //dyn method type
                             for (Object o : dyn.bsmArgs) {
-                                args.add(new StackObject(Object.class, o));
+                                args.add(JavaValue.valueOf(o));
                             }
                             try {
                                 Context context = new Context(provider);
@@ -149,7 +152,7 @@ public class InvokedynamicTransformer extends Transformer {
 
                                 JavaMethodHandle result = MethodExecutor.execute(wrappedClassNode, bootstrapMethodNode, args, null, context);
                                 String clazz = result.clazz.replace('.', '/');
-                                AbstractInsnNode replacement = null;
+                                MethodInsnNode replacement = null;
                                 switch (result.type) {
                                     case "virtual":
                                         replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
@@ -166,6 +169,11 @@ public class InvokedynamicTransformer extends Transformer {
                                     System.out.println("[Stringer] [InvokedynamicTransformer] Done " + x + "%");
                                     alerted[x - 1] = true;
                                 }
+                            } catch (ExecutionException ex) {
+                                if (ex.getCause() != null) {
+                                    ex.getCause().printStackTrace(System.out);
+                                }
+                                throw ex;
                             } catch (Throwable t) {
                                 System.out.println(classNode.name);
                                 throw t;

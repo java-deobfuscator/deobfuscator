@@ -26,8 +26,10 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
@@ -84,40 +86,40 @@ public class ReflectionObfuscationTransformer extends Transformer {
         provider.register(new MappedMethodProvider(classes));
         provider.register(new ComparisonProvider() {
             @Override
-            public boolean instanceOf(StackObject target, Type type, Context context) {
-                return type.getDescriptor().equals("java/lang/String") && target.value instanceof String;
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
+                return type.getDescriptor().equals("java/lang/String") && target.value() instanceof String;
             }
 
             @Override
-            public boolean checkcast(StackObject target, Type type, Context context) {
+            public boolean checkcast(JavaValue target, Type type, Context context) {
                 if (type.getInternalName().equals("java/lang/String")) {
-                    return target.value instanceof String;
+                    return target.value() instanceof String;
                 } else if (type.getInternalName().equals("java/lang/Class")) {
-                    return target.value instanceof JavaClass || target.value instanceof Type; //TODO consolidate types
+                    return target.value() instanceof JavaClass || target.value() instanceof Type; //TODO consolidate types
                 } else if (type.getInternalName().equals("java/lang/reflect/Method")) {
-                    return target.value instanceof JavaMethod;
+                    return target.value() instanceof JavaMethod;
                 } else if (type.getInternalName().equals("java/lang/reflect/Field")) {
-                    return target.value instanceof JavaField;
+                    return target.value() instanceof JavaField;
                 } else if (type.getInternalName().equals("[Ljava/lang/reflect/Method;")) {
-                    return target.value instanceof Object[];
+                    return target.value() instanceof Object[];
                 } else if (type.getInternalName().equals("[Ljava/lang/Class;")) {
-                    return target.value instanceof Object[];
+                    return target.value() instanceof Object[];
                 }
                 return false;
             }
 
             @Override
-            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean canCheckcast(StackObject target, Type type, Context context) {
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
                 return type.getInternalName().equals("java/lang/String")
                         || type.getInternalName().equals("java/lang/Class")
                         || type.getInternalName().equals("java/lang/reflect/Method")
@@ -127,7 +129,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
             }
 
             @Override
-            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
         });
@@ -175,7 +177,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         Context context = new Context(provider);
                                         context.dictionary = this.classpath;
-                                        MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new StackObject(long.class, ldc)), null, context);
+                                        MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new JavaLong(ldc)), null, context);
                                     } catch (Throwable t) {
                                         System.out.println("Error while fully initializing  " + strCl);
 //                                    t.printStackTrace(System.out);
@@ -185,7 +187,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                 MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                                 Context ctx = new Context(provider);
                                 ctx.dictionary = classpath;
-                                JavaMethod javaMethod = MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new StackObject(long.class, ldc)), null, ctx);
+                                JavaMethod javaMethod = MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new JavaLong(ldc)), null, ctx);
 
                                 InsnList replacement = new InsnList();
                                 String str = javaMethod.getDeclaringClass().getName().replace('.', '/');
@@ -225,12 +227,12 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                 ClassNode innerClassNode = classpath.get(strCl).classNode;
                                 if (initted.add(innerClassNode)) {
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                                    MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Collections.singletonList(new StackObject(long.class, ldc)), null, new Context(provider));
+                                    MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, new Context(provider));
                                 }
                                 MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                                 Context ctx = new Context(provider);
                                 ctx.dictionary = classpath;
-                                JavaField javaField = MethodExecutor.execute(classpath.get(classNode.name), decrypterNode, Collections.singletonList(new StackObject(long.class, ldc)), null, ctx);
+                                JavaField javaField = MethodExecutor.execute(classpath.get(classNode.name), decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, ctx);
                                 InsnList replacement = new InsnList();
                                 Type t = Type.getObjectType(javaField.getDeclaringClass().getName().replace('.', '/'));
                                 replacement.add(new LdcInsnNode(t));

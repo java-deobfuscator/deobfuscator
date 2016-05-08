@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.DictionaryMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
@@ -36,6 +36,8 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
@@ -115,47 +117,47 @@ public class ReflectionObfuscationTransformer extends Transformer {
         provider.register(new DictionaryMethodProvider(this.classes));
         provider.register(new JVMMethodProvider());
         provider.register(new MethodProvider() {
-            public Object invokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
-                Object val = targetObject != null && targetObject.value instanceof JavaMethod ? targetObject.value : null;
+            public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
+                Object val = targetObject != null && targetObject.value() instanceof JavaMethod ? targetObject.value() : null;
                 if (val != null) {
                     myMethod.set((JavaMethod) val);
                 }
                 return val;
             }
 
-            public boolean canInvokeMethod(String className, String methodName, String methodDesc, StackObject targetObject, List<StackObject> args, Context context) {
+            public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
                 return true;
             }
         });
 
         provider.register(new ComparisonProvider() {
             @Override
-            public boolean instanceOf(StackObject target, Type type, Context context) {
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean checkcast(StackObject target, Type type, Context context) {
+            public boolean checkcast(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckcast(StackObject target, Type type, Context context) {
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
         });
@@ -181,13 +183,13 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                         MethodExecutor.execute(wrappedTarget, clinit, new ArrayList<>(), null, context);
                                     }
                                     remove.add(target);
-                                    List<StackObject> args = new ArrayList<>();
+                                    List<JavaValue> args = new ArrayList<>();
                                     for (Type t : Type.getArgumentTypes(method.desc)) {
                                         Class<?> prim = PrimitiveUtils.getPrimitiveByName(t.getClassName());
                                         if (prim != null) {
-                                            args.add(StackObject.forPrimitive(prim));
+                                            args.add(JavaValue.forPrimitive(prim));
                                         } else {
-                                            args.add(StackObject.forPrimitive(Object.class));
+                                            args.add(new JavaObject(null, "java/lang/Object"));
                                         }
                                     }
                                     Context context = new Context(provider);

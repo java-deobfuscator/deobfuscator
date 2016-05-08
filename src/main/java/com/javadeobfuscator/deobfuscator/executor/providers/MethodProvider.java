@@ -17,58 +17,59 @@
 package com.javadeobfuscator.deobfuscator.executor.providers;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
 public abstract class MethodProvider implements Provider {
 
     @Override
-    public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         return false;
     }
 
     @Override
-    public boolean canCheckcast(StackObject target, Type type, Context context) {
+    public boolean canCheckcast(JavaValue target, Type type, Context context) {
         return false;
     }
 
     @Override
-    public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public boolean canSetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         return false;
     }
 
     @Override
-    public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+    public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
         return false;
     }
 
     @Override
-    public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+    public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
         return false;
     }
 
     @Override
-    public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         throw new IllegalStateException("Cannot set field on MethodProvider");
     }
 
     @Override
-    public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         throw new IllegalStateException("Cannot get field on MethodProvider");
     }
 
     @Override
-    public boolean instanceOf(StackObject target, Type type, Context context) {
+    public boolean instanceOf(JavaValue target, Type type, Context context) {
         throw new IllegalStateException("Cannot check instanceof on MethodProvider");
     }
 
     @Override
-    public boolean checkEquality(StackObject first, StackObject second, Context context) {
+    public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
         throw new IllegalStateException("Cannot check equality on MethodProvider");
     }
 
     @Override
-    public boolean checkcast(StackObject target, Type type, Context context) {
+    public boolean checkcast(JavaValue target, Type type, Context context) {
         throw new IllegalStateException("Cannot check cast on MethodProvider");
     }
 }

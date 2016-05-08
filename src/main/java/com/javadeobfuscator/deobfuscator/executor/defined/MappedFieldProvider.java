@@ -20,25 +20,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+;
 import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 
 public class MappedFieldProvider extends FieldProvider {
     private Map<String, Object> fields = new HashMap<>();
 
-    public Object getField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         return fields.get(className + fieldName + fieldDesc);
     }
 
-    public void setField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         fields.put(className + fieldName + fieldDesc, value);
     }
 
-    public boolean canGetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Context context) {
+    public boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         return true;
     }
 
-    public boolean canSetField(String className, String fieldName, String fieldDesc, StackObject targetObject, Object value, Context context) {
+    public boolean canSetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
         return true;
     }
 }

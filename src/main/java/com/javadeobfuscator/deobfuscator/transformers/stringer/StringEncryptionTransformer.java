@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.transformers.stringer;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -27,12 +28,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.StackObject;
+
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
@@ -142,32 +145,32 @@ public class StringEncryptionTransformer extends Transformer {
 
         provider.register(new ComparisonProvider() {
             @Override
-            public boolean instanceOf(StackObject target, Type type, Context context) {
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean checkcast(StackObject target, Type type, Context context) {
+            public boolean checkcast(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean checkEquality(StackObject first, StackObject second, Context context) {
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckInstanceOf(StackObject target, Type type, Context context) {
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
                 return false;
             }
 
             @Override
-            public boolean canCheckcast(StackObject target, Type type, Context context) {
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
                 return true;
             }
 
             @Override
-            public boolean canCheckEquality(StackObject first, StackObject second, Context context) {
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
                 return false;
             }
         });
@@ -197,7 +200,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
                                             Object o = null;
                                             try {
-                                                o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new StackObject(Object.class, ldc.cst)), null, context);
+                                                o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Collections.singletonList(new JavaObject(ldc.cst, "java/lang/String")), null, context);
                                             } catch (ArrayIndexOutOfBoundsException e) {
                                                 enhanced.put(ldc, classNode.classNode.name + " " + methodNode.name);
                                             }
@@ -253,7 +256,7 @@ public class StringEncryptionTransformer extends Transformer {
                                                     context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
                                                     context.push(targetClassNode.classNode.name.replace('/', '.'), targetMethodNode.name, targetClassNode.constantPoolSize);
                                                     context.dictionary = classpath;
-                                                    Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new StackObject(Object.class, innerLdc.cst)), null, context);
+                                                    Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new JavaObject(innerLdc.cst, "java/lang/String")), null, context);
                                                     innerLdc.cst = o;
                                                     targetMethodNode.instructions.remove(innerLdc.getNext());
                                                     total.incrementAndGet();

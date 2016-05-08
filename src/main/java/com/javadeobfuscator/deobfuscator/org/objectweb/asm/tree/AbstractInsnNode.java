@@ -166,7 +166,7 @@ public abstract class AbstractInsnNode {
      * value of -1 indicates that this instruction does not belong to any
      * {@link InsnList}.
      */
-    int index;
+    public int index;
 
     /**
      * Constructs a new {@link AbstractInsnNode}.
