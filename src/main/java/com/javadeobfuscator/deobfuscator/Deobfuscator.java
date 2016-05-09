@@ -86,6 +86,7 @@ public class Deobfuscator {
                 if (ent.getName().endsWith(".class")) {
                     ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                     ClassNode node = new ClassNode();
+                    node.isLibrary = true;
                     reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                     WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
                     classpath.put(node.name, wrappedClassNode);
@@ -153,12 +154,19 @@ public class Deobfuscator {
         });
 
         System.out.println();
-        System.out.println("Reading complete. Transforming");
+        System.out.println("Reading complete. Loading hierachy");
+        System.out.println();
+
+        loadHierachy();
+
+        System.out.println();
+        System.out.println("Transforming");
         System.out.println();
 
 
         for (Class<? extends Transformer> transformerClass : transformers) {
             Transformer transformer = transformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath);
+            transformer.setDeobfuscator(this);
             transformer.transform();
         }
 
@@ -194,7 +202,7 @@ public class Deobfuscator {
     public void loadHierachy() {
         Set<String> processed = new HashSet<>();
         LinkedList<ClassNode> toLoad = new LinkedList<>();
-        toLoad.addAll(this.classpath.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).collect(Collectors.toList()));
+        toLoad.addAll(this.classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).collect(Collectors.toList()));
         while (!toLoad.isEmpty()) {
             for (ClassNode toProcess : loadHierachy(toLoad.poll())) {
                 if (processed.add(toProcess.name)) {
@@ -202,6 +210,10 @@ public class Deobfuscator {
                 }
             }
         }
+    }
+
+    public void resetHierachy() {
+        this.hierachy.clear();
     }
 
     public List<ClassNode> loadHierachy(ClassNode specificNode) {
@@ -235,6 +247,32 @@ public class Deobfuscator {
             toProcess.add(interfaceNode);
         }
         return toProcess;
+    }
+
+    public boolean isSubclass(String possibleParent, String possibleChild) {
+        if (possibleParent.equals(possibleChild)) {
+            return true;
+        }
+        ClassTree parentTree = hierachy.get(possibleParent);
+        if (parentTree != null && hierachy.get(possibleChild) != null) {
+            List<String> layer = new ArrayList<>();
+            layer.add(possibleParent);
+            layer.addAll(parentTree.subClasses);
+            while (!layer.isEmpty()) {
+                if (layer.contains(possibleChild)) {
+                    return true;
+                }
+                List<String> clone = new ArrayList<>();
+                clone.addAll(layer);
+                layer.clear();
+                for (String r : clone) {
+                    ClassTree tree = hierachy.get(r);
+                    if (tree != null)
+                        layer.addAll(tree.subClasses);
+                }
+            }
+        }
+        return false;
     }
 
     public ClassTree getClassTree(String classNode) {
@@ -371,6 +409,7 @@ public class Deobfuscator {
         String className;
 
         public NoClassInPathException(String className) {
+            super(className);
             this.className = className;
         }
     }

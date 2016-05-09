@@ -41,4 +41,10 @@ public class Transformers {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer.class;
         public static final Class<? extends Transformer> REFLECTION_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.ReflectionObfuscationTransformer.class;
     }
+
+    public static class Normalizer {
+        public static final Class<? extends Transformer> CLASS_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.ClassNormalizer.class;
+        public static final Class<? extends Transformer> FIELD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.FieldNormalizer.class;
+        public static final Class<? extends Transformer> METHOD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.MethodNormalizer.class;
+    }
 }

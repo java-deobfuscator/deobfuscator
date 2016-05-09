@@ -48,6 +48,8 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
  */
 public class ClassNode extends ClassVisitor {
 
+    public boolean isLibrary;
+
     /**
      * The class version.
      */

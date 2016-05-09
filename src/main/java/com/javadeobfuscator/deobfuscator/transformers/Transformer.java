@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
@@ -29,6 +30,8 @@ public abstract class Transformer {
     protected final Map<String, WrappedClassNode> classes;
     protected final Map<String, WrappedClassNode> classpath;
     protected final Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers;
+
+    protected Deobfuscator deobfuscator;
 
     public Transformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         this.classes = classes;
@@ -41,4 +44,9 @@ public abstract class Transformer {
     }
 
     public abstract void transform() throws Throwable;
+
+    // heh
+    public void setDeobfuscator(Deobfuscator deobfuscator) {
+        this.deobfuscator = deobfuscator;
+    }
 }
