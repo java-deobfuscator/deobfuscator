@@ -129,27 +129,34 @@ public class CustomRemapper extends Remapper {
      * Map type name to the new name. Subclasses can override.
      */
     public String map(String in) {
-        if (map.containsKey(in)) {
-            return map.get(in);
+        int lin = in.lastIndexOf('/');
+        String className =  lin == -1 ? in : in.substring(lin + 1);
+        if (lin == -1) {
+            return map.getOrDefault(in, in);
+        } else {
+            String newClassName = map.getOrDefault(in, className);
+            int nlin = newClassName.lastIndexOf('/');
+            newClassName =  nlin == -1 ? newClassName : newClassName.substring(nlin + 1);
+            return mapPackage(in.substring(0, lin)) + "/" + newClassName;
         }
-        return in;
     }
 
     public String mapPackage(String in) {
-        if (in.lastIndexOf('/') != -1) {
-            String parentPackage = in.substring(0, in.lastIndexOf('/'));
-            String ret = in.substring(in.lastIndexOf('/'), in.length());
-            return mapPackage(parentPackage) + ret;
+        int lin = in.lastIndexOf('/');
+        if (lin != -1) {
+            String originalName = in.substring(lin + 1);
+            String parentPackage = in.substring(0, lin);
+            String newPackageName = packageMap.getOrDefault(in, originalName);
+            int nlin = newPackageName.lastIndexOf('/');
+            newPackageName =  nlin == -1 ? newPackageName : newPackageName.substring(nlin + 1);
+            return mapPackage(parentPackage) + "/" + newPackageName;
         } else {
-            if (packageMap.containsKey(in)) {
-                return packageMap.get(in);
-            }
-            return in;
+            return packageMap.getOrDefault(in, in);
         }
     }
 
     public boolean mapPackage(String oldPackage, String newPackage) {
-        if (!packageMapReversed.containsKey(newPackage)) {
+        if (!packageMapReversed.containsKey(newPackage) && !packageMap.containsKey(oldPackage)) {
             packageMapReversed.put(newPackage, oldPackage);
             packageMap.put(oldPackage, newPackage);
             return true;
