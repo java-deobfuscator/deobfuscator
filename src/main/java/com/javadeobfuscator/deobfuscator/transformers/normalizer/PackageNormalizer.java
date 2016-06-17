@@ -47,20 +47,24 @@ public class PackageNormalizer extends Transformer {
                     }
                     packageName = parentPackage;
                 }
+                remapper.mapPackage(packageName, "package" + id.getAndIncrement());
             }
-            remapper.mapPackage(packageName, "package" + id.getAndIncrement());
         });
 
         Map<String, WrappedClassNode> updated = new HashMap<>();
         Set<String> removed = new HashSet<>();
 
         classNodes().forEach(wr -> {
-            ClassNode newNode = new ClassNode();
-            RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
-            removed.add(wr.classNode.name);
-            wr.classNode.accept(remap);
-            wr.classNode = newNode;
-            updated.put(newNode.name, wr);
+            String oldName = wr.classNode.name;
+            String newName = remapper.map(oldName);
+            if (!oldName.equals(newName)) {
+                ClassNode newNode = new ClassNode();
+                RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
+                removed.add(wr.classNode.name);
+                wr.classNode.accept(remap);
+                wr.classNode = newNode;
+                updated.put(newNode.name, wr);
+            }
         });
 
         classes.putAll(updated);

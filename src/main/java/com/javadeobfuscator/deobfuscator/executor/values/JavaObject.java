@@ -35,7 +35,7 @@ public class JavaObject extends JavaValue {
     }
 
     public JavaObject copy() {
-        return new JavaObject(value, type);
+        return this;
     }
 
     public void initialize(Object value) {
@@ -46,6 +46,6 @@ public class JavaObject extends JavaValue {
         return this.type;
     }
     public String toString() {
-        return "JavaObject(value=" + value + ", type=" + type + ")";
+        return "JavaObject@" + Integer.toHexString(System.identityHashCode(this)) + "(value=" + value + ", type=" + type + ")";
     }
 }
