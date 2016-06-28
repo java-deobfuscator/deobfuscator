@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
@@ -57,8 +58,10 @@ public class InvokedynamicTransformer extends Transformer {
         System.out.println("[Stringer] [InvokedynamicTransformer] Found " + amount + " invokedynamic instructions");
         if (amount > 0) {
             System.out.println("[Stringer] [InvokedynamicTransformer] Inlining invokedynamic");
+            long start = System.currentTimeMillis();
             int inlined = inlineInvokeDynamic(amount);
-            System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + inlined + " invokedynamic instructions");
+            long end = System.currentTimeMillis();
+            System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + inlined + " invokedynamic instructions, took " + TimeUnit.MILLISECONDS.toSeconds(end - start) + "s");
             System.out.println("[Stringer] [InvokedynamicTransformer] Cleaning up bootstrap methods");
             int cleanedup = cleanup();
             System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + cleanedup + " bootstrap methods");

@@ -181,6 +181,8 @@ public class MethodNormalizer extends Transformer {
                         if (foundSimilar) {
                             if (equals) {
                                 allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+                            } else {
+                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                             }
                         } else {
                             allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);

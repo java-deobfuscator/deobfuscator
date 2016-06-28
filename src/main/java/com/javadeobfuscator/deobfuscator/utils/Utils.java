@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.LinkedList;
 import java.util.Map;
@@ -31,6 +33,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Printer;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Textifier;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisitor;
+import sun.misc.Unsafe;
 
 public class Utils {
 
@@ -213,5 +216,33 @@ public class Utils {
             }
         }
         return false;
+    }
+
+    public static Unsafe getUnsafe() {
+        try {
+            initializeUnsafe();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return unsafe;
+    }
+
+    public static <T> T allocateInstance(Class<T> t) {
+        try {
+            return (T) getUnsafe().allocateInstance(t);
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static Unsafe unsafe;
+
+    private static void initializeUnsafe() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        if (unsafe == null) {
+            Constructor<Unsafe> ctor = Unsafe.class.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            unsafe = ctor.newInstance();
+        }
     }
 }

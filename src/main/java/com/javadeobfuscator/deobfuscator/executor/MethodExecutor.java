@@ -92,6 +92,9 @@ public class MethodExecutor {
         }
         int index = stack.remove(0).intValue();
         Object array = stack.remove(0).value();
+        if (VERIFY && array == null) {
+            throw new ExecutionException("Array is null");
+        }
         if (VERIFY && !array.getClass().isArray()) {
             throw new ExecutionException("Expected Array on stack");
         }
@@ -1118,10 +1121,12 @@ public class MethodExecutor {
                         MethodInsnNode cast = (MethodInsnNode) now;
                         Type type = Type.getReturnType(cast.desc);
                         List<JavaValue> args = new ArrayList<>();
-                        for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+                        List<Type> l = new ArrayList<>(Arrays.asList(Type.getArgumentTypes(cast.desc)));
+                        Collections.reverse(l);
+                        for (Type t1 : l) {
                             if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
                                 if (!(stack.get(0) instanceof JavaTop)) {
-                                    throw new ExecutionException("Expected JavaTop");
+                                    throw new ExecutionException("Expected JavaTop while invoking " + cast.owner + " " + cast.name + " " + cast.desc + ", but got " + stack.get(0).getClass().getSimpleName());
                                 }
                                 stack.remove(0);
                             }
@@ -1269,6 +1274,9 @@ public class MethodExecutor {
                     }
                     case ARRAYLENGTH: {
                         JavaValue obj = stack.remove(0);
+                        if (VERIFY && obj.value() == null) {
+                            throw new ExecutionException("Array is null");
+                        }
                         int len = Array.getLength(obj.value());
                         stack.add(0, new JavaInteger(len));
                         break;
@@ -1417,6 +1425,10 @@ public class MethodExecutor {
                 }
                 now = now.getNext();
             } catch (ExecutionException e) {
+                if (e.clazz.isEmpty()) {
+                    e.clazz = classNode.classNode.name;
+                    e.method = method.name + method.desc;
+                }
                 throw e;
             } catch (Throwable t) {
                 if (DEBUG_PRINT_EXCEPTIONS) {

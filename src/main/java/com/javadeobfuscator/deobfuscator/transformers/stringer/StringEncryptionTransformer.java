@@ -198,6 +198,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             Context context = new Context(provider);
                                             context.dictionary = classpath;
                                             context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
+                                            context.file = deobfuscator.getFile();
                                             Object o = null;
                                             try {
                                                 o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Collections.singletonList(new JavaObject(ldc.cst, "java/lang/String")), null, context);
