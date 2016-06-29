@@ -12,5 +12,7 @@ public class DupFrame extends Frame {
         for (Frame target : this.targets) {
             target.getChildren().add(this);
         }
+        this.parents.addAll(this.targets);
     }
+
 }

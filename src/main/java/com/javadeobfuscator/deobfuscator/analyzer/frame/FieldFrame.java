@@ -39,12 +39,7 @@ public class FieldFrame extends Frame {
             this.obj.children.add(this);
         }
     }
-
-    @Override
-    public String toString() {
-        return "FieldFrame[opcode=" + opcode + ", instance=" + instance + ", value=" + obj + ", target=" + owner + " " + name + desc + "]";
-    }
-
+    
     public String getDesc() {
         return desc;
     }

@@ -46,11 +46,6 @@ public class MethodFrame extends Frame {
         return Collections.unmodifiableList(args);
     }
 
-    @Override
-    public String toString() {
-        return "MethodFrame[target=" + owner + " " + name + desc + ", instance=" + instance + ", args=" + args + "]";
-    }
-
     public Frame getInstance() {
         return instance;
     }

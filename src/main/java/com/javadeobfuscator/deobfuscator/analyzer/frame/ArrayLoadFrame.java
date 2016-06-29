@@ -10,6 +10,8 @@ public class ArrayLoadFrame extends Frame {
         this.array = array;
         this.index.children.add(this);
         this.array.children.add(this);
+        this.parents.add(this.index);
+        this.parents.add(this.array);
     }
 
     public Frame getIndex() {
@@ -20,8 +22,4 @@ public class ArrayLoadFrame extends Frame {
         return this.array;
     }
 
-    @Override
-    public boolean isConstant() {
-        return false;
-    }
 }

@@ -20,4 +20,10 @@ public class ArgumentFrame extends Frame {
     public ArgumentFrame() {
         super(-1);
     }
+    
+    // fixme how to determine?
+    @Override
+    public boolean isConstant() {
+        return false;
+    }
 }

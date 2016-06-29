@@ -19,19 +19,14 @@ package com.javadeobfuscator.deobfuscator.analyzer.frame;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 
 public class NewFrame extends Frame {
-    private String type;
+    private String ntype;
 
     public NewFrame(String type) {
         super(Opcodes.NEW);
-        this.type = type;
+        this.ntype = type;
     }
 
     public String getType() {
-        return this.type;
-    }
-
-    @Override
-    public String toString() {
-        return "NewFrame[type=" + type + "]";
+        return this.ntype;
     }
 }

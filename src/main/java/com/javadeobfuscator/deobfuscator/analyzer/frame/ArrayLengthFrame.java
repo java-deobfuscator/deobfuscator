@@ -25,5 +25,7 @@ public class ArrayLengthFrame extends Frame {
         super(Opcodes.ARRAYLENGTH);
         this.array = array;
         this.array.children.add(this);
+        this.parents.add(array);
     }
+
 }

@@ -25,5 +25,7 @@ public class CheckCastFrame extends Frame {
         super(Opcodes.CHECKCAST);
         this.check = check;
         this.check.children.add(this);
+        this.parents.add(this.check);
     }
+
 }

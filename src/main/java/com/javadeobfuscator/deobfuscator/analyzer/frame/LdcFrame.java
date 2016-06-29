@@ -16,9 +16,4 @@ public class LdcFrame extends Frame {
     public boolean isConstant() {
         return true;
     }
-
-    @Override
-    public String toString() {
-        return "LdcFrame[cst=" + cst + "]";
-    }
 }

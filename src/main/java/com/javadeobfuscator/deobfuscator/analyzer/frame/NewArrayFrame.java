@@ -18,21 +18,16 @@ package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
 public class NewArrayFrame extends Frame {
     private Frame length;
-    private String type;
+    private String ntype;
 
     public NewArrayFrame(int opcode, String type, Frame length) {
         super(opcode);
         this.length = length;
-        this.type = type;
+        this.ntype = type;
 
         this.length.children.add(this);
     }
-
-    @Override
-    public String toString() {
-        return "NewArrayFrame[type=" + type + ", len=" + length + "]";
-    }
-
+    
     public Frame getLength() {
         return length;
     }

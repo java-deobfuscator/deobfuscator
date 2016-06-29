@@ -14,6 +14,9 @@ public class ArrayStoreFrame extends Frame {
         this.object.children.add(this);
         this.index.children.add(this);
         this.array.children.add(this);
+        this.parents.add(this.object);
+        this.parents.add(this.index);
+        this.parents.add(this.array);
     }
 
     public Frame getObject(){
@@ -28,13 +31,4 @@ public class ArrayStoreFrame extends Frame {
         return this.array;
     }
 
-    @Override
-    public boolean isConstant() {
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "ArrayStoreFrame[array=" + array + ", index=" + index + ", value=" + object + "]";
-    }
 }

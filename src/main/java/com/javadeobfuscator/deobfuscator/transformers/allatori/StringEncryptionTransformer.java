@@ -19,7 +19,10 @@ package com.javadeobfuscator.deobfuscator.transformers.allatori;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
+import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 
@@ -46,9 +49,12 @@ public class StringEncryptionTransformer extends Transformer {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
+        
+        AtomicInteger x = new AtomicInteger();
 
         classNodes().forEach(wrappedClassNode -> {
             wrappedClassNode.classNode.methods.forEach(methodNode -> {
+                AnalyzerResult result = MethodAnalyzer.analyze(wrappedClassNode.classNode, methodNode);
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
                     AbstractInsnNode current = methodNode.instructions.get(index);
                     if (current instanceof LdcInsnNode) {
@@ -56,6 +62,7 @@ public class StringEncryptionTransformer extends Transformer {
                         if (ldc.cst instanceof String) {
                             if (ldc.getNext() instanceof MethodInsnNode) {
                                 MethodInsnNode m = (MethodInsnNode) ldc.getNext();
+                                System.out.println(result.getFrames().get(m).get(0));
                                 String strCl = m.owner;
                                 if (m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                                     Context context = new Context(provider);
