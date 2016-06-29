@@ -332,6 +332,10 @@ public class Deobfuscator {
         return null;
     }
 
+    public File getFile() {
+        return input;
+    }
+
     public class CustomClassWriter extends ClassWriter {
         public CustomClassWriter(int flags) {
             super(flags);

@@ -16,9 +16,21 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.security.CodeSource;
+import java.security.ProtectionDomain;
+import java.security.cert.Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
@@ -60,18 +72,35 @@ public class JavaMethod {
         }
         return params.toArray(new JavaClass[params.size()]);
     }
-    
+
     public MethodNode getMethodNode() {
         return this.method;
     }
-    
+
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((clazz == null) ? 0 : clazz.hashCode());
-        result = prime * result + ((method == null) ? 0 : method.hashCode());
-        return result;
+        return getDeclaringClass().getName().hashCode() ^ getName().hashCode();
+    }
+
+    public Object invoke(JavaValue instance, Object[] args) {
+        try {
+            List<JavaValue> argsobjects = new ArrayList<>();
+            if (args != null) {
+                for (Object o : args) {
+                    // I think this should be the case?
+                    argsobjects.add((JavaValue) o);
+                }
+            }
+
+            if (this.clazz.getContext().provider.canInvokeMethod(this.clazz.getWrappedClassNode().classNode.name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext())) {
+                return this.clazz.getContext().provider.invokeMethod(this.clazz.getWrappedClassNode().classNode.name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext());
+            }
+        } catch (ExecutionException ex) {
+            throw ex;
+        } catch (Throwable t) {
+            throw new ExecutionException(t);
+        }
+        throw new ExecutionException("Could not invoke " + this.clazz.getName() + " " + method.name + method.desc);
     }
 
     @Override

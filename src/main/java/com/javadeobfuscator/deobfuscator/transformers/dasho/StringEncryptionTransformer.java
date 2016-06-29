@@ -56,8 +56,8 @@ public class StringEncryptionTransformer extends Transformer {
                     if (current instanceof LdcInsnNode) {
                         LdcInsnNode ldc = (LdcInsnNode) current;
                         if (ldc.cst instanceof String) {
-                            if (ldc.getNext() instanceof MethodInsnNode) {
-                                MethodInsnNode m = (MethodInsnNode) ldc.getNext();
+                            if (Utils.getNext(Utils.getNext(ldc)) instanceof MethodInsnNode) {
+                                MethodInsnNode m = (MethodInsnNode) Utils.getNext(Utils.getNext(ldc));
                                 String strCl = m.owner;
                                 if (m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
                                     Context context = new Context(provider);
@@ -66,17 +66,17 @@ public class StringEncryptionTransformer extends Transformer {
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
 
                                     int intConstant = Integer.MIN_VALUE;
-                                    if (ldc.getNext() instanceof IntInsnNode) {
-                                        intConstant = ((IntInsnNode) ldc.getNext()).operand;
+                                    if (Utils.getNext(ldc) instanceof IntInsnNode) {
+                                        intConstant = ((IntInsnNode) Utils.getNext(ldc)).operand;
                                     } else {
-                                        intConstant = Utils.iconstToInt(ldc.getNext().getOpcode());
+                                        intConstant = Utils.iconstToInt(Utils.getNext(ldc).getOpcode());
                                     }
                                     if (intConstant != Integer.MAX_VALUE) {
                                         try {
-                                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new JavaObject(ldc, "java/lang/String"), new JavaInteger(intConstant)), null, context);
+                                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new JavaObject(ldc.cst, "java/lang/String"), new JavaInteger(intConstant)), null, context);
                                             ldc.cst = o;
-                                            methodNode.instructions.remove(ldc.getNext());
-                                            methodNode.instructions.remove(ldc.getNext());
+                                            methodNode.instructions.remove(Utils.getNext(ldc));
+                                            methodNode.instructions.remove(Utils.getNext(ldc));
                                         } catch (Throwable t) {
                                             System.out.println("Error while decrypting DashO string.");
                                             System.out.println("Are you sure you're deobfuscating something obfuscated by DashO?");

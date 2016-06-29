@@ -21,6 +21,7 @@ import java.util.List;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 ;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 
@@ -30,7 +31,12 @@ public class DelegatingProvider implements Provider {
 
     @Override
     public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-        return providers.stream().filter(provider -> provider.canInvokeMethod(className, methodName, methodDesc, targetObject, args, context)).findFirst().get().invokeMethod(className, methodName, methodDesc, targetObject, args, context);
+        for (Provider provider : providers) {
+            if (provider.canInvokeMethod(className, methodName, methodDesc, targetObject, args, context)) {
+                return provider.invokeMethod(className, methodName, methodDesc, targetObject, args, context);
+            }
+        }
+        throw new ExecutionException("invokeMethod failed");
     }
 
     @Override
@@ -50,17 +56,33 @@ public class DelegatingProvider implements Provider {
 
     @Override
     public void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
-        providers.stream().filter(provider -> provider.canSetField(className, fieldName, fieldDesc, targetObject, value, context)).findFirst().get().setField(className, fieldName, fieldDesc, targetObject, value, context);
+        for (Provider provider : providers) {
+            if (provider.canSetField(className, fieldName, fieldDesc, targetObject, value, context)) {
+                provider.setField(className, fieldName, fieldDesc, targetObject, value, context);
+                return;
+            }
+        }
+        throw new ExecutionException("setField failed");
     }
 
     @Override
     public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
-        return providers.stream().filter(provider -> provider.canGetField(className, fieldName, fieldDesc, targetObject, context)).findFirst().get().getField(className, fieldName, fieldDesc, targetObject, context);
+        for (Provider provider : providers) {
+            if (provider.canGetField(className, fieldName, fieldDesc, targetObject, context)) {
+                return provider.getField(className, fieldName, fieldDesc, targetObject, context);
+            }
+        }
+        throw new ExecutionException("getField failed");
     }
 
     @Override
     public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-        return providers.stream().filter(provider -> provider.canInvokeMethod(className, methodName, methodDesc, targetObject, args, context)).findFirst().isPresent();
+        for (Provider provider : providers) {
+            if (provider.canInvokeMethod(className, methodName, methodDesc, targetObject, args, context)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -80,12 +102,22 @@ public class DelegatingProvider implements Provider {
 
     @Override
     public boolean canSetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
-        return providers.stream().filter(provider -> provider.canSetField(className, fieldName, fieldDesc, targetObject, value, context)).findFirst().isPresent();
+        for (Provider provider : providers) {
+            if (provider.canSetField(className, fieldName, fieldDesc, targetObject, value, context)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
-        return providers.stream().filter(provider -> provider.canGetField(className, fieldName, fieldDesc, targetObject, context)).findFirst().isPresent();
+        for (Provider provider : providers) {
+            if (provider.canGetField(className, fieldName, fieldDesc, targetObject, context)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public DelegatingProvider register(Provider provider) {

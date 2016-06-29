@@ -3,6 +3,7 @@
 /src/debug/
 /src/test/resources/Krakatau
 /src/test/resources/testcases/*.class
+/sn/
 .classpath
 .project
 deobfuscator.iml

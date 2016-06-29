@@ -101,6 +101,12 @@ public class DeobfuscatorMain {
             try {
                 deobfuscator.start();
                 return 0;
+            } catch (Deobfuscator.NoClassInPathException ex) {
+                System.out.println("Could not locate a class file.");
+                System.out.println("Have you added the necessary files to the -path argument?");
+                System.out.println("The error was:");
+                ex.printStackTrace(System.out);
+                return -2;
             } catch (Throwable t) {
                 System.out.println("Deobfuscation failed. Please open a ticket on GitHub");
                 t.printStackTrace(System.out);
