@@ -185,6 +185,15 @@ public class JVMMethodProvider extends MethodProvider {
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.toString());
         }});
+        put("java/lang/Throwable", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("<init>()V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/Throwable");
+                targetObject.initialize(null);
+                return null;
+            });
+            put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
+            put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.toString());
+        }});
         put("java/lang/NullPointerException", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/NullPointerException");

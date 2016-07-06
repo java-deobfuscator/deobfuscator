@@ -249,7 +249,7 @@ public class StringEncryptionTransformer extends Transformer {
                                         MethodInsnNode innerMethod = (MethodInsnNode) innerLdc.getNext();
                                         if (innerLdc.cst instanceof String) {
                                             String strCl = innerMethod.owner;
-                                            if (innerMethod.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
+                                            if (innerMethod.desc.endsWith(")Ljava/lang/String;")) {
                                                 if (enhanced.remove(innerLdc) != null) {
                                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerMethod.name) && mn.desc.equals(innerMethod.desc)).findFirst().orElse(null);

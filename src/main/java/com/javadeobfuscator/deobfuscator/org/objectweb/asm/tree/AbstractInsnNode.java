@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.MethodVisitor;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 /**
  * A node that represents a bytecode instruction. <i>An instruction can appear
@@ -216,6 +217,10 @@ public abstract class AbstractInsnNode {
      */
     public AbstractInsnNode getNext() {
         return next;
+    }
+
+    public AbstractInsnNode getNextIgnoreNonInstructions() {
+        return Utils.getNext(this);
     }
 
     /**

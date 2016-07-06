@@ -4,6 +4,8 @@
 /src/test/resources/Krakatau
 /src/test/resources/testcases/*.class
 /sn/
+/issues/
+/src/main/java/com/javadeobfuscator/deobfuscator/analyzernew/
 .classpath
 .project
 deobfuscator.iml

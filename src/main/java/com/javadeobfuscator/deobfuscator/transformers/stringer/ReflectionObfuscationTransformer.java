@@ -33,6 +33,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.PrimitiveFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
@@ -111,57 +112,6 @@ public class ReflectionObfuscationTransformer extends Transformer {
 
         AtomicReference<JavaMethod> myMethod = new AtomicReference<>();
 
-        DelegatingProvider provider = new DelegatingProvider();
-        provider.register(new PrimitiveFieldProvider());
-        provider.register(new MappedFieldProvider());
-        provider.register(new DictionaryMethodProvider(this.classes));
-        provider.register(new JVMMethodProvider());
-        provider.register(new MethodProvider() {
-            public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-                Object val = targetObject != null && targetObject.value() instanceof JavaMethod ? targetObject.value() : null;
-                if (val != null) {
-                    myMethod.set((JavaMethod) val);
-                }
-                return val;
-            }
-
-            public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-                return true;
-            }
-        });
-
-        provider.register(new ComparisonProvider() {
-            @Override
-            public boolean instanceOf(JavaValue target, Type type, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean checkcast(JavaValue target, Type type, Context context) {
-                return true;
-            }
-
-            @Override
-            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean canCheckcast(JavaValue target, Type type, Context context) {
-                return true;
-            }
-
-            @Override
-            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
-                return false;
-            }
-        });
-
         Set<ClassNode> initted = new HashSet<>();
 
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
@@ -176,9 +126,62 @@ public class ReflectionObfuscationTransformer extends Transformer {
                             MethodNode method = target.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                             if (method != null) {
                                 if (isValidTarget(target, method)) {
-                                    if (initted.add(target)) {
+                                    DelegatingProvider provider = new DelegatingProvider();
+                                    provider.register(new MethodProvider() {
+                                        public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
+                                            Object val = targetObject != null && targetObject.value() instanceof JavaMethod ? targetObject.value() : null;
+                                            if (val != null) {
+                                                myMethod.set((JavaMethod) val);
+                                                throw new StopExecution();
+                                            }
+                                            return val;
+                                        }
+
+                                        public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
+                                            return className.equals("java/lang/reflect/Method") && (methodName.equals("setAccessible") || methodName.equals("invoke"));
+                                        }
+                                    });
+                                    provider.register(new PrimitiveFieldProvider());
+                                    provider.register(new MappedFieldProvider());
+                                    provider.register(new DictionaryMethodProvider(this.classes));
+                                    provider.register(new JVMMethodProvider());
+
+                                    provider.register(new ComparisonProvider() {
+                                        @Override
+                                        public boolean instanceOf(JavaValue target, Type type, Context context) {
+                                            return false;
+                                        }
+
+                                        @Override
+                                        public boolean checkcast(JavaValue target, Type type, Context context) {
+                                            return true;
+                                        }
+
+                                        @Override
+                                        public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
+                                            return false;
+                                        }
+
+                                        @Override
+                                        public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
+                                            return false;
+                                        }
+
+                                        @Override
+                                        public boolean canCheckcast(JavaValue target, Type type, Context context) {
+                                            return true;
+                                        }
+
+                                        @Override
+                                        public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
+                                            return false;
+                                        }
+                                    });
+
+                                    if (initted.add(target) || true) {
                                         Context context = new Context(provider);
                                         context.dictionary = this.classpath;
+                                        context.file = deobfuscator.getFile();
                                         MethodNode clinit = target.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         MethodExecutor.execute(wrappedTarget, clinit, new ArrayList<>(), null, context);
                                     }
@@ -194,23 +197,30 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                     }
                                     Context context = new Context(provider);
                                     context.dictionary = this.classpath;
-                                    MethodExecutor.execute(wrappedTarget, method, args, null, context);
+                                    context.file = deobfuscator.getFile();
+                                    try {
+                                        MethodExecutor.execute(wrappedTarget, method, args, null, context);
+                                    } catch (StopExecution ex) {
+                                    }
                                     JavaMethod result = myMethod.get();
-                                    
-                                    String partDesc = Utils.descFromTypes(Type.getArgumentTypes(result.getMethodNode().desc));
-                                    
-                                    
-                                    methodInsnNode.owner = result.getDeclaringClass().getName().replace('.', '/');
-                                    methodInsnNode.name = result.getName();
-                                    ClassNode cn = result.getDeclaringClass().getClassNode();
-                                    MethodNode mn = cn.methods.stream().filter(m -> m.name.equals(result.getName()) && m.desc.startsWith(partDesc)).findFirst().orElse(null);
-                                    methodInsnNode.desc = mn.desc;
-                                    methodInsnNode.setOpcode(Modifier.isStatic(mn.access) ? Opcodes.INVOKESTATIC : Opcodes.INVOKEVIRTUAL);
-                                    total.incrementAndGet();
-                                    int x = (int) ((total.get() * 1.0d / expected) * 100);
-                                    if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
-                                        System.out.println("[Stringer] [ReflectionObfuscationTransformer] Done " + x + "%");
-                                        alerted[x - 1] = true;
+
+                                    if (result != null) {
+
+                                        String partDesc = Utils.descFromTypes(Type.getArgumentTypes(result.getMethodNode().desc));
+
+
+                                        methodInsnNode.owner = result.getDeclaringClass().getName().replace('.', '/');
+                                        methodInsnNode.name = result.getName();
+                                        ClassNode cn = result.getDeclaringClass().getClassNode();
+                                        MethodNode mn = cn.methods.stream().filter(m -> m.name.equals(result.getName()) && m.desc.startsWith(partDesc)).findFirst().orElse(null);
+                                        methodInsnNode.desc = mn.desc;
+                                        methodInsnNode.setOpcode(Modifier.isStatic(mn.access) ? Opcodes.INVOKESTATIC : Opcodes.INVOKEVIRTUAL);
+                                        total.incrementAndGet();
+                                        int x = (int) ((total.get() * 1.0d / expected) * 100);
+                                        if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                            System.out.println("[Stringer] [ReflectionObfuscationTransformer] Done " + x + "%");
+                                            alerted[x - 1] = true;
+                                        }
                                     }
                                 }
                             }
@@ -230,5 +240,11 @@ public class ReflectionObfuscationTransformer extends Transformer {
             classpath.remove(str.name);
         });
         return total.get();
+    }
+
+    private class StopExecution extends ExecutionException {
+        public StopExecution() {
+            super("");
+        }
     }
 }
