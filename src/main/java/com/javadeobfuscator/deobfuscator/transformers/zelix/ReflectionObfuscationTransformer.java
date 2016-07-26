@@ -75,8 +75,6 @@ public class ReflectionObfuscationTransformer extends Transformer {
         AtomicInteger count = new AtomicInteger(0);
         final boolean[] alerted = new boolean[100];
 
-        Map<String, Object> fields = new HashMap<>();
-
         DelegatingProvider provider = new DelegatingProvider();
 
         provider.register(new PrimitiveFieldProvider());
@@ -167,6 +165,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                             continue;
                         }
                         if (current instanceof MethodInsnNode) {
+
                             MethodInsnNode methodInsnNode = (MethodInsnNode) current;
                             if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;")) {
                                 long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
@@ -177,10 +176,10 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         Context context = new Context(provider);
                                         context.dictionary = this.classpath;
-                                        MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new JavaLong(ldc)), null, context);
+                                        MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Collections.emptyList(), null, context);
                                     } catch (Throwable t) {
                                         System.out.println("Error while fully initializing  " + strCl);
-//                                    t.printStackTrace(System.out);
+                                        t.printStackTrace(System.out);
                                     }
                                 }
 
@@ -226,8 +225,8 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                 String strCl = methodInsnNode.owner;
                                 ClassNode innerClassNode = classpath.get(strCl).classNode;
                                 if (initted.add(innerClassNode)) {
-                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                                    MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, new Context(provider));
+                                    MethodNode decrypterNode1 = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                    MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode1, Collections.singletonList(new JavaLong(ldc)), null, new Context(provider));
                                 }
                                 MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                                 Context ctx = new Context(provider);

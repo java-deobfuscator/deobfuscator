@@ -31,6 +31,7 @@ package com.javadeobfuscator.deobfuscator.org.objectweb.asm;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 /**
  * A Java class parser to make a {@link ClassVisitor} visit an existing class.
@@ -165,6 +166,12 @@ public class ClassReader {
      */
     public ClassReader(final byte[] b, final int off, final int len) {
         this.b = b;
+
+        if (!(b[off] == (byte) 0xca && b[off + 1] == (byte) 0xfe && b[off + 2] == (byte) 0xba && b[off + 3] == (byte) 0xbe)) {
+            byte[] b1 = new byte[]{b[off], b[off + 1], b[off + 2], b[off + 3]};
+            throw new IllegalArgumentException("Not a class file (" + Integer.toHexString(ByteBuffer.wrap(b1).getInt()) + ")");
+        }
+
         // checks the class version
         if (readShort(off + 6) > Opcodes.V1_8) {
             throw new IllegalArgumentException();

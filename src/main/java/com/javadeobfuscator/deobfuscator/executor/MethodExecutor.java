@@ -102,7 +102,12 @@ public class MethodExecutor {
         JavaValue result;
         switch (type.getCanonicalName()) {
             case "byte":
-                result = new JavaByte((Byte) value);
+                if (value instanceof Byte)
+                    result = new JavaByte((Byte) value);
+                else if (value instanceof Boolean)
+                    result = new JavaBoolean((Boolean) value);
+                else
+                    throw new IllegalStateException(value.getClass().getName());
                 break;
             case "char":
                 result = new JavaCharacter((Character) value);
@@ -152,7 +157,15 @@ public class MethodExecutor {
             throw new ExecutionException("Expected Array");
         }
         Object val = value(value);
-        Array.set(array.value(), index.intValue(), val);
+        if (array.value() instanceof boolean[]) {
+            if (value instanceof JavaInteger) {
+                Array.set(array.value(), index.intValue(), value.intValue() != 0);
+            } else {
+                Array.set(array.value(), index.intValue(), val);
+            }
+        } else {
+            Array.set(array.value(), index.intValue(), val);
+        }
     }
 
     public static Object value(JavaValue value) {

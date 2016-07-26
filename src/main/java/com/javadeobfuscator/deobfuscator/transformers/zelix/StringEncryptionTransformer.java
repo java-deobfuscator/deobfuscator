@@ -251,6 +251,7 @@ public class StringEncryptionTransformer extends Transformer {
                     } catch (NoSuchHandlerException e) {
                     } catch (Throwable t) {
                         System.out.println("Error while fully initializing " + wrappedClassNode.classNode.name);
+                        t.printStackTrace();
                     }
                 }
             }

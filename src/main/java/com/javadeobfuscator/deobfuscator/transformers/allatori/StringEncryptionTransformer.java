@@ -30,6 +30,7 @@ import com.javadeobfuscator.deobfuscator.executor.Context;
 
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.Method;
@@ -52,6 +53,7 @@ public class StringEncryptionTransformer extends Transformer {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
+        provider.register(new MappedMethodProvider(classes));
 
         AtomicInteger x = new AtomicInteger();
 
@@ -80,6 +82,7 @@ public class StringEncryptionTransformer extends Transformer {
                                     } catch (Throwable t) {
                                         System.out.println("Error while decrypting Allatori string.");
                                         System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
+                                        System.out.println(wrappedClassNode.classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
                                         t.printStackTrace(System.out);
                                     }
                                 }
