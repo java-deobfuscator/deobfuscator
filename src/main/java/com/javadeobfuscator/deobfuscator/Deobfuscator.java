@@ -322,7 +322,7 @@ public class Deobfuscator {
                 cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
             } catch (Throwable t) {
                 System.out.println("Error: " + node.name + " failed verification");
-//                t.printStackTrace(System.out);
+                //t.printStackTrace(System.out);
             }
             return classBytes;
         } catch (Throwable t) {

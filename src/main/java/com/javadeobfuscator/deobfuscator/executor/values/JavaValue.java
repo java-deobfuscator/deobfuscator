@@ -52,6 +52,9 @@ public abstract class JavaValue {
         if (value() instanceof Integer && clazz == boolean.class) {
             return (T) Boolean.valueOf(intValue() != 0 ? true : false);
         }
+        if (value() instanceof Byte && clazz == char.class) {
+            return (T) Character.valueOf((char) ((JavaByte) this).byteValue());
+        }
         return clazz.cast(value());
     }
 

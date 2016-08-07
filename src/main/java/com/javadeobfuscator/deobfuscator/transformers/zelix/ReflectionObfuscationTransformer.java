@@ -237,7 +237,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                 replacement.add(new LdcInsnNode(t));
                                 replacement.add(new LdcInsnNode(javaField.getName()));
                                 replacement.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getDeclaredField", "(Ljava/lang/String;)Ljava/lang/reflect/Field;", false));
-                                methodNode.instructions.insert(current.getPrevious().getPrevious(), replacement);
+                                methodNode.instructions.insertBefore(current.getPrevious(), replacement);
                                 methodNode.instructions.remove(current.getPrevious());
                                 methodNode.instructions.remove(current);
                                 count.incrementAndGet();
