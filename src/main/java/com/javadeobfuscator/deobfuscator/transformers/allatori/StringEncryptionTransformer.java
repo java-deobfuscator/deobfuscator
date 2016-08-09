@@ -16,31 +16,24 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.allatori;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.Method;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LdcInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer {
 
@@ -69,6 +62,10 @@ public class StringEncryptionTransformer extends Transformer {
                         if (m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                             if (frame.getArgs().get(0) instanceof LdcFrame) {
                                 LdcFrame ldcFrame = (LdcFrame) frame.getArgs().get(0);
+                                if (!(result.getMapping().get(ldcFrame) instanceof LdcInsnNode))
+                                {
+                                    continue;
+                                }
                                 LdcInsnNode insn = (LdcInsnNode) result.getMapping().get(ldcFrame);
                                 Context context = new Context(provider);
                                 context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
