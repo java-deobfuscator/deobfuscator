@@ -1406,7 +1406,7 @@ class MethodWriter extends MethodVisitor {
             if (ClassReader.RESIZE) {
                 resizeInstructions();
             } else {
-                throw new RuntimeException("Method code too large!");
+                //throw new RuntimeException("Method code too large!");
             }
         }
         if (ClassReader.FRAMES && compute == FRAMES) {
