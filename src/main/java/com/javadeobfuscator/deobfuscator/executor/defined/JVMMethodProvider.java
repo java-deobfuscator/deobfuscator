@@ -209,6 +209,12 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(args.get(0).value());
                 return null;
             });
+            put("<init>()V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/RuntimeException");
+                targetObject.initialize(new RuntimeException());
+                return null;
+            });
+            put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
         }});
         put("java/lang/Class", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("forName(Ljava/lang/String;)Ljava/lang/Class;", (targetObject, args, context) -> new JavaClass(args.get(0).as(String.class), context));
