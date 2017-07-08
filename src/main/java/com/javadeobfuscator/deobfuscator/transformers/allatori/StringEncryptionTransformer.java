@@ -32,9 +32,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer {
@@ -51,6 +49,7 @@ public class StringEncryptionTransformer extends Transformer {
         provider.register(new MappedMethodProvider(classes));
 
         AtomicInteger count = new AtomicInteger();
+        Set<MethodNode> decryptor = new HashSet<>();
 
         System.out.println("[Allatori] [StringEncryptionTransformer] Starting");
 
@@ -92,6 +91,8 @@ public class StringEncryptionTransformer extends Transformer {
 
                                     if (isAllatoriMethod(insnCount, invokeCount)) {
                                         patchMethod(invokeCount, decrypterNode);
+                                        decryptor.add(decrypterNode);
+
                                         try {
                                             insn.cst = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(insn.cst)), null, context);
                                             methodNode.instructions.remove(current);
@@ -111,6 +112,8 @@ public class StringEncryptionTransformer extends Transformer {
             });
         });
         System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
+        System.out.println("[Allatori] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
+        System.out.println("[Allatori] [StringEncryptionTransformer] Done");
     }
 
     private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {
@@ -132,5 +135,15 @@ public class StringEncryptionTransformer extends Transformer {
                 }
             }
         }
+    }
+
+    private int cleanup(Set<MethodNode> methods) {
+        AtomicInteger count = new AtomicInteger(0);
+        classNodes().forEach(wrappedClassNode -> {
+            if (wrappedClassNode.classNode.methods.removeIf(methods::contains)) {
+                count.getAndIncrement();
+            }
+        });
+        return count.get();
     }
 }
