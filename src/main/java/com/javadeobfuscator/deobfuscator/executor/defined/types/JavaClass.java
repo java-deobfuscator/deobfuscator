@@ -86,6 +86,10 @@ public class JavaClass {
         return this.name;
     }
 
+    public String getSimpleName() {
+        return this.name.substring(this.name.lastIndexOf(".") + 1);
+    }
+
     private Map<String, ClassTree> hierachy = new HashMap<>();
 
     public ClassNode assureLoaded(String ref) {
@@ -226,6 +230,14 @@ public class JavaClass {
         return fields.toArray(new JavaField[fields.size()]);
     }
 
+    public JavaField getDeclaredField(String fieldName) {
+        for (FieldNode fieldNode : this.classNode.fields) {
+            if (fieldNode.name.equals(fieldName))
+                return new JavaField(this, fieldNode);
+        }
+        return null;
+    }
+
     public JavaClass getSuperclass() {
         if (this.type.getSort() == Type.ARRAY) {
             return new JavaClass("java/lang/Object", this.context);
@@ -302,5 +314,9 @@ public class JavaClass {
 
     public WrappedClassNode getWrappedClassNode() {
         return this.wrappedClassNode;
+    }
+
+    public boolean isInterface() {
+        return !((classNode.access & Opcodes.ACC_INTERFACE) == 0);
     }
 }
