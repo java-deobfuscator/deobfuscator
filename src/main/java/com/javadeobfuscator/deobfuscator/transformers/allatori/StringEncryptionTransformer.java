@@ -28,12 +28,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LdcInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TypeInsnNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
@@ -43,45 +38,44 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer {
-    
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath)
-    {
+
+    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
     }
-    
+
     @Override
-    public void transform() throws Throwable
-    {
+    public void transform() throws Throwable {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
         provider.register(new MappedMethodProvider(classes));
-        
+
         AtomicInteger count = new AtomicInteger();
-    
+
         System.out.println("[Allatori] [StringEncryptionTransformer] Starting");
-        
+
         classNodes().forEach(wrappedClassNode -> {
             wrappedClassNode.classNode.methods.forEach(methodNode -> {
                 AnalyzerResult result = MethodAnalyzer.analyze(wrappedClassNode.classNode, methodNode);
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
                     AbstractInsnNode current = methodNode.instructions.get(index);
                     if (current instanceof MethodInsnNode) {
-                        MethodInsnNode m     = (MethodInsnNode) current;
-                        MethodFrame    frame = (MethodFrame) result.getFrames().get(m).get(0);
-                        String         strCl = m.owner;
+                        MethodInsnNode m = (MethodInsnNode) current;
+                        MethodFrame frame = (MethodFrame) result.getFrames().get(m).get(0);
+                        String strCl = m.owner;
                         if (m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                             if (frame.getArgs().get(0) instanceof LdcFrame) {
                                 LdcFrame ldcFrame = (LdcFrame) frame.getArgs().get(0);
-                                if (!(result.getMapping().get(ldcFrame) instanceof LdcInsnNode)) {
+                                if (!(result.getMapping().get(ldcFrame) instanceof LdcInsnNode))
+                                {
                                     continue;
                                 }
-                                LdcInsnNode insn    = (LdcInsnNode) result.getMapping().get(ldcFrame);
-                                Context     context = new Context(provider);
+                                LdcInsnNode insn = (LdcInsnNode) result.getMapping().get(ldcFrame);
+                                Context context = new Context(provider);
                                 context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
                                 if (classes.containsKey(strCl)) {
-                                    ClassNode  innerClassNode = classes.get(strCl).classNode;
-                                    MethodNode decrypterNode  = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
+                                    ClassNode innerClassNode = classes.get(strCl).classNode;
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
                                     if (isAllatoriMethod(decrypterNode)) {
                                         try {
                                             insn.cst = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(insn.cst)), null, context);
@@ -103,28 +97,27 @@ public class StringEncryptionTransformer extends Transformer {
         });
         System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
     }
-    
+
     //XXX: Better detector
-    private boolean isAllatoriMethod(MethodNode method)
-    {
+    private boolean isAllatoriMethod(MethodNode method) {
         Map<Integer, AtomicInteger> insnCount   = new HashMap<>();
         Map<String, AtomicInteger>  invokeCount = new HashMap<>();
         for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
             int opcode = insn.getOpcode();
             insnCount.putIfAbsent(opcode, new AtomicInteger(0));
             insnCount.get(opcode).getAndIncrement();
-            
+
             if (insn instanceof MethodInsnNode) {
                 invokeCount.putIfAbsent(((MethodInsnNode) insn).name, new AtomicInteger(0));
                 invokeCount.get(((MethodInsnNode) insn).name).getAndIncrement();
             }
         }
-        
+
         if (((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 11)) >= 50 &&
-            ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 50 &&
-            ((int) ((insnCount.get(Opcodes.NEWARRAY).get() * 100.0f) / 1)) >= 100 &&
-            ((int) ((invokeCount.get("charAt").get() * 100.0f) / 4)) >= 50 &&
-            ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50) {
+                ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 50 &&
+                ((int) ((insnCount.get(Opcodes.NEWARRAY).get() * 100.0f) / 1)) >= 100 &&
+                ((int) ((invokeCount.get("charAt").get() * 100.0f) / 4)) >= 50 &&
+                ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50) {
             if (invokeCount.containsKey("getStackTrace") && invokeCount.containsKey("getClassName")) {
                 for (int i = 0; i < method.instructions.size(); i++) {
                     AbstractInsnNode insn = method.instructions.get(i);
