@@ -235,6 +235,7 @@ public class JavaClass {
             if (fieldNode.name.equals(fieldName))
                 return new JavaField(this, fieldNode);
         }
+        Utils.sneakyThrow(new NoSuchFieldException(fieldName));
         return null;
     }
 
