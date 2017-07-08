@@ -47,6 +47,25 @@ public class JavaField {
         }
     }
 
+    public void setAccessible(boolean accessible) {
+    }
+
+    public int getModifiers() {
+        return this.field.access;
+    }
+
+    public void setInt(Object obj, int i) {
+        this.field.value = i;
+    }
+
+    public void set(Object instance, Object obj) {
+        this.field.value = obj;
+    }
+
+    public Object get(Object obj) {
+        return this.field.value;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
