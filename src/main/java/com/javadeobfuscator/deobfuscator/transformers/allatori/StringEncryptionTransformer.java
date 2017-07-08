@@ -76,7 +76,22 @@ public class StringEncryptionTransformer extends Transformer {
                                 if (classes.containsKey(strCl)) {
                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
-                                    if (isAllatoriMethod(decrypterNode)) {
+
+                                    Map<Integer, AtomicInteger> insnCount = new HashMap<>();
+                                    Map<String, AtomicInteger> invokeCount = new HashMap<>();
+                                    for (AbstractInsnNode i = decrypterNode.instructions.getFirst(); i != null; i = i.getNext()) {
+                                        int opcode = i.getOpcode();
+                                        insnCount.putIfAbsent(opcode, new AtomicInteger(0));
+                                        insnCount.get(opcode).getAndIncrement();
+
+                                        if (i instanceof MethodInsnNode) {
+                                            invokeCount.putIfAbsent(((MethodInsnNode) i).name, new AtomicInteger(0));
+                                            invokeCount.get(((MethodInsnNode) i).name).getAndIncrement();
+                                        }
+                                    }
+
+                                    if (isAllatoriMethod(insnCount, invokeCount)) {
+                                        patchMethod(invokeCount, decrypterNode);
                                         try {
                                             insn.cst = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(insn.cst)), null, context);
                                             methodNode.instructions.remove(current);
@@ -98,38 +113,24 @@ public class StringEncryptionTransformer extends Transformer {
         System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
     }
 
-    //XXX: Better detector
-    private boolean isAllatoriMethod(MethodNode method) {
-        Map<Integer, AtomicInteger> insnCount   = new HashMap<>();
-        Map<String, AtomicInteger>  invokeCount = new HashMap<>();
-        for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
-            int opcode = insn.getOpcode();
-            insnCount.putIfAbsent(opcode, new AtomicInteger(0));
-            insnCount.get(opcode).getAndIncrement();
-
-            if (insn instanceof MethodInsnNode) {
-                invokeCount.putIfAbsent(((MethodInsnNode) insn).name, new AtomicInteger(0));
-                invokeCount.get(((MethodInsnNode) insn).name).getAndIncrement();
-            }
-        }
-
-        if (((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 11)) >= 50 &&
+    private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {
+        //XXX: Better detector
+        return ((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 11)) >= 50 &&
                 ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 50 &&
                 ((int) ((insnCount.get(Opcodes.NEWARRAY).get() * 100.0f) / 1)) >= 100 &&
                 ((int) ((invokeCount.get("charAt").get() * 100.0f) / 4)) >= 50 &&
-                ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50) {
-            if (invokeCount.containsKey("getStackTrace") && invokeCount.containsKey("getClassName")) {
-                for (int i = 0; i < method.instructions.size(); i++) {
-                    AbstractInsnNode insn = method.instructions.get(i);
-                    if (insn.getOpcode() == Opcodes.NEW && ((TypeInsnNode)insn).desc.endsWith("Exception")) {
-                        method.instructions.set(insn, new TypeInsnNode(Opcodes.NEW, "java/lang/RuntimeException"));
-                    } else if (insn instanceof MethodInsnNode && ((MethodInsnNode) insn).owner.endsWith("Exception")) {
-                        method.instructions.set(insn, new MethodInsnNode(insn.getOpcode(), "java/lang/RuntimeException", ((MethodInsnNode) insn).name, ((MethodInsnNode) insn).desc, ((MethodInsnNode) insn).itf));
-                    }
+                ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50;
+    }
+
+    private void patchMethod(Map<String, AtomicInteger> invokeCount, MethodNode method) {
+        if (invokeCount.containsKey("getStackTrace") && invokeCount.containsKey("getClassName")) {
+            for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
+                if (insn.getOpcode() == Opcodes.NEW && ((TypeInsnNode) insn).desc.endsWith("Exception")) {
+                    ((TypeInsnNode) insn).desc = "java/lang/RuntimeException";
+                } else if (insn instanceof MethodInsnNode && ((MethodInsnNode) insn).owner.endsWith("Exception")) {
+                    ((MethodInsnNode) insn).owner = "java/lang/RuntimeException";
                 }
             }
-            return true;
         }
-        return false;
     }
 }
