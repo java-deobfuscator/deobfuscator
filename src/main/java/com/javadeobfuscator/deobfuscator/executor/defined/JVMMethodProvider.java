@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import java.io.*;
 import java.lang.reflect.Modifier;
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.CodeSource;
@@ -28,6 +29,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
@@ -49,6 +51,23 @@ public class JVMMethodProvider extends MethodProvider {
         // Java
         put("java/lang/Object", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getClass()Ljava/lang/Class;", (targetObject, args, context) -> new JavaClass(Type.getType(targetObject.value().getClass()).getInternalName(), context));
+            put("notifyAll()V", (targetObject, args, context) -> {
+                synchronized (targetObject.as(Object.class)) {
+                    targetObject.as(Object.class).notifyAll();
+                }
+                return null;
+            });
+            put("wait(J)V", (targetObject, args, context) -> {
+                synchronized (targetObject.as(Object.class)) {
+                    targetObject.as(Object.class).wait((long) args.get(0).value());
+                }
+                return null;
+            });
+            put("<init>()V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/Object");
+                targetObject.initialize(new Object());
+                return null;
+            });
         }});
         put("java/util/zip/ZipInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/io/InputStream;)V", (targetObject, args, context) -> {
@@ -343,12 +362,20 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.as(JavaThread.class).start();
                 return null;
             });
-            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> context.retrieveThread(Thread.currentThread().getId()));
+            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> ThreadStore.retrieveThread(Thread.currentThread().getId()));
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> {
                 context.push("java.lang.Thread", "getStackTrace", 0);
                 StackTraceElement[] elems = context.getStackTrace();
                 context.pop();
                 return elems;
+            });
+            put("join()V", (targetObject, args, context) -> {
+                targetObject.as(JavaThread.class).getThread().join();
+                return null;
+            });
+            put("yield()V", (targetObject, args, context) -> {
+                Thread.yield();
+                return null;
             });
             put("<init>()V", (targetObject, args, context) -> {
                 targetObject.initialize(new JavaThread(context, (JavaObject) targetObject));
@@ -368,6 +395,8 @@ public class JVMMethodProvider extends MethodProvider {
             put("parseInt(Ljava/lang/String;)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/String;)Ljava/lang/Integer;", (targetObject, args, context) -> new JavaInteger(Integer.valueOf(args.get(0).as(String.class))));
             put("valueOf(Ljava/lang/String;I)Ljava/lang/Integer;", (targetObject, args, context) -> new JavaInteger(Integer.valueOf(args.get(0).as(String.class), args.get(1).intValue())));
+            put("valueOf(I)Ljava/lang/Integer;", (targetObject, args, context) -> args.get(0));
+            put("intValue()I", (targetObject, args, context) -> ((JavaInteger) targetObject.value()).value());
         }});
         put("java/util/regex/Pattern", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("compile(Ljava/lang/String;)Ljava/util/regex/Pattern;", (targetObject, args, context) -> Pattern.compile(args.get(0).as(String.class)));
@@ -408,6 +437,23 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/lang/Math", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("abs(J)J", (targetObject, args, context) -> Math.abs(args.get(0).longValue()));
+        }});
+        put("java/math/BigInteger", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("<init>(Ljava/lang/String;I)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/math/BigInteger");
+                if (args.get(1).value() instanceof Byte) { // FIXME
+                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (byte) args.get(1).value()));
+                } else if (args.get(1).value() instanceof Short) {
+                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (short) args.get(1).value()));
+                } else {
+                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (int) args.get(1).value()));
+                }
+                return null;
+            });
+            put("add(Ljava/math/BigInteger;)Ljava/math/BigInteger;", (targetObject, args, context) -> targetObject.as(BigInteger.class).add(args.get(0).as(BigInteger.class)));
+            put("xor(Ljava/math/BigInteger;)Ljava/math/BigInteger;", (targetObject, args, context) -> targetObject.as(BigInteger.class).xor(args.get(0).as(BigInteger.class)));
+            put("modPow(Ljava/math/BigInteger;Ljava/math/BigInteger;)Ljava/math/BigInteger;", (targetObject, args, context) -> targetObject.as(BigInteger.class).modPow(args.get(0).as(BigInteger.class), args.get(1).as(BigInteger.class)));
+            put("intValue()I", (targetObject, args, context) -> new JavaInteger(targetObject.as(BigInteger.class).intValue()).intValue());
         }});
 
         // Javax

@@ -343,8 +343,7 @@ public class Deobfuscator {
 
         @Override
         protected String getCommonSuperClass(String type1, String type2) {
-            String a = getCommonSuperClass1(type1, type2);
-            return a;
+            return getCommonSuperClass1(type1, type2);
         }
 
         private String getCommonSuperClass1(String type1, String type2) {
@@ -402,10 +401,7 @@ public class Deobfuscator {
                     toProcess.addAll(tempTree.subClasses);
                 }
             }
-            if (allChilds1.contains(type2)) {
-                return true;
-            }
-            return false;
+            return allChilds1.contains(type2);
         }
     }
 
