@@ -72,20 +72,20 @@ public class StringEncryptionTransformer extends Transformer {
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             boolean method = false;
             boolean field = false;
-            Iterator<MethodNode> it = classNode.methods.iterator();
-            while (it.hasNext()) {
-                MethodNode node = it.next();
+            for (MethodNode node : classNode.methods) {
                 if (node.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                     method = true;
                 } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
                     method = false;
                     break;
+                } else if (node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;") && classNode.superName.equals("java/lang/Thread")) {
+                    method = true;
                 }
             }
-            Iterator<FieldNode> fieldIt = classNode.fields.iterator();
-            while (fieldIt.hasNext()) {
-                FieldNode node = fieldIt.next();
+            for (FieldNode node : classNode.fields) {
                 if (node.desc.equals("[Ljava/lang/Object;")) {
+                    field = true;
+                } else if (node.desc.equals("[Ljava/math/BigInteger")) {
                     field = true;
                 }
             }
