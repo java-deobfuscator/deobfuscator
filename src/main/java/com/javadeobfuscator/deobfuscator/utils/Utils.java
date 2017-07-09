@@ -245,4 +245,40 @@ public class Utils {
             unsafe = ctor.newInstance();
         }
     }
+
+    public static boolean isNumber(String type) {
+        switch (type) {
+            case "I":
+            case "S":
+            case "B":
+            case "J":
+            case "D":
+            case "F":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isDigit(String type) {
+        switch (type) {
+            case "I":
+            case "S":
+            case "B":
+            case "J":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isFloat(String type) {
+        switch (type) {
+            case "F":
+            case "D":
+                return true;
+            default:
+                return false;
+        }
+    }
 }

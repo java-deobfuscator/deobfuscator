@@ -1,17 +1,15 @@
 package com.javadeobfuscator.deobfuscator.executor;
 
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaThread;
 import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Context { //FIXME clinit classes
     private List<StackTraceElement> context = new ArrayList<>();
+    private Map<Long, JavaThread> threads = Collections.synchronizedMap(new HashMap<>());
 
     public Provider provider;
     public Map<String, WrappedClassNode> dictionary;
@@ -47,5 +45,20 @@ public class Context { //FIXME clinit classes
             orig[i] = at(i);
         }
         return orig;
+    }
+
+    public void addThread(long threadId, JavaThread thread) {
+        threads.put(threadId, thread);
+    }
+
+    public JavaThread retrieveThread(long threadId) {
+        JavaThread thread = threads.get(threadId);
+
+        if (thread == null) { // main thread
+            thread = new JavaThread(this, Thread.currentThread());
+            addThread(threadId, thread);
+        }
+
+        return thread;
     }
 }
