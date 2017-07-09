@@ -42,8 +42,9 @@ public class JavaThread {
             ClassNode classNode = wrappedClass.classNode;
             MethodNode method = classNode.methods.stream().filter(mn -> mn.name.equals("run") && mn.desc.equals("()V")).findFirst().orElse(null);
             if (method != null) {
-                (thread = new Thread(() -> MethodExecutor.execute(wrappedClass, method, Collections.emptyList(), instance, context))).start();
+                thread = new Thread(() -> MethodExecutor.execute(wrappedClass, method, Collections.emptyList(), instance, context));
                 context.addThread(thread.getId(), this);
+                thread.start();
                 return;
             }
             throw new RuntimeException("Could not find run() method on " + classNode.name);
