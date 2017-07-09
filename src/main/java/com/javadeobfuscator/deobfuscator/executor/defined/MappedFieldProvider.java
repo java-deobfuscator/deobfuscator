@@ -25,7 +25,7 @@ import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 
 public class MappedFieldProvider extends FieldProvider {
-    private Map<String, Object> fields = new HashMap<>();
+    private Map<String, Object> fields = new HashMap<>(); //FIXME: Instance field
 
     public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
         return fields.get(className + fieldName + fieldDesc);

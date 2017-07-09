@@ -58,8 +58,8 @@ public class JavaField {
         this.field.value = i;
     }
 
-    public void set(Object instance, Object obj) {
-        this.field.value = obj;
+    public void set(Object obj, Object value) {
+        this.field.value = value;
     }
 
     public Object get(Object obj) {

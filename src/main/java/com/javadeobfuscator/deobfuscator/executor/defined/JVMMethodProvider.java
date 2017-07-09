@@ -32,13 +32,13 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import org.jooq.lambda.tuple.Tuple3;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -48,9 +48,7 @@ public class JVMMethodProvider extends MethodProvider {
     private static final Map<String, Map<String, Function3<JavaValue, List<JavaValue>, Context, Object>>> functions = new HashMap<String, Map<String, Function3<JavaValue, List<JavaValue>, Context, Object>>>() {{
         // Java
         put("java/lang/Object", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("getClass()Ljava/lang/Class;", (targetObject, args, context) -> {
-                return new JavaClass(Type.getType(targetObject.value().getClass()).getInternalName(), context);
-            });
+            put("getClass()Ljava/lang/Class;", (targetObject, args, context) -> new JavaClass(Type.getType(targetObject.value().getClass()).getInternalName(), context));
         }});
         put("java/util/zip/ZipInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/io/InputStream;)V", (targetObject, args, context) -> {
@@ -281,7 +279,7 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.as(JavaConstructor.class).setAccessible(args.get(0).as(boolean.class));
                 return null;
             });
-            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class)); // FIXME
+            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class)); // XXX
         }});
         put("java/lang/reflect/Method", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).getName());
@@ -341,26 +339,25 @@ public class JVMMethodProvider extends MethodProvider {
             });
         }});
         put("java/lang/Thread", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> null);
+            put("start()V", (targetObject, args, context) -> {
+                targetObject.as(JavaThread.class).start();
+                return null;
+            });
+            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> context.retrieveThread(Thread.currentThread().getId()));
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> {
                 context.push("java.lang.Thread", "getStackTrace", 0);
                 StackTraceElement[] elems = context.getStackTrace();
                 context.pop();
                 return elems;
             });
-        }});
-        put("sun/misc/SharedSecrets", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("getJavaLangAccess()Lsun/misc/JavaLangAccess;", (targetObject, args, context) -> null);
+            put("<init>()V", (targetObject, args, context) -> {
+                targetObject.initialize(new JavaThread(context, (JavaObject) targetObject));
+                return null;
+            });
         }});
         put("java/lang/StackTraceElement", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getClassName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getClassName());
             put("getMethodName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getMethodName());
-        }});
-        put("sun/misc/JavaLangAccess", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("getConstantPool(Ljava/lang/Class;)Lsun/reflect/ConstantPool;", (targetObject, args, context) -> new JavaConstantPool(args.get(0).as(JavaClass.class)));
-        }});
-        put("sun/reflect/ConstantPool", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("getSize()I", (targetObject, args, context) -> targetObject.as(JavaConstantPool.class).getSize());
         }});
         put("java/lang/Long", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("parseLong(Ljava/lang/String;)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class)));
@@ -413,10 +410,20 @@ public class JVMMethodProvider extends MethodProvider {
             put("abs(J)J", (targetObject, args, context) -> Math.abs(args.get(0).longValue()));
         }});
 
-
         // Javax
         put("javax/xml/bind/DatatypeConverter", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("parseBase64Binary(Ljava/lang/String;)[B", (targetObject, args, context) -> DatatypeConverter.parseBase64Binary(args.get(0).as(String.class)));
+        }});
+
+        // Sun
+        put("sun/misc/SharedSecrets", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("getJavaLangAccess()Lsun/misc/JavaLangAccess;", (targetObject, args, context) -> null);
+        }});
+        put("sun/misc/JavaLangAccess", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("getConstantPool(Ljava/lang/Class;)Lsun/reflect/ConstantPool;", (targetObject, args, context) -> new JavaConstantPool(args.get(0).as(JavaClass.class)));
+        }});
+        put("sun/reflect/ConstantPool", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("getSize()I", (targetObject, args, context) -> targetObject.as(JavaConstantPool.class).getSize());
         }});
     }};
     //@formatter:on
