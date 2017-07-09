@@ -106,5 +106,10 @@
             <version>2.5</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.rollbar</groupId>
+            <artifactId>rollbar</artifactId>
+            <version>0.5.3</version>
+        </dependency>
     </dependencies>
 </project>
