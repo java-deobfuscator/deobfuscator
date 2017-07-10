@@ -1,5 +1,4 @@
 # Deobfuscator
-[![Build Status](https://ci.samczsun.com/buildStatus/icon?job=Deobfuscator)](https://ci.samczsun.com/job/Deobfuscator/)
 
 This is an all-in-one Java deobfuscator which will deobfuscate code obfuscated by most obfuscators available on the market.
 
