@@ -104,7 +104,7 @@ public class Deobfuscator {
                     InputStream in = zipIn.getInputStream(next);
                     ClassReader reader = new ClassReader(in);
                     ClassNode node = new ClassNode();
-                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                    reader.accept(node, ClassReader.SKIP_FRAMES); //TODO: Skip classpath mode
                     for (int i = 0; i < node.methods.size(); i++) {
                         MethodNode methodNode = node.methods.get(i);
                         JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));

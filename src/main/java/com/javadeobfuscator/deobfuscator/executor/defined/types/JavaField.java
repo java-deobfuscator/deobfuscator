@@ -29,8 +29,16 @@ public class JavaField {
         this.field = methodNode;
     }
 
+    public String getClassName() {
+        return getDeclaringClass().getName().replace(".", "/");
+    }
+
     public String getName() {
         return field.name;
+    }
+
+    public String getDesc() {
+        return field.desc;
     }
 
     public JavaClass getDeclaringClass() {

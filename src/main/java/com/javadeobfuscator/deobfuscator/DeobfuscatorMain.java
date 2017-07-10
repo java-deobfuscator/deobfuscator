@@ -32,6 +32,9 @@ public class DeobfuscatorMain {
         options.addOption("path", true, "A JAR to be placed in the classpath");
         options.addOption("input", true, "The input file");
         options.addOption("output", true, "The output file");
+        //TODO:
+        // * keepClass
+        // * custom normalizer name
 
         CommandLineParser parser = new DefaultParser();
         try {
