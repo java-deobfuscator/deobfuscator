@@ -173,6 +173,24 @@ public class MethodExecutor {
         }
     }
 
+    public static Object convert(Object value, String type) {
+        if (value instanceof Number && Utils.isDigit(type)) {
+            Number cast = (Number) value;
+            switch (type) {
+                case "I":
+                    return cast.intValue();
+                case "S":
+                    return cast.shortValue();
+                case "B":
+                    return cast.byteValue();
+                case "J":
+                    return cast.longValue();
+            }
+        }
+
+        return value;
+    }
+
     public static Object value(JavaValue value) {
         Object val;
 
@@ -979,7 +997,7 @@ public class MethodExecutor {
                     case PUTSTATIC: {
                         JavaValue obj = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
-                        context.provider.setField(cast.owner, cast.name, cast.desc, null, value(obj), context);
+                        context.provider.setField(cast.owner, cast.name, cast.desc, null, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case GETFIELD: {
@@ -1026,7 +1044,7 @@ public class MethodExecutor {
                         JavaValue obj = stack.remove(0);
                         JavaValue instance = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
-                        context.provider.setField(cast.owner, cast.name, cast.desc, instance, value(obj), context);
+                        context.provider.setField(cast.owner, cast.name, cast.desc, instance, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case INVOKEVIRTUAL: {
@@ -1370,12 +1388,12 @@ public class MethodExecutor {
                         }
                         break;
                     }
-                    case MONITORENTER: { //TODO Actually implement
-                        stack.remove(0);
+                    case MONITORENTER: {
+                        Monitor.enter(stack.remove(0));
                         break;
                     }
                     case MONITOREXIT: {
-                        stack.remove(0);
+                        Monitor.exit(stack.remove(0));
                         break;
                     }
                     case MULTIANEWARRAY: {

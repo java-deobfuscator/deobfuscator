@@ -16,8 +16,10 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 ;
@@ -25,14 +27,37 @@ import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 
 public class MappedFieldProvider extends FieldProvider {
-    private Map<String, Object> fields = new HashMap<>(); //FIXME: Instance field
+    private final Map<String, Object> staticFields = Collections.synchronizedMap(new HashMap<>());
+    private final Map<Object, Map<String, Object>> instanceFields = new ConcurrentHashMap<>();
 
     public Object getField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
-        return fields.get(className + fieldName + fieldDesc);
+        if (targetObject == null) {
+            return staticFields.get(className + fieldName + fieldDesc);
+        } else {
+            synchronized (instanceFields) {
+                Object field = instanceFields.get(targetObject);
+                if (field != null) {
+                    return ((Map<String, Object>) field).get(className + fieldName + fieldDesc);
+                }
+            }
+
+            return null;
+        }
     }
 
     public void setField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Object value, Context context) {
-        fields.put(className + fieldName + fieldDesc, value);
+        if (targetObject == null) {
+            staticFields.put(className + fieldName + fieldDesc, value);
+        } else {
+            synchronized (instanceFields) {
+                Object field = instanceFields.get(targetObject);
+                if (field == null) {
+                    field = new HashMap<>();
+                }
+                ((Map<String, Object>) field).put(className + fieldName + fieldDesc, value);
+                instanceFields.put(targetObject, (Map<String, Object>) field);
+            }
+        }
     }
 
     public boolean canGetField(String className, String fieldName, String fieldDesc, JavaValue targetObject, Context context) {
