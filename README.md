@@ -22,7 +22,7 @@ public class SomeRandomDeobfuscator {
             .withInput(new File("input.jar"))
             .withOutput(new File("output.jar"))
             .withClasspath(new File("path/to/rt.jar"))
-            .withTransformer(Transformers.Generic.SYNTHETIC_BRIDGE)
+            .withTransformer(Transformers.General.SYNTHETIC_BRIDGE)
             .start();
     }
 }
