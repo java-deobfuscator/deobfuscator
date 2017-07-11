@@ -36,6 +36,7 @@ public class Transformers {
         public static final Class<? extends Transformer> SYNTHETIC_BRIDGE = com.javadeobfuscator.deobfuscator.transformers.general.SyntheticBridgeTransformer.class;
         public static final Class<? extends Transformer> PEEPHOLE_OPTIMIZER = com.javadeobfuscator.deobfuscator.transformers.general.peephole.PeepholeOptimizer.class;
         public static final Class<? extends Transformer> LINE_NUMBER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
+        public static final Class<? extends Transformer> ILLEGAL_VARARGS = com.javadeobfuscator.deobfuscator.transformers.general.IllegalVarargsTransformer.class;
     }
 
     public static class Zelix {
