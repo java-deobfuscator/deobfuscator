@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 

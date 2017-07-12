@@ -22,7 +22,6 @@ import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;

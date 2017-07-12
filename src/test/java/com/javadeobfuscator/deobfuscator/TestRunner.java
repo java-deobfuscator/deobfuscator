@@ -6,11 +6,8 @@ import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.ReflectiveProvider;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
-import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
@@ -20,13 +17,8 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
-import sun.invoke.util.BytecodeDescriptor;
-
 import java.io.*;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -59,6 +51,7 @@ public class TestRunner {
                     }
                 }
             }
+            zipIn.close();
         } catch (IOException e) {
             e.printStackTrace(System.out);
         }
