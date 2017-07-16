@@ -50,6 +50,8 @@ public class Deobfuscator {
     private File input;
     private File output;
 
+    private static final boolean DEBUG = false; 
+ 
     public Deobfuscator withTransformer(Class<? extends Transformer> transformer) {
         this.transformers.add(transformer);
         return this;
@@ -173,6 +175,10 @@ public class Deobfuscator {
         System.out.println();
         System.out.println("Transforming complete. Writing to file");
         System.out.println();
+
+        if (DEBUG) { 
+            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass); 
+        } 
 
         classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             try {
@@ -322,7 +328,7 @@ public class Deobfuscator {
                 cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
             } catch (Throwable t) {
                 System.out.println("Error: " + node.name + " failed verification");
-                //t.printStackTrace(System.out);
+//                t.printStackTrace(System.out);
             }
             return classBytes;
         } catch (Throwable t) {
