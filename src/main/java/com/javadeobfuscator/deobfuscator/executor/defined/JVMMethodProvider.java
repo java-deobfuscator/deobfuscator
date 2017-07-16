@@ -32,15 +32,15 @@ import java.util.zip.ZipInputStream;
 import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.executor.values.*; 
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode; 
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode; 
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
+import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode; 
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -64,8 +64,9 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("<init>()V", (targetObject, args, context) -> {
-                expect(targetObject, "java/lang/Object");
-                targetObject.initialize(new Object());
+                expect(targetObject, targetObject.type()); 
+                targetObject.initialize(new JavaObject(null, targetObject.type())); 
+                initObject(context, targetObject.type(), targetObject); 
                 return null;
             });
         }});
@@ -436,6 +437,29 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
         }});
+        put("java/util/LinkedHashMap", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{ 
+            put("<init>()V", (targetObject, args, context) -> { 
+                expect(targetObject, "java/util/LinkedHashMap"); 
+                targetObject.initialize(new LinkedHashMap<>()); 
+                return null; 
+            }); 
+            put("<init>(Ljava/util/Map;)V", (targetObject, args, context) -> { 
+                expect(targetObject, "java/util/LinkedHashMap"); 
+                targetObject.initialize(new LinkedHashMap<>(args.get(0).as(Map.class))); 
+                return null; 
+            }); 
+            put("<init>(IFZ)V", (targetObject, args, context) -> { 
+                expect(targetObject, "java/util/LinkedHashMap"); 
+                JavaValue accessOrder = args.get(2); 
+                targetObject.initialize(new LinkedHashMap<>(args.get(0).intValue(), args.get(1).floatValue(), accessOrder instanceof JavaBoolean ? accessOrder.booleanValue() : accessOrder.intValue() == 1)); 
+                return null; 
+            }); 
+            put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(LinkedHashMap.class).get(args.get(0).value())); 
+            put("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(LinkedHashMap.class).put(args.get(0).value(), args.get(1).value())); 
+            put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(LinkedHashMap.class).isEmpty()); 
+            put("entrySet()Ljava/util/Set;", (targetObject, args, context) -> targetObject.as(LinkedHashMap.class).entrySet()); 
+            put("remove(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(LinkedHashMap.class).remove(args.get(0).value())); 
+        }}); 
         put("java/lang/Math", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("abs(J)J", (targetObject, args, context) -> Math.abs(args.get(0).longValue()));
         }});
@@ -496,6 +520,46 @@ public class JVMMethodProvider extends MethodProvider {
     public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
         return false;
     }
+
+    @Override
+    private static void initObject(Context context, String className, JavaValue object) { 
+        WrappedClassNode wrappedClassNode = context.dictionary.get(className); 
+        if (wrappedClassNode != null) { 
+            ClassNode classNode = wrappedClassNode.classNode; 
+ 
+            for (FieldNode field : classNode.fields) { 
+                switch (field.desc) { 
+                    case "B": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (byte) 0, context); 
+                        break; 
+                    case "S": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (short) 0, context); 
+                        break; 
+                    case "I": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0, context); 
+                        break; 
+                    case "J": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0L, context); 
+                        break; 
+                    case "F": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0, context); 
+                        break; 
+                    case "D": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0D, context); 
+                        break; 
+                    case "C": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (char) 0, context); 
+                        break; 
+                    case "Z": 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, false, context); 
+                        break; 
+                } 
+            } 
+        } else { 
+            throw new RuntimeException("Could not initialize class " + className); 
+        } 
+    } 
+ 
 
     private static void expect(JavaValue object, String type) {
         if (!object.type().equals(type)) {
