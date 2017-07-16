@@ -521,7 +521,6 @@ public class JVMMethodProvider extends MethodProvider {
         return false;
     }
 
-    @Override
     private static void initObject(Context context, String className, JavaValue object) { 
         WrappedClassNode wrappedClassNode = context.dictionary.get(className); 
         if (wrappedClassNode != null) { 
