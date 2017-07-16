@@ -35,12 +35,17 @@ import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.*; 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode; 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode; 
+import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode; 
+
+import javax.xml.bind.DatatypeConverter;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -299,7 +304,8 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.as(JavaConstructor.class).setAccessible(args.get(0).as(boolean.class));
                 return null;
             });
-            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class)); // XXX
+
+            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class)); // FIXME
         }});
         put("java/lang/reflect/Method", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).getName());
@@ -496,6 +502,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("sun/reflect/ConstantPool", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getSize()I", (targetObject, args, context) -> targetObject.as(JavaConstantPool.class).getSize());
         }});
+
     }};
     //@formatter:on
 
