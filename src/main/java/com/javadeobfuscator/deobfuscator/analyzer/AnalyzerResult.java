@@ -41,6 +41,15 @@ public class AnalyzerResult {
         return frames;
     }
 
+    public AbstractInsnNode getInsnNode(Frame frame) { 
+        if (reverse == null) { 
+            reverse = new HashMap<>(); 
+            frames.forEach((key, value) -> value.forEach(f -> reverse.put(f, key))); 
+        } 
+ 
+        return reverse.get(frame); 
+    } 
+
     public Map<Frame, AbstractInsnNode> getMapping() {
         Map<Frame, AbstractInsnNode> reverseMapping = new HashMap<>();
         frames.entrySet().forEach(ent -> ent.getValue().forEach(frame -> reverseMapping.put(frame, ent.getKey())));
