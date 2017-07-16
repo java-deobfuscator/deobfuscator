@@ -18,8 +18,8 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
@@ -50,8 +50,9 @@ public class MappedMethodProvider extends MethodProvider {
                 for (JavaValue arg : args) {
                     argsClone.add(arg.copy());
                 }
-                return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? null : targetObject.value(), context);
+                return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? new JavaObject(null, "java/lang/Object") : targetObject, context);
             }
+            throw new IllegalArgumentException("Could not find method " + methodName + methodDesc);
         }
         throw new IllegalArgumentException("Could not find class " + className);
     }

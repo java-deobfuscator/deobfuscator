@@ -17,7 +17,6 @@
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;

@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,20 +71,20 @@ public class StringEncryptionTransformer extends Transformer {
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             boolean method = false;
             boolean field = false;
-            Iterator<MethodNode> it = classNode.methods.iterator();
-            while (it.hasNext()) {
-                MethodNode node = it.next();
+            for (MethodNode node : classNode.methods) {
                 if (node.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
                     method = true;
                 } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
                     method = false;
                     break;
+                } else if (node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;") && classNode.superName.equals("java/lang/Thread")) {
+                    method = true;
                 }
             }
-            Iterator<FieldNode> fieldIt = classNode.fields.iterator();
-            while (fieldIt.hasNext()) {
-                FieldNode node = fieldIt.next();
+            for (FieldNode node : classNode.fields) {
                 if (node.desc.equals("[Ljava/lang/Object;")) {
+                    field = true;
+                } else if (node.desc.equals("[Ljava/math/BigInteger")) {
                     field = true;
                 }
             }
@@ -192,6 +191,7 @@ public class StringEncryptionTransformer extends Transformer {
                                 if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
                                     ClassNode innerClassNode = classes.get(strCl).classNode;
                                     FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+
                                     if (signature != null) {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                         if (decrypterNode != null) {
@@ -199,6 +199,15 @@ public class StringEncryptionTransformer extends Transformer {
                                             context.dictionary = classpath;
                                             context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
                                             context.file = deobfuscator.getFile();
+
+                                            // Stringer3
+                                            if (innerClassNode.superName.equals("java/lang/Thread")) {
+                                                MethodNode clinitMethod = classes.get(strCl).getClassNode().methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                                if (clinitMethod != null) {
+                                                    MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
+                                                }
+                                            }
+
                                             Object o = null;
                                             try {
                                                 o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Collections.singletonList(new JavaObject(ldc.cst, "java/lang/String")), null, context);

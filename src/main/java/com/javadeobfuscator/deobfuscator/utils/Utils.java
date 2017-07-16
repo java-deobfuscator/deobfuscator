@@ -24,10 +24,13 @@ import java.io.StringWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
+
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Printer;
@@ -245,4 +248,97 @@ public class Utils {
             unsafe = ctor.newInstance();
         }
     }
+
+    public static boolean isNumber(String type) {
+        switch (type) {
+            case "I":
+            case "S":
+            case "B":
+            case "J":
+            case "D":
+            case "F":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isDigit(String type) {
+        switch (type) {
+            case "I":
+            case "S":
+            case "B":
+            case "J":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isFloat(String type) {
+        switch (type) {
+            case "F":
+            case "D":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static InsnList copyInsnList(InsnList original) {
+        InsnList newInsnList = new InsnList();
+
+        for (AbstractInsnNode insn = original.getFirst(); insn != null; insn = insn.getNext()) {
+            newInsnList.add(insn);
+        }
+
+        return newInsnList;
+    }
+
+    public static InsnList cloneInsnList(InsnList original) {
+        InsnList newInsnList = new InsnList();
+        Map<LabelNode, LabelNode> labels = new HashMap<>();
+
+        for (AbstractInsnNode insn = original.getFirst(); insn != null; insn = insn.getNext()) {
+            if (insn instanceof LabelNode) {
+                labels.put((LabelNode)insn, new LabelNode());
+            }
+        }
+
+        for (AbstractInsnNode insn = original.getFirst(); insn != null; insn = insn.getNext()) {
+            newInsnList.add(insn.clone(labels));
+        }
+
+        return newInsnList;
+    }
+
+    public static AbstractInsnNode getNumberInsn(short num) {
+        switch (num) {
+            case 0:
+                return new InsnNode(Opcodes.ICONST_0);
+            case 1:
+                return new InsnNode(Opcodes.ICONST_1);
+            case 2:
+                return new InsnNode(Opcodes.ICONST_2);
+            case 3:
+                return new InsnNode(Opcodes.ICONST_3);
+            case 4:
+                return new InsnNode(Opcodes.ICONST_4);
+            case 5:
+                return new InsnNode(Opcodes.ICONST_5);
+            default:
+                return new IntInsnNode(Opcodes.SIPUSH, num);
+        }
+    }
+    
+    public static void printClass(ClassNode classNode) { 
+        System.out.println(classNode.name + '\n'); 
+        classNode.methods.forEach(methodNode -> { 
+            System.out.println(methodNode.name + " " + methodNode.desc); 
+            for (int i = 0; i < methodNode.instructions.size(); i++) { 
+                System.out.printf("%s:   %s \n", i, prettyprint(methodNode.instructions.get(i))); 
+            } 
+        }); 
+    } 
+
 }

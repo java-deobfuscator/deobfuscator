@@ -1,5 +1,4 @@
 # Deobfuscator
-[![Build Status](https://ci.samczsun.com/buildStatus/icon?job=Deobfuscator)](https://ci.samczsun.com/job/Deobfuscator/)
 
 This is an all-in-one Java deobfuscator which will deobfuscate code obfuscated by most obfuscators available on the market.
 
@@ -22,7 +21,7 @@ public class SomeRandomDeobfuscator {
             .withInput(new File("input.jar"))
             .withOutput(new File("output.jar"))
             .withClasspath(new File("path/to/rt.jar"))
-            .withTransformer(Transformers.Generic.SYNTHETIC_BRIDGE)
+            .withTransformer(Transformers.General.SYNTHETIC_BRIDGE)
             .start();
     }
 }
@@ -54,8 +53,9 @@ Official transformers are linked via the `Transformers` class.
 | Allatori.STRING_ENCRYPTION | allatori.StringEncryptionTransformer | Decrypts strings encrypted by Allatori |
 | DashO.STRING_ENCRYPTION | dasho.StringEncryptionTransformer | Decrypts strings encrypted by DashO |
 | Stringer.STRING_ENCRYPTION | stringer.StringEncryptionTransformer | Decrypts strings encrypted by Stringer |
-| Stringer.INVOKEDYNAMIC | stringer.InvokedynamicTransformer | Decrypts invokedynamic obfuscated calls by Stringer |
-| Stringer.REFLECTION_OBFUSCATION | stringer.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Stringer |
+| Stringer.INVOKEDYNAMIC | stringer.InvokedynamicTransformer | Decrypts invokedynamic obfuscated calls by Stringer (Below version 3.0.0) |
+| Stringer.REFLECTION_OBFUSCATION | stringer.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Stringer (Below version 3.0.0) |
+| Stringer.HIDEACCESS_OBFUSCATION | stringer.HideAccessObfuscationTransformer | Decrypts hide access by Stringer (Included invokedynamic and reflection) |
 | Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
 | General.SYNTHETIC_BRIDGE | general.SyntheticBridgeTransformer | Removes synthetic and bridge modifiers from all methods and fields |
@@ -63,6 +63,7 @@ Official transformers are linked via the `Transformers` class.
 | Normalizer.CLASS_NORMALIZER | normalizer.ClassNormalizer | Renames all classes to Class<number> |
 | Normalizer.METHOD_NORMALIZER | normalizer.MethodNormalizer | Renames all methods to Method<number> |
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  
+| Normalizer.PACKAGE_NORMALIZER | normalizer.PackageNormalizer | Renames all packages to Package<number> |
 
 ## Downloads
 
@@ -74,7 +75,8 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [Stringer](https://jfxstore.com/stringer/)  
 [Allatori](http://www.allatori.com/)  
 [DashO](https://www.preemptive.com/products/dasho/overview)  
-[DexGuard](https://www.guardsquare.com/dexguard)  
+[DexGuard](https://www.guardsquare.com/dexguard)
+[Smoke](https://newtownia.net/smoke)
 Generic obfuscation
 
 ## Licensing

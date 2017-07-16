@@ -17,7 +17,6 @@
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 

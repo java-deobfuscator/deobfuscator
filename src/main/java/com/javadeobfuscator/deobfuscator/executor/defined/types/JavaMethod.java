@@ -31,6 +31,7 @@ import java.util.zip.ZipInputStream;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
@@ -44,8 +45,16 @@ public class JavaMethod {
         this.method = methodNode;
     }
 
+    public String getOwner() {
+        return getDeclaringClass().getName().replace(".", "/");
+    }
+
     public String getName() {
         return method.name;
+    }
+
+    public String getDesc() {
+        return method.desc;
     }
 
     public JavaClass getReturnType() {
@@ -126,5 +135,9 @@ public class JavaMethod {
     }
 
     public void setAccessible(boolean accessible) {
+    }
+
+    public boolean isStatic() {
+        return (method.access & Opcodes.ACC_STATIC) != 0;
     }
 }

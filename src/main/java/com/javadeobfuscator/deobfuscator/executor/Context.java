@@ -4,11 +4,7 @@ import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Context { //FIXME clinit classes
     private List<StackTraceElement> context = new ArrayList<>();

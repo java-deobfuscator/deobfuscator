@@ -955,8 +955,8 @@ public class MethodAnalyzer {
                 }
             }
 //            System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now).trim());
-//            System.out.println("\t" + stack);
-//            System.out.println("\t" + locals);
+//            System.out.println("\t Stack: " + stack); 
+//            System.out.println("\t Locals: " + locals); 
 //            System.out.println();
             if (currentFrame != null) {
                 List<Frame> thisFrame = result.frames.get(now);

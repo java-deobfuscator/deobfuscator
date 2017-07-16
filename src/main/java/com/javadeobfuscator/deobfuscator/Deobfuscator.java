@@ -50,6 +50,8 @@ public class Deobfuscator {
     private File input;
     private File output;
 
+    private static final boolean DEBUG = false; 
+ 
     public Deobfuscator withTransformer(Class<? extends Transformer> transformer) {
         this.transformers.add(transformer);
         return this;
@@ -104,7 +106,7 @@ public class Deobfuscator {
                     InputStream in = zipIn.getInputStream(next);
                     ClassReader reader = new ClassReader(in);
                     ClassNode node = new ClassNode();
-                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                    reader.accept(node, ClassReader.SKIP_FRAMES); //TODO: Skip classpath mode
                     for (int i = 0; i < node.methods.size(); i++) {
                         MethodNode methodNode = node.methods.get(i);
                         JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
@@ -173,6 +175,10 @@ public class Deobfuscator {
         System.out.println();
         System.out.println("Transforming complete. Writing to file");
         System.out.println();
+
+        if (DEBUG) { 
+            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass); 
+        } 
 
         classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             try {
@@ -322,7 +328,7 @@ public class Deobfuscator {
                 cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
             } catch (Throwable t) {
                 System.out.println("Error: " + node.name + " failed verification");
-                //t.printStackTrace(System.out);
+//                t.printStackTrace(System.out);
             }
             return classBytes;
         } catch (Throwable t) {
@@ -343,8 +349,7 @@ public class Deobfuscator {
 
         @Override
         protected String getCommonSuperClass(String type1, String type2) {
-            String a = getCommonSuperClass1(type1, type2);
-            return a;
+            return getCommonSuperClass1(type1, type2);
         }
 
         private String getCommonSuperClass1(String type1, String type2) {
@@ -402,10 +407,7 @@ public class Deobfuscator {
                     toProcess.addAll(tempTree.subClasses);
                 }
             }
-            if (allChilds1.contains(type2)) {
-                return true;
-            }
-            return false;
+            return allChilds1.contains(type2);
         }
     }
 

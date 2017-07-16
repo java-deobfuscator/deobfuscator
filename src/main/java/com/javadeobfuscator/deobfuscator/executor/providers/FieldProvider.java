@@ -19,7 +19,6 @@ package com.javadeobfuscator.deobfuscator.executor.providers;
 import java.util.List;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 

@@ -45,13 +45,14 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class MethodExecutor {
-    private static final boolean VERIFY = false;
+    private static final boolean VERIFY;
     private static final boolean DEBUG;
     private static final boolean DEBUG_PRINT_EXCEPTIONS;
     private static final List<String> DEBUG_CLASSES;
     private static final List<String> DEBUG_METHODS_WITH_DESC;
 
     static {
+        VERIFY = false;
         DEBUG = false;
         DEBUG_PRINT_EXCEPTIONS = false;
         DEBUG_CLASSES = Arrays.asList();
@@ -64,7 +65,11 @@ public class MethodExecutor {
         List<JavaValue> stack = new LinkedList<>();
         List<JavaValue> locals = new LinkedList<>();
         if (!Modifier.isStatic(method.access)) {
-            locals.add(new JavaObject(instance, "java/lang/Object"));
+            if (instance != null && instance instanceof JavaObject) {
+                locals.add((JavaObject) instance);
+            } else {
+                locals.add(new JavaObject(instance, "java/lang/Object"));
+            }
         }
         if (args != null) {
             for (JavaValue arg : args) {
@@ -166,6 +171,24 @@ public class MethodExecutor {
         } else {
             Array.set(array.value(), index.intValue(), val);
         }
+    }
+
+    public static Object convert(Object value, String type) {
+        if (value instanceof Number && Utils.isDigit(type)) {
+            Number cast = (Number) value;
+            switch (type) {
+                case "I":
+                    return cast.intValue();
+                case "S":
+                    return cast.shortValue();
+                case "B":
+                    return cast.byteValue();
+                case "J":
+                    return cast.longValue();
+            }
+        }
+
+        return value;
     }
 
     public static Object value(JavaValue value) {
@@ -301,8 +324,8 @@ public class MethodExecutor {
         while (true) {
             try {
                 if (DEBUG && (DEBUG_CLASSES.isEmpty() || DEBUG_CLASSES.contains(classNode.classNode.name)) && (DEBUG_METHODS_WITH_DESC.isEmpty() || DEBUG_METHODS_WITH_DESC.contains(method.name + method.desc))) {
-                    System.out.println("\t" + stack);
-                    System.out.println("\t" + locals);
+                    System.out.println("\t Stack: " + stack);
+                    System.out.println("\t Locals: " + locals);
                     System.out.println();
                     System.out.println(method.instructions.indexOf(now) + " " + Utils.prettyprint(now));
                 }
@@ -974,7 +997,7 @@ public class MethodExecutor {
                     case PUTSTATIC: {
                         JavaValue obj = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
-                        context.provider.setField(cast.owner, cast.name, cast.desc, null, value(obj), context);
+                        context.provider.setField(cast.owner, cast.name, cast.desc, null, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case GETFIELD: {
@@ -1021,7 +1044,7 @@ public class MethodExecutor {
                         JavaValue obj = stack.remove(0);
                         JavaValue instance = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
-                        context.provider.setField(cast.owner, cast.name, cast.desc, instance, value(obj), context);
+                        context.provider.setField(cast.owner, cast.name, cast.desc, instance, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case INVOKEVIRTUAL: {
@@ -1038,42 +1061,58 @@ public class MethodExecutor {
                             args.add(0, stack.remove(0).copy());
                         }
                         args.add(stack.remove(0));
-                        if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
-                            Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
-                            switch (type.getReturnType().getSort()) {
-                                case Type.BOOLEAN:
-                                    stack.add(0, new JavaBoolean((Boolean) provided));
-                                    break;
-                                case Type.CHAR:
-                                    stack.add(0, new JavaCharacter((Character) provided));
-                                    break;
-                                case Type.BYTE:
-                                    stack.add(0, new JavaByte((Byte) provided));
-                                    break;
-                                case Type.SHORT:
-                                    stack.add(0, new JavaShort((Short) provided));
-                                    break;
-                                case Type.INT:
-                                    stack.add(0, new JavaInteger((Integer) provided));
-                                    break;
-                                case Type.FLOAT:
-                                    stack.add(0, new JavaFloat((Float) provided));
-                                    break;
-                                case Type.LONG:
-                                    stack.add(0, new JavaLong((Long) provided));
-                                    stack.add(0, new JavaTop());
-                                    break;
-                                case Type.DOUBLE:
-                                    stack.add(0, new JavaDouble((Double) provided));
-                                    stack.add(0, new JavaTop());
-                                    break;
-                                case Type.ARRAY:
-                                case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
-                                    break;
+                        String owner = cast.owner;
+                        while(true) {
+                            try {
+                                if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                                    Object provided = context.provider.invokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
+                                    switch (type.getReturnType().getSort()) {
+                                        case Type.BOOLEAN:
+                                            stack.add(0, new JavaBoolean((Boolean) provided));
+                                            break;
+                                        case Type.CHAR:
+                                            stack.add(0, new JavaCharacter((Character) provided));
+                                            break;
+                                        case Type.BYTE:
+                                            stack.add(0, new JavaByte((Byte) provided));
+                                            break;
+                                        case Type.SHORT:
+                                            stack.add(0, new JavaShort((Short) provided));
+                                            break;
+                                        case Type.INT:
+                                            stack.add(0, new JavaInteger((Integer) provided));
+                                            break;
+                                        case Type.FLOAT:
+                                            stack.add(0, new JavaFloat((Float) provided));
+                                            break;
+                                        case Type.LONG:
+                                            stack.add(0, new JavaLong((Long) provided));
+                                            stack.add(0, new JavaTop());
+                                            break;
+                                        case Type.DOUBLE:
+                                            stack.add(0, new JavaDouble((Double) provided));
+                                            stack.add(0, new JavaTop());
+                                            break;
+                                        case Type.ARRAY:
+                                        case Type.OBJECT:
+                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                            break;
+                                    }
+                                } else {
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                                }
+                                break;
+                            } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
+                                WrappedClassNode ownerWrappedClass = context.dictionary.get(owner);
+                                if (ownerWrappedClass != null) {
+                                    ClassNode ownerClass = ownerWrappedClass.classNode;
+                                    if (ownerClass.superName != null) {
+                                        owner = ownerClass.superName;
+                                        continue;
+                                    }
+                                }
+                                throw t;
                             }
-                        } else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
                         }
                         break;
                     }
@@ -1091,42 +1130,58 @@ public class MethodExecutor {
                             args.add(0, stack.remove(0).copy());
                         }
                         args.add(stack.remove(0));
-                        if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
-                            Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
-                            switch (type.getReturnType().getSort()) {
-                                case Type.BOOLEAN:
-                                    stack.add(0, new JavaBoolean((Boolean) provided));
-                                    break;
-                                case Type.CHAR:
-                                    stack.add(0, new JavaCharacter((Character) provided));
-                                    break;
-                                case Type.BYTE:
-                                    stack.add(0, new JavaByte((Byte) provided));
-                                    break;
-                                case Type.SHORT:
-                                    stack.add(0, new JavaShort((Short) provided));
-                                    break;
-                                case Type.INT:
-                                    stack.add(0, new JavaInteger((Integer) provided));
-                                    break;
-                                case Type.FLOAT:
-                                    stack.add(0, new JavaFloat((Float) provided));
-                                    break;
-                                case Type.LONG:
-                                    stack.add(0, new JavaLong((Long) provided));
-                                    stack.add(0, new JavaTop());
-                                    break;
-                                case Type.DOUBLE:
-                                    stack.add(0, new JavaDouble((Double) provided));
-                                    stack.add(0, new JavaTop());
-                                    break;
-                                case Type.ARRAY:
-                                case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
-                                    break;
+                        String owner = cast.owner;
+                        while(true) {
+                            try {
+                                if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                                    Object provided = context.provider.invokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
+                                    switch (type.getReturnType().getSort()) {
+                                        case Type.BOOLEAN:
+                                            stack.add(0, new JavaBoolean((Boolean) provided));
+                                            break;
+                                        case Type.CHAR:
+                                            stack.add(0, new JavaCharacter((Character) provided));
+                                            break;
+                                        case Type.BYTE:
+                                            stack.add(0, new JavaByte((Byte) provided));
+                                            break;
+                                        case Type.SHORT:
+                                            stack.add(0, new JavaShort((Short) provided));
+                                            break;
+                                        case Type.INT:
+                                            stack.add(0, new JavaInteger((Integer) provided));
+                                            break;
+                                        case Type.FLOAT:
+                                            stack.add(0, new JavaFloat((Float) provided));
+                                            break;
+                                        case Type.LONG:
+                                            stack.add(0, new JavaLong((Long) provided));
+                                            stack.add(0, new JavaTop());
+                                            break;
+                                        case Type.DOUBLE:
+                                            stack.add(0, new JavaDouble((Double) provided));
+                                            stack.add(0, new JavaTop());
+                                            break;
+                                        case Type.ARRAY:
+                                        case Type.OBJECT:
+                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                            break;
+                                    }
+                                } else {
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                                }
+                                break;
+                            } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
+                                WrappedClassNode ownerWrappedClass = context.dictionary.get(owner);
+                                if (ownerWrappedClass != null) {
+                                    ClassNode ownerClass = ownerWrappedClass.classNode;
+                                    if (ownerClass.superName != null) {
+                                        owner = ownerClass.superName;
+                                        continue;
+                                    }
+                                }
+                                throw t;
                             }
-                        } else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
                         }
                         break;
                     }
@@ -1333,12 +1388,12 @@ public class MethodExecutor {
                         }
                         break;
                     }
-                    case MONITORENTER: { //TODO Actually implement
-                        stack.remove(0);
+                    case MONITORENTER: {
+                        Monitor.enter(stack.remove(0));
                         break;
                     }
                     case MONITOREXIT: {
-                        stack.remove(0);
+                        Monitor.exit(stack.remove(0));
                         break;
                     }
                     case MULTIANEWARRAY: {

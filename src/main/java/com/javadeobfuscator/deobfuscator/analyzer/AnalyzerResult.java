@@ -33,12 +33,22 @@ public class AnalyzerResult {
     }
 
     protected Map<AbstractInsnNode, List<Frame>> frames;
+    private Map<Frame, AbstractInsnNode> reverse; 
     protected int maxLocals;
     protected int maxStack;
 
     public Map<AbstractInsnNode, List<Frame>> getFrames() {
         return frames;
     }
+
+    public AbstractInsnNode getInsnNode(Frame frame) { 
+        if (reverse == null) { 
+            reverse = new HashMap<>(); 
+            frames.forEach((key, value) -> value.forEach(f -> reverse.put(f, key))); 
+        } 
+ 
+        return reverse.get(frame); 
+    } 
 
     public Map<Frame, AbstractInsnNode> getMapping() {
         Map<Frame, AbstractInsnNode> reverseMapping = new HashMap<>();
