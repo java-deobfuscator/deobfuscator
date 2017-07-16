@@ -1,9 +1,0 @@
-deployment:
-  release:
-    tag: /release-.*/
-    owner: FireMasterK
-    commands:
-      - ./deploy_master.sh
-general:
-  artifacts:
-    - "target/deobfuscator-1.0.0.jar"
