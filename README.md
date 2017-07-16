@@ -75,7 +75,8 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [Stringer](https://jfxstore.com/stringer/)  
 [Allatori](http://www.allatori.com/)  
 [DashO](https://www.preemptive.com/products/dasho/overview)  
-[DexGuard](https://www.guardsquare.com/dexguard)  
+[DexGuard](https://www.guardsquare.com/dexguard)
+[Smoke](https://newtownia.net/smoke)
 Generic obfuscation
 
 ## Licensing
