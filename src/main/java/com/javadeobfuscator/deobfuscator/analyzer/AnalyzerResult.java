@@ -33,6 +33,7 @@ public class AnalyzerResult {
     }
 
     protected Map<AbstractInsnNode, List<Frame>> frames;
+    private Map<Frame, AbstractInsnNode> reverse; 
     protected int maxLocals;
     protected int maxStack;
 
