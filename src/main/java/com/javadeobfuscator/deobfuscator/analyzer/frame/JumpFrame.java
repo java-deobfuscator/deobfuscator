@@ -25,7 +25,7 @@ import java.util.List;
 
 public class JumpFrame extends Frame {
     private List<Frame> comparators = new ArrayList<>();
-    private List<AbstractInsnNode> targets;
+    private transient List<AbstractInsnNode> targets; 
 
     public JumpFrame(int opcode, List<Frame> comparators, AbstractInsnNode... targets) {
         super(opcode);
@@ -36,4 +36,13 @@ public class JumpFrame extends Frame {
             comparator.children.add(this);
         }
     }
+
+    public List<Frame> getComparators() { 
+        return comparators; 
+    } 
+ 
+    public List<AbstractInsnNode> getTargets() { 
+        return targets; 
+    } 
+
 }

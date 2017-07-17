@@ -18,7 +18,6 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.InsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.JumpInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LabelNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -39,7 +38,7 @@ public class GotoUnconditionalJumpRemover extends Transformer {
         AtomicInteger counter = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
-                boolean modified = false;
+                boolean modified;
                 do {
                     modified = false;
                     Map<LabelNode, LabelNode> mapping = new HashMap<>();
@@ -64,8 +63,7 @@ public class GotoUnconditionalJumpRemover extends Transformer {
                                     case Opcodes.GOTO:
                                     case Opcodes.TABLESWITCH:
                                     case Opcodes.LOOKUPSWITCH:
-                                        methodNode.instructions.insertBefore(node, target.clone(mapping));
-                                        methodNode.instructions.remove(node);
+                                        methodNode.instructions.set(node, target.clone(mapping));
                                         counter.incrementAndGet();
                                         modified = true;
                                         break;

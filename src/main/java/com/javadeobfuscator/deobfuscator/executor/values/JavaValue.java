@@ -21,6 +21,10 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 
 public abstract class JavaValue {
+    
+    public boolean booleanValue() { 
+        throw new ExecutionException(new UnsupportedOperationException()); 
+    }
 
     public int intValue() {
         throw new ExecutionException(new UnsupportedOperationException());

@@ -330,4 +330,15 @@ public class Utils {
                 return new IntInsnNode(Opcodes.SIPUSH, num);
         }
     }
+    
+    public static void printClass(ClassNode classNode) { 
+        System.out.println(classNode.name + '\n'); 
+        classNode.methods.forEach(methodNode -> { 
+            System.out.println(methodNode.name + " " + methodNode.desc); 
+            for (int i = 0; i < methodNode.instructions.size(); i++) { 
+                System.out.printf("%s:   %s \n", i, prettyprint(methodNode.instructions.get(i))); 
+            } 
+        }); 
+    } 
+
 }

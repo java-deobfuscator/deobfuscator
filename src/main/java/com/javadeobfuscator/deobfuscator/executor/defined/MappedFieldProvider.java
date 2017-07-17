@@ -34,7 +34,7 @@ public class MappedFieldProvider extends FieldProvider {
             return staticFields.get(className + fieldName + fieldDesc);
         } else {
             synchronized (instanceFields) {
-                Object field = instanceFields.get(targetObject);
+                Object field = instanceFields.get(targetObject.value());
                 if (field != null) {
                     return ((Map<String, Object>) field).get(className + fieldName + fieldDesc);
                 }
@@ -49,12 +49,12 @@ public class MappedFieldProvider extends FieldProvider {
             staticFields.put(className + fieldName + fieldDesc, value);
         } else {
             synchronized (instanceFields) {
-                Object field = instanceFields.get(targetObject);
+                Object field = instanceFields.get(targetObject.value());
                 if (field == null) {
                     field = new HashMap<>();
                 }
                 ((Map<String, Object>) field).put(className + fieldName + fieldDesc, value);
-                instanceFields.put(targetObject, (Map<String, Object>) field);
+                instanceFields.put(targetObject.value(), (Map<String, Object>) field);
             }
         }
     }
