@@ -36,15 +36,17 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 /**
  * An {@link AnnotationVisitor} adapter for type remapping.
  * 
+ * @deprecated use {@link AnnotationRemapper} instead.
  * @author Eugene Kuleshov
  */
+@Deprecated
 public class RemappingAnnotationAdapter extends AnnotationVisitor {
 
     protected final Remapper remapper;
 
     public RemappingAnnotationAdapter(final AnnotationVisitor av,
             final Remapper remapper) {
-        this(Opcodes.ASM5, av, remapper);
+        this(Opcodes.ASM6, av, remapper);
     }
 
     protected RemappingAnnotationAdapter(final int api,

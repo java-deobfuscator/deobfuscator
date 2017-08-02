@@ -36,6 +36,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Attribute;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.FieldVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.MethodVisitor;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ModuleVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
 
@@ -131,7 +132,7 @@ public final class TraceClassVisitor extends ClassVisitor {
      */
     public TraceClassVisitor(final ClassVisitor cv, final Printer p,
             final PrintWriter pw) {
-        super(Opcodes.ASM5, cv);
+        super(Opcodes.ASM6, cv);
         this.pw = pw;
         this.p = p;
     }
@@ -148,6 +149,14 @@ public final class TraceClassVisitor extends ClassVisitor {
     public void visitSource(final String file, final String debug) {
         p.visitSource(file, debug);
         super.visitSource(file, debug);
+    }
+    
+    @Override
+    public ModuleVisitor visitModule(String name, int flags,
+            String version) {
+        Printer p = this.p.visitModule(name, flags, version);
+        ModuleVisitor mv = super.visitModule(name, flags, version);
+        return new TraceModuleVisitor(mv, p);
     }
 
     @Override

@@ -713,7 +713,7 @@ public class Processor {
 
         private final void writeAttributes(final Attributes atts)
                 throws IOException {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             int len = atts.getLength();
             for (int i = 0; i < len; i++) {
                 sb.append(' ').append(atts.getLocalName(i)).append("=\"")
@@ -730,7 +730,7 @@ public class Processor {
          * @return encoded string
          */
         private static final String esc(final String str) {
-            StringBuffer sb = new StringBuffer(str.length());
+            StringBuilder sb = new StringBuilder(str.length());
             for (int i = 0; i < str.length(); i++) {
                 char ch = str.charAt(i);
                 switch (ch) {

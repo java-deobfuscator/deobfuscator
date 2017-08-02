@@ -88,7 +88,7 @@ public class Deobfuscator {
                 if (ent.getName().endsWith(".class")) {
                     ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                     ClassNode node = new ClassNode();
-                    node.isLibrary = true;
+//                    node.isLibrary = true;
                     reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                     WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
                     classpath.put(node.name, wrappedClassNode);

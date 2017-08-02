@@ -76,11 +76,6 @@ public class LocalVariablesSorter extends MethodVisitor {
     protected int nextLocal;
 
     /**
-     * Indicates if at least one local variable has moved due to remapping.
-     */
-    private boolean changed;
-
-    /**
      * Creates a new {@link LocalVariablesSorter}. <i>Subclasses must not use
      * this constructor</i>. Instead, they must use the
      * {@link #LocalVariablesSorter(int, int, String, MethodVisitor)} version.
@@ -96,7 +91,7 @@ public class LocalVariablesSorter extends MethodVisitor {
      */
     public LocalVariablesSorter(final int access, final String desc,
             final MethodVisitor mv) {
-        this(Opcodes.ASM5, access, desc, mv);
+        this(Opcodes.ASM6, access, desc, mv);
         if (getClass() != LocalVariablesSorter.class) {
             throw new IllegalStateException();
         }
@@ -107,7 +102,7 @@ public class LocalVariablesSorter extends MethodVisitor {
      * 
      * @param api
      *            the ASM API version implemented by this visitor. Must be one
-     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
+     *            of {@link Opcodes#ASM4}, {@link Opcodes#ASM5} or {@link Opcodes#ASM6}.
      * @param access
      *            access flags of the adapted method.
      * @param desc
@@ -197,11 +192,6 @@ public class LocalVariablesSorter extends MethodVisitor {
         if (type != Opcodes.F_NEW) { // uncompressed frame
             throw new IllegalStateException(
                     "ClassReader.accept() should be called with EXPAND_FRAMES flag");
-        }
-
-        if (!changed) { // optimization for the case where mapping = identity
-            mv.visitFrame(type, nLocal, local, nStack, stack);
-            return;
         }
 
         // creates a copy of newLocals
@@ -299,7 +289,6 @@ public class LocalVariablesSorter extends MethodVisitor {
         int local = newLocalMapping(type);
         setLocalType(local, type);
         setFrameLocal(local, t);
-        changed = true;
         return local;
     }
 
@@ -324,7 +313,7 @@ public class LocalVariablesSorter extends MethodVisitor {
      */
     protected void updateNewLocals(Object[] newLocals) {
     }
-
+    
     /**
      * Notifies subclasses that a local variable has been added or remapped. The
      * default implementation of this method does nothing.
@@ -366,9 +355,6 @@ public class LocalVariablesSorter extends MethodVisitor {
             mapping[key] = value + 1;
         } else {
             value--;
-        }
-        if (value != var) {
-            changed = true;
         }
         return value;
     }

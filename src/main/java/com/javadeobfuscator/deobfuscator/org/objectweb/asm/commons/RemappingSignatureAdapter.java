@@ -36,8 +36,10 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.signature.SignatureVi
 /**
  * A {@link SignatureVisitor} adapter for type mapping.
  * 
+ * @deprecated use {@link SignatureRemapper} instead.
  * @author Eugene Kuleshov
  */
+@Deprecated
 public class RemappingSignatureAdapter extends SignatureVisitor {
 
     private final SignatureVisitor v;
@@ -48,7 +50,7 @@ public class RemappingSignatureAdapter extends SignatureVisitor {
 
     public RemappingSignatureAdapter(final SignatureVisitor v,
             final Remapper remapper) {
-        this(Opcodes.ASM5, v, remapper);
+        this(Opcodes.ASM6, v, remapper);
     }
 
     protected RemappingSignatureAdapter(final int api,
