@@ -190,11 +190,11 @@ public class MethodNormalizer extends Transformer {
                     });
                 }
 
-                allMethodNodes.entrySet().forEach(ent -> {
-                    if (ent.getKey().getKey().isLibrary && ent.getValue()) {
-                        isLibrary.set(true);
-                    }
-                });
+//                allMethodNodes.entrySet().forEach(ent -> {
+//                    if (ent.getKey().getKey().isLibrary && ent.getValue()) {
+//                        isLibrary.set(true);
+//                    }
+//                });
 
                 if (!isLibrary.get()) {
                     if (!remapper.methodMappingExists(classNode.name, methodNode.name, methodNode.desc)) {

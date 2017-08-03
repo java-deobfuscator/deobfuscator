@@ -36,6 +36,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.AnnotationVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.FieldVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.MethodVisitor;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ModuleVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
 
@@ -70,6 +71,16 @@ public final class SAXClassAdapter extends ClassVisitor {
      * Pseudo access flag used to distinguish inner class flags.
      */
     private static final int ACCESS_INNER = 1048576;
+    
+    /**
+     * Pseudo access flag used to distinguish module flags.
+     */
+    static final int ACCESS_MODULE = 2097152;
+    
+    /**
+     * Pseudo access flag used to distinguish module requires flags.
+     */
+    static final int ACCESS_MODULE_REQUIRES = 4194304;
 
     /**
      * Constructs a new {@link SAXClassAdapter SAXClassAdapter} object.
@@ -82,7 +93,7 @@ public final class SAXClassAdapter extends ClassVisitor {
      *            {@link ContentHandler#endDocument() endDocument()} events.
      */
     public SAXClassAdapter(final ContentHandler h, boolean singleDocument) {
-        super(Opcodes.ASM5);
+        super(Opcodes.ASM6);
         this.sa = new SAXAdapter(h);
         this.singleDocument = singleDocument;
         if (!singleDocument) {
@@ -101,6 +112,21 @@ public final class SAXClassAdapter extends ClassVisitor {
         }
 
         sa.addElement("source", att);
+    }
+    
+    @Override
+    public ModuleVisitor visitModule(final String name, final int access,
+            final String version) {
+        AttributesImpl att = new AttributesImpl();
+        att.addAttribute("", "name", "name", "", name);
+        StringBuilder sb = new StringBuilder();
+        appendAccess(access | ACCESS_MODULE, sb);
+        att.addAttribute("", "access", "access", "", sb.toString());
+        if (version != null) {
+          att.addAttribute("", "version", "version", "", encode(version));
+        }
+        sa.addStart("module", att);
+        return new SAXModuleAdapter(sa);
     }
 
     @Override
@@ -136,7 +162,7 @@ public final class SAXClassAdapter extends ClassVisitor {
     public void visit(final int version, final int access, final String name,
             final String signature, final String superName,
             final String[] interfaces) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         appendAccess(access | ACCESS_CLASS, sb);
 
         AttributesImpl att = new AttributesImpl();
@@ -171,7 +197,7 @@ public final class SAXClassAdapter extends ClassVisitor {
     @Override
     public FieldVisitor visitField(final int access, final String name,
             final String desc, final String signature, final Object value) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         appendAccess(access | ACCESS_FIELD, sb);
 
         AttributesImpl att = new AttributesImpl();
@@ -192,7 +218,7 @@ public final class SAXClassAdapter extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(final int access, final String name,
             final String desc, final String signature, final String[] exceptions) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         appendAccess(access, sb);
 
         AttributesImpl att = new AttributesImpl();
@@ -220,7 +246,7 @@ public final class SAXClassAdapter extends ClassVisitor {
     @Override
     public final void visitInnerClass(final String name,
             final String outerName, final String innerName, final int access) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         appendAccess(access | ACCESS_INNER, sb);
 
         AttributesImpl att = new AttributesImpl();
@@ -246,7 +272,7 @@ public final class SAXClassAdapter extends ClassVisitor {
     }
 
     static final String encode(final String s) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (c == '\\') {
@@ -268,7 +294,7 @@ public final class SAXClassAdapter extends ClassVisitor {
         return sb.toString();
     }
 
-    static void appendAccess(final int access, final StringBuffer sb) {
+    static void appendAccess(final int access, final StringBuilder sb) {
         if ((access & Opcodes.ACC_PUBLIC) != 0) {
             sb.append("public ");
         }
@@ -279,14 +305,26 @@ public final class SAXClassAdapter extends ClassVisitor {
             sb.append("protected ");
         }
         if ((access & Opcodes.ACC_FINAL) != 0) {
-            sb.append("final ");
+            if ((access & ACCESS_MODULE) == 0) {
+                sb.append("final ");
+            } else {
+                sb.append("transitive ");
+            }
         }
         if ((access & Opcodes.ACC_STATIC) != 0) {
             sb.append("static ");
         }
         if ((access & Opcodes.ACC_SUPER) != 0) {
             if ((access & ACCESS_CLASS) == 0) {
-                sb.append("synchronized ");
+                if ((access & ACCESS_MODULE_REQUIRES) != 0) {
+                    sb.append("transitive ");
+                } else {
+                    if ((access & ACCESS_MODULE) == 0) {
+                        sb.append("synchronized ");
+                    } else {
+                        sb.append("open ");
+                    }
+                }
             } else {
                 sb.append("super ");
             }
@@ -295,7 +333,11 @@ public final class SAXClassAdapter extends ClassVisitor {
             if ((access & ACCESS_FIELD) == 0) {
                 sb.append("bridge ");
             } else {
-                sb.append("volatile ");
+                if ((access & ACCESS_MODULE_REQUIRES) == 0) {
+                    sb.append("volatile ");
+                } else {
+                    sb.append("static ");
+                }
             }
         }
         if ((access & Opcodes.ACC_TRANSIENT) != 0) {
@@ -330,7 +372,11 @@ public final class SAXClassAdapter extends ClassVisitor {
             sb.append("deprecated ");
         }
         if ((access & Opcodes.ACC_MANDATED) != 0) {
-            sb.append("mandated ");
+            if ((access & ACCESS_CLASS) == 0) {
+                sb.append("module ");
+            } else {
+                sb.append("mandated ");
+            }
         }
     }
 }

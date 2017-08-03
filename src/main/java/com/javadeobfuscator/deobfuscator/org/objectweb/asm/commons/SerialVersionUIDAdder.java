@@ -170,7 +170,7 @@ public class SerialVersionUIDAdder extends ClassVisitor {
      *             If a subclass calls this constructor.
      */
     public SerialVersionUIDAdder(final ClassVisitor cv) {
-        this(Opcodes.ASM5, cv);
+        this(Opcodes.ASM6, cv);
         if (getClass() != SerialVersionUIDAdder.class) {
             throw new IllegalStateException();
         }
@@ -181,7 +181,7 @@ public class SerialVersionUIDAdder extends ClassVisitor {
      * 
      * @param api
      *            the ASM API version implemented by this visitor. Must be one
-     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
+     *            of {@link Opcodes#ASM4}, {@link Opcodes#ASM5} or {@link Opcodes#ASM6}.
      * @param cv
      *            a {@link ClassVisitor} to which this visitor will delegate
      *            calls.
@@ -205,7 +205,7 @@ public class SerialVersionUIDAdder extends ClassVisitor {
     public void visit(final int version, final int access, final String name,
             final String signature, final String superName,
             final String[] interfaces) {
-        computeSVUID = (access & Opcodes.ACC_INTERFACE) == 0;
+        computeSVUID = (access & Opcodes.ACC_ENUM) == 0;
 
         if (computeSVUID) {
             this.name = name;
@@ -367,6 +367,11 @@ public class SerialVersionUIDAdder extends ClassVisitor {
             /*
              * 2. The class modifiers written as a 32-bit integer.
              */
+            int access = this.access;
+            if ((access & Opcodes.ACC_INTERFACE) != 0) {
+                access = (svuidMethods.size() > 0) ? (access | Opcodes.ACC_ABSTRACT)
+                        : (access & ~Opcodes.ACC_ABSTRACT);
+            }
             dos.writeInt(access
                     & (Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL
                             | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT));

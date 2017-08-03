@@ -40,9 +40,9 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 public class SignatureWriter extends SignatureVisitor {
 
     /**
-     * Buffer used to construct the signature.
+     * Builder used to construct the signature.
      */
-    private final StringBuffer buf = new StringBuffer();
+    private final StringBuilder buf = new StringBuilder();
 
     /**
      * Indicates if the signature contains formal type parameters.
@@ -66,7 +66,7 @@ public class SignatureWriter extends SignatureVisitor {
      * Constructs a new {@link SignatureWriter} object.
      */
     public SignatureWriter() {
-        super(Opcodes.ASM5);
+        super(Opcodes.ASM6);
     }
 
     // ------------------------------------------------------------------------

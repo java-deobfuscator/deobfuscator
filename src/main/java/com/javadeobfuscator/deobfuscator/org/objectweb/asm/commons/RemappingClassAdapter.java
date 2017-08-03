@@ -34,14 +34,17 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.AnnotationVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.FieldVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.MethodVisitor;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ModuleVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
 
 /**
  * A {@link ClassVisitor} for type remapping.
  * 
+ * @deprecated use {@link ClassRemapper} instead.
  * @author Eugene Kuleshov
  */
+@Deprecated
 public class RemappingClassAdapter extends ClassVisitor {
 
     protected final Remapper remapper;
@@ -49,7 +52,7 @@ public class RemappingClassAdapter extends ClassVisitor {
     protected String className;
 
     public RemappingClassAdapter(final ClassVisitor cv, final Remapper remapper) {
-        this(Opcodes.ASM5, cv, remapper);
+        this(Opcodes.ASM6, cv, remapper);
     }
 
     protected RemappingClassAdapter(final int api, final ClassVisitor cv,
@@ -67,6 +70,11 @@ public class RemappingClassAdapter extends ClassVisitor {
                 interfaces == null ? null : remapper.mapTypes(interfaces));
     }
 
+    @Override
+    public ModuleVisitor visitModule(String name, int flags, String version) {
+        throw new RuntimeException("RemappingClassAdapter is deprecated, use ClassRemapper instead");
+    }
+    
     @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         AnnotationVisitor av = super.visitAnnotation(remapper.mapDesc(desc),

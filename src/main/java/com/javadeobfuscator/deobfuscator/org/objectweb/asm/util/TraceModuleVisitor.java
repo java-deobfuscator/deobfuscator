@@ -27,63 +27,75 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.javadeobfuscator.deobfuscator.org.objectweb.asm.optimizer;
+package com.javadeobfuscator.deobfuscator.org.objectweb.asm.util;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.AnnotationVisitor;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Attribute;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.FieldVisitor;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ModuleVisitor;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
 
 /**
- * A {@link FieldVisitor} that collects the {@link Constant}s of the fields it
- * visits.
+ * A {@link ModuleVisitor} that prints the fields it visits with a
+ * {@link Printer}.
  * 
- * @author Eric Bruneton
+ * @author Remi Forax
  */
-public class FieldConstantsCollector extends FieldVisitor {
+public final class TraceModuleVisitor extends ModuleVisitor {
+    
+    public final Printer p;
 
-    private final ConstantPool cp;
+    public TraceModuleVisitor(final Printer p) {
+        this(null, p);
+    }
 
-    public FieldConstantsCollector(final FieldVisitor fv, final ConstantPool cp) {
-        super(Opcodes.ASM5, fv);
-        this.cp = cp;
+    public TraceModuleVisitor(final ModuleVisitor mv, final Printer p) {
+        super(Opcodes.ASM6, mv);
+        this.p = p;
     }
 
     @Override
-    public AnnotationVisitor visitAnnotation(final String desc,
-            final boolean visible) {
-        cp.newUTF8(desc);
-        if (visible) {
-            cp.newUTF8("RuntimeVisibleAnnotations");
-        } else {
-            cp.newUTF8("RuntimeInvisibleAnnotations");
-        }
-        return new AnnotationConstantsCollector(fv.visitAnnotation(desc,
-                visible), cp);
+    public void visitMainClass(String mainClass) {
+        p.visitMainClass(mainClass);
+        super.visitMainClass(mainClass);
     }
-
+    
     @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef,
-            TypePath typePath, String desc, boolean visible) {
-        cp.newUTF8(desc);
-        if (visible) {
-            cp.newUTF8("RuntimeVisibleTypeAnnotations");
-        } else {
-            cp.newUTF8("RuntimeInvisibleTypeAnnotations");
-        }
-        return new AnnotationConstantsCollector(fv.visitAnnotation(desc,
-                visible), cp);
+    public void visitPackage(String packaze) {
+        p.visitPackage(packaze);
+        super.visitPackage(packaze);
     }
-
+    
     @Override
-    public void visitAttribute(final Attribute attr) {
-        // can do nothing
-        fv.visitAttribute(attr);
+    public void visitRequire(String module, int access, String version) {
+        p.visitRequire(module, access, version);
+        super.visitRequire(module, access, version);
+    }
+    
+    @Override
+    public void visitExport(String packaze, int access, String... modules) {
+        p.visitExport(packaze, access, modules);
+        super.visitExport(packaze, access, modules);
+    }
+    
+    @Override
+    public void visitOpen(String packaze, int access, String... modules) {
+        p.visitOpen(packaze, access, modules);
+        super.visitOpen(packaze, access, modules);
+    }
+    
+    @Override
+    public void visitUse(String use) {
+        p.visitUse(use);
+        super.visitUse(use);
+    }
+    
+    @Override
+    public void visitProvide(String service, String... providers) {
+        p.visitProvide(service, providers);
+        super.visitProvide(service, providers);
     }
 
     @Override
     public void visitEnd() {
-        fv.visitEnd();
+        p.visitModuleEnd();
+        super.visitEnd();
     }
 }

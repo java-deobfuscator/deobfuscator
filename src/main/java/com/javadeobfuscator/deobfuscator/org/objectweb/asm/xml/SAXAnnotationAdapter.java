@@ -49,20 +49,20 @@ public final class SAXAnnotationAdapter extends AnnotationVisitor {
 
     public SAXAnnotationAdapter(final SAXAdapter sa, final String elementName,
             final int visible, final String name, final String desc) {
-        this(Opcodes.ASM5, sa, elementName, visible, desc, name, -1, -1, null,
+        this(Opcodes.ASM6, sa, elementName, visible, desc, name, -1, -1, null,
                 null, null, null);
     }
 
     public SAXAnnotationAdapter(final SAXAdapter sa, final String elementName,
             final int visible, final int parameter, final String desc) {
-        this(Opcodes.ASM5, sa, elementName, visible, desc, null, parameter, -1,
+        this(Opcodes.ASM6, sa, elementName, visible, desc, null, parameter, -1,
                 null, null, null, null);
     }
 
     public SAXAnnotationAdapter(final SAXAdapter sa, final String elementName,
             final int visible, final String name, final String desc,
             final int typeRef, final TypePath typePath) {
-        this(Opcodes.ASM5, sa, elementName, visible, desc, name, -1, typeRef,
+        this(Opcodes.ASM6, sa, elementName, visible, desc, name, -1, typeRef,
                 typePath, null, null, null);
     }
 
@@ -70,7 +70,7 @@ public final class SAXAnnotationAdapter extends AnnotationVisitor {
             final int visible, final String name, final String desc,
             int typeRef, TypePath typePath, final String[] start,
             final String[] end, final int[] index) {
-        this(Opcodes.ASM5, sa, elementName, visible, desc, name, -1, typeRef,
+        this(Opcodes.ASM6, sa, elementName, visible, desc, name, -1, typeRef,
                 typePath, start, end, index);
     }
 
@@ -114,21 +114,21 @@ public final class SAXAnnotationAdapter extends AnnotationVisitor {
                     typePath.toString());
         }
         if (start != null) {
-            StringBuffer value = new StringBuffer(start[0]);
+            StringBuilder value = new StringBuilder(start[0]);
             for (int i = 1; i < start.length; ++i) {
                 value.append(" ").append(start[i]);
             }
             att.addAttribute("", "start", "start", "", value.toString());
         }
         if (end != null) {
-            StringBuffer value = new StringBuffer(end[0]);
+            StringBuilder value = new StringBuilder(end[0]);
             for (int i = 1; i < end.length; ++i) {
                 value.append(" ").append(end[i]);
             }
             att.addAttribute("", "end", "end", "", value.toString());
         }
         if (index != null) {
-            StringBuffer value = new StringBuffer();
+            StringBuilder value = new StringBuilder();
             value.append(index[0]);
             for (int i = 1; i < index.length; ++i) {
                 value.append(" ").append(index[i]);

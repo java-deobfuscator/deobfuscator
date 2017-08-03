@@ -83,7 +83,7 @@ public abstract class AdviceAdapter extends GeneratorAdapter implements Opcodes 
      * 
      * @param api
      *            the ASM API version implemented by this visitor. Must be one
-     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
+     *            of {@link Opcodes#ASM4}, {@link Opcodes#ASM5} or {@link Opcodes#ASM6}.
      * @param mv
      *            the method visitor to which this adapter delegates calls.
      * @param access
@@ -360,8 +360,8 @@ public abstract class AdviceAdapter extends GeneratorAdapter implements Opcodes 
                 break;
             case PUTFIELD:
                 popValue();
+                popValue();
                 if (longOrDouble) {
-                    popValue();
                     popValue();
                 }
                 break;

@@ -38,14 +38,16 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.TypePath;
 /**
  * A {@link FieldVisitor} adapter for type remapping.
  * 
+ * @deprecated use {@link FieldRemapper} instead.
  * @author Eugene Kuleshov
  */
+@Deprecated
 public class RemappingFieldAdapter extends FieldVisitor {
 
     private final Remapper remapper;
 
     public RemappingFieldAdapter(final FieldVisitor fv, final Remapper remapper) {
-        this(Opcodes.ASM5, fv, remapper);
+        this(Opcodes.ASM6, fv, remapper);
     }
 
     protected RemappingFieldAdapter(final int api, final FieldVisitor fv,
