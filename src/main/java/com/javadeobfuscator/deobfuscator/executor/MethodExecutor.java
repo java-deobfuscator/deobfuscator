@@ -168,9 +168,20 @@ public class MethodExecutor {
             } else {
                 Array.set(array.value(), index.intValue(), val);
             }
-        } else {
-            Array.set(array.value(), index.intValue(), val);
-        }
+        } else if(array.value() instanceof char[]) {
+    		//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (char)value.intValue());
+        	else if(value instanceof JavaByte)
+        		Array.set(array.value(), index.intValue(), (char)((JavaByte)value).byteValue());
+        	else if(value instanceof JavaShort)
+        		Array.set(array.value(), index.intValue(), (char)((JavaShort)value).shortValue());
+        	else if(value instanceof JavaLong)
+        		Array.set(array.value(), index.intValue(), (char)(value.longValue()));
+        	else
+        		Array.set(array.value(), index.intValue(), val);
+        } else
+    		Array.set(array.value(), index.intValue(), val);
     }
 
     public static Object convert(Object value, String type) {
