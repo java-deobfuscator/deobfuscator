@@ -42,6 +42,7 @@ public class Transformers {
     public static class Zelix {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer.class;
         public static final Class<? extends Transformer> REFLECTION_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.ReflectionObfuscationTransformer.class;
+        public static final Class<? extends Transformer> FLOW_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.FlowObfuscationTransformer.class;
     }
 
     public static class Normalizer {
