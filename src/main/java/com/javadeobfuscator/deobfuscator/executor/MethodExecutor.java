@@ -911,8 +911,9 @@ public class MethodExecutor {
                     case TABLESWITCH: {
                         int x = stack.remove(0).intValue();
                         TableSwitchInsnNode cast = (TableSwitchInsnNode) now;
-                        if (x < cast.labels.size() && x >= 0) {
-                            now = cast.labels.get(x);
+                        int offset = cast.min;
+                        if (x < cast.labels.size() + offset && x - offset >= 0) {
+                            now = cast.labels.get(x - offset);
                         } else {
                             now = cast.dflt;
                         }
