@@ -38,7 +38,14 @@ public class Transformers {
         public static final Class<? extends Transformer> LINE_NUMBER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
         public static final Class<? extends Transformer> ILLEGAL_VARARGS = com.javadeobfuscator.deobfuscator.transformers.general.IllegalVarargsTransformer.class;
     }
-
+    
+    public static class Smoke {
+    	public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.smoke.StringEncryptionTransformer.class;
+        public static final Class<? extends Transformer> NUMBER_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.smoke.NumberObfuscationTransformer.class;
+        public static final Class<? extends Transformer> ILLEGAL_VARIABLE = com.javadeobfuscator.deobfuscator.transformers.smoke.IllegalVariableTransformer.class;
+        public static final Class<? extends Transformer> PEEPHOLE_OPTIMIZER = com.javadeobfuscator.deobfuscator.transformers.smoke.peephole.PeepholeOptimizer.class;
+    }
+    
     public static class Zelix {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer.class;
         public static final Class<? extends Transformer> REFLECTION_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.ReflectionObfuscationTransformer.class;
