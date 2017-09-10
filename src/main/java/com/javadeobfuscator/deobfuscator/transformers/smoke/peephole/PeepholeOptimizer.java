@@ -40,6 +40,7 @@ public class PeepholeOptimizer extends Transformer {
  
     static { 
         PEEPHOLE_TRANSFORMERS.add(EndlessSelfJump.class); 
-        PEEPHOLE_TRANSFORMERS.add(DeadCodeRemover.class); 
+        PEEPHOLE_TRANSFORMERS.add(DeadCodeRemover.class);
+        PEEPHOLE_TRANSFORMERS.add(ImpossibleSwitchRemover.class);
     } 
 } 
