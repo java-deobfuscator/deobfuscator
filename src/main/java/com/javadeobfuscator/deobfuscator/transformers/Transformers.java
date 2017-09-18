@@ -58,5 +58,6 @@ public class Transformers {
         public static final Class<? extends Transformer> FIELD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.FieldNormalizer.class;
         public static final Class<? extends Transformer> METHOD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.MethodNormalizer.class;
         public static final Class<? extends Transformer> VARIABLE_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.VariableNormalizer.class;
+        public static final Class<? extends Transformer> SRC_RENAMER = com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer.class;
     }
 }
