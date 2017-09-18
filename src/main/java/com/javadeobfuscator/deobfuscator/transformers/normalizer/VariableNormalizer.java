@@ -29,11 +29,11 @@ public class VariableNormalizer extends Transformer {
  
     @Override 
     public void transform() throws Throwable { 
-        AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> 
         classNode.methods.forEach(methodNode -> { 
             if (methodNode.instructions.size() > 0) { 
             	methodNode.localVariables.forEach(variableNode -> {
+              AtomicInteger id = new AtomicInteger(0);
             		if (variableNode != null) {
                         String newName = "var" + id.getAndIncrement();
             			variableNode.name = newName;
