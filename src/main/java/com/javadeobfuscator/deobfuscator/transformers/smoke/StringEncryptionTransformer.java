@@ -1,6 +1,5 @@
 package com.javadeobfuscator.deobfuscator.transformers.smoke; 
- 
-import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
+
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
