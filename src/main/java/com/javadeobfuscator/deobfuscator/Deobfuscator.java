@@ -51,6 +51,11 @@ public class Deobfuscator {
     private File output;
 
     private static final boolean DEBUG = false; 
+    /**
+     * Some obfuscators like to have junk classes. If ALL your libraries are added, 
+     * enable this to dump troublesome classes. Note that this will not get rid of all junk classes.
+     */
+    private static final boolean DELETE_USELESS_CLASSES = false;
  
     public Deobfuscator withTransformer(Class<? extends Transformer> transformer) {
         this.transformers.add(transformer);
@@ -204,6 +209,16 @@ public class Deobfuscator {
         }
         return clazz.classNode;
     }
+    
+    public ClassNode assureLoadedElseRemove(String referencer, String ref) {
+        WrappedClassNode clazz = classpath.get(ref);
+        if (clazz == null) {
+            classes.remove(referencer);
+            classpath.remove(referencer);
+            return null;
+        }
+        return clazz.classNode;
+    }
 
     public void loadHierachy() {
         Set<String> processed = new HashSet<>();
@@ -233,7 +248,15 @@ public class Deobfuscator {
         List<ClassNode> toProcess = new ArrayList<>();
 
         ClassTree thisTree = getClassTree(specificNode.name);
-        ClassNode superClass = assureLoaded(specificNode.superName);
+        ClassNode superClass;
+        if(DELETE_USELESS_CLASSES)
+        {
+        	superClass = assureLoadedElseRemove(specificNode.name, specificNode.superName);
+        	if(superClass == null)
+        		//It got removed
+        		return toProcess;
+        }else
+        	superClass = assureLoaded(specificNode.superName);
         if (superClass == null) {
             throw new IllegalArgumentException("Could not load " + specificNode.name);
         }
@@ -243,7 +266,15 @@ public class Deobfuscator {
         toProcess.add(superClass);
 
         for (String interfaceReference : specificNode.interfaces) {
-            ClassNode interfaceNode = assureLoaded(interfaceReference);
+            ClassNode interfaceNode;
+            if(DELETE_USELESS_CLASSES)
+            {
+            	interfaceNode = assureLoadedElseRemove(specificNode.name, interfaceReference);
+            	if(interfaceNode == null)
+            		//It got removed
+            		return toProcess;
+            }else
+            	interfaceNode = assureLoaded(interfaceReference);
             if (interfaceNode == null) {
                 throw new IllegalArgumentException("Could not load " + interfaceReference);
             }

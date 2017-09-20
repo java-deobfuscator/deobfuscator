@@ -16,19 +16,12 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
-import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
-import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
-import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
-import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
-import com.javadeobfuscator.deobfuscator.analyzer.frame.PopFrame;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -107,6 +100,15 @@ public class LdcPopRemover extends Transformer {
                             AbstractInsnNode next = node.getNext();
                             if (next.getOpcode() == Opcodes.POP) {
                                 methodNode.instructions.remove(next);
+                                methodNode.instructions.remove(node);
+                                counter.incrementAndGet();
+                                modified = true;
+                            }else if(node.getPrevious() != null
+                            	&& Utils.willPushToStack(node.getPrevious().getOpcode())
+                            	&& next.getOpcode() == Opcodes.POP2)
+                            {
+                            	methodNode.instructions.remove(next);
+                            	methodNode.instructions.remove(node.getPrevious());
                                 methodNode.instructions.remove(node);
                                 counter.incrementAndGet();
                                 modified = true;

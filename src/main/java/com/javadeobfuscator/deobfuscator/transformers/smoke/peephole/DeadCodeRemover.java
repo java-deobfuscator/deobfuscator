@@ -60,7 +60,11 @@ public class DeadCodeRemover extends Transformer {
                                     methodNode.instructions.remove(result.getInsnNode(ldcFrame)); 
                                     methodNode.instructions.insert(insn, new LabelNode()); 
                                     methodNode.instructions.set(insn, new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode) insn).label)); 
-                                } 
+                                }else
+                                {
+                                    methodNode.instructions.remove(result.getInsnNode(ldcFrame));
+                                    methodNode.instructions.remove(insn);
+                                }
                             } 
                         } else if (insn.getOpcode() == Opcodes.ATHROW && insn.getPrevious().getOpcode() == ACONST_NULL) { 
                             InsnList insert = new InsnList(); 

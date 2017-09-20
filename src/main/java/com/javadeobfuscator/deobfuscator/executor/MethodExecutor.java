@@ -168,9 +168,20 @@ public class MethodExecutor {
             } else {
                 Array.set(array.value(), index.intValue(), val);
             }
-        } else {
-            Array.set(array.value(), index.intValue(), val);
-        }
+        } else if(array.value() instanceof char[]) {
+    		//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (char)value.intValue());
+        	else if(value instanceof JavaByte)
+        		Array.set(array.value(), index.intValue(), (char)((JavaByte)value).byteValue());
+        	else if(value instanceof JavaShort)
+        		Array.set(array.value(), index.intValue(), (char)((JavaShort)value).shortValue());
+        	else if(value instanceof JavaLong)
+        		Array.set(array.value(), index.intValue(), (char)(value.longValue()));
+        	else
+        		Array.set(array.value(), index.intValue(), val);
+        } else
+    		Array.set(array.value(), index.intValue(), val);
     }
 
     public static Object convert(Object value, String type) {
@@ -911,8 +922,9 @@ public class MethodExecutor {
                     case TABLESWITCH: {
                         int x = stack.remove(0).intValue();
                         TableSwitchInsnNode cast = (TableSwitchInsnNode) now;
-                        if (x < cast.labels.size() && x >= 0) {
-                            now = cast.labels.get(x);
+                        int offset = cast.min;
+                        if (x < cast.labels.size() + offset && x - offset >= 0) {
+                            now = cast.labels.get(x - offset);
                         } else {
                             now = cast.dflt;
                         }

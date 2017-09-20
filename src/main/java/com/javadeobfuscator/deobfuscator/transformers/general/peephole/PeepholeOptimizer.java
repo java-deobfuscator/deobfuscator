@@ -54,6 +54,7 @@ public class PeepholeOptimizer extends Transformer {
         PEEPHOLE_TRANSFORMERS.add(NopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(GotoUnconditionalJumpRemover.class);
         PEEPHOLE_TRANSFORMERS.add(LdcPopRemover.class);
+        PEEPHOLE_TRANSFORMERS.add(DupPopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(LdcSwapInvokeSwapPopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(RedundantTrapRemover.class);
 //        PEEPHOLE_TRANSFORMERS.add(Test.class);

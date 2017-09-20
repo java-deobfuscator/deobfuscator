@@ -38,10 +38,18 @@ public class Transformers {
         public static final Class<? extends Transformer> LINE_NUMBER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
         public static final Class<? extends Transformer> ILLEGAL_VARARGS = com.javadeobfuscator.deobfuscator.transformers.general.IllegalVarargsTransformer.class;
     }
-
+    
+    public static class Smoke {
+    	public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.smoke.StringEncryptionTransformer.class;
+        public static final Class<? extends Transformer> NUMBER_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.smoke.NumberObfuscationTransformer.class;
+        public static final Class<? extends Transformer> ILLEGAL_VARIABLE = com.javadeobfuscator.deobfuscator.transformers.smoke.IllegalVariableTransformer.class;
+        public static final Class<? extends Transformer> PEEPHOLE_OPTIMIZER = com.javadeobfuscator.deobfuscator.transformers.smoke.peephole.PeepholeOptimizer.class;
+    }
+    
     public static class Zelix {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer.class;
         public static final Class<? extends Transformer> REFLECTION_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.ReflectionObfuscationTransformer.class;
+        public static final Class<? extends Transformer> FLOW_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.zelix.FlowObfuscationTransformer.class;
     }
 
     public static class Normalizer {
@@ -50,5 +58,6 @@ public class Transformers {
         public static final Class<? extends Transformer> FIELD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.FieldNormalizer.class;
         public static final Class<? extends Transformer> METHOD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.MethodNormalizer.class;
         public static final Class<? extends Transformer> VARIABLE_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.VariableNormalizer.class;
+        public static final Class<? extends Transformer> SRC_RENAMER = com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer.class;
     }
 }
