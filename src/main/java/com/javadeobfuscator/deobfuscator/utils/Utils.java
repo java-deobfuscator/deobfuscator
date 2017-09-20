@@ -341,4 +341,34 @@ public class Utils {
         }); 
     } 
 
+    public static boolean isNumber(AbstractInsnNode ain)
+	{
+		if(ain.getOpcode() >= Opcodes.ICONST_M1
+			&& ain.getOpcode() <= Opcodes.SIPUSH)
+			return true;
+		if(ain instanceof LdcInsnNode)
+		{
+			LdcInsnNode ldc = (LdcInsnNode)ain;
+			if(ldc.cst instanceof Number)
+				return true;
+		}
+		return false;
+	}
+
+	public static int getIntValue(AbstractInsnNode node)
+	{
+		if(node.getOpcode() >= Opcodes.ICONST_M1
+			&& node.getOpcode() <= Opcodes.ICONST_5)
+			return node.getOpcode() - 3;
+		if(node.getOpcode() == Opcodes.SIPUSH
+			|| node.getOpcode() == Opcodes.BIPUSH)
+			return ((IntInsnNode)node).operand;
+		if(node instanceof LdcInsnNode)
+		{
+			LdcInsnNode ldc = (LdcInsnNode)node;
+			if(ldc.cst instanceof Number)
+				return (int)ldc.cst;
+		}
+		return 0;
+	}
 }
