@@ -313,7 +313,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
 
-            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class)); // FIXME
+            put("newInstance([Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaConstructor.class).newInstance(context, args.get(0).as(Object[].class)));
         }});
         put("java/lang/reflect/Method", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).getName());
