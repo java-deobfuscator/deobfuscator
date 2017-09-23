@@ -322,8 +322,6 @@ public class JavaClass {
         if (possibleMethods.size() == 0) {
             Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
             return null;
-        } else if (possibleMethods.size() > 1) {
-        	throw new RuntimeException("Multiple constructors with the same argument types?");
         } else {
             return new JavaConstructor(this, possibleMethods.get(0).desc);
         }
@@ -342,8 +340,6 @@ public class JavaClass {
         if (possibleMethods.size() == 0) {
             Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
             return null;
-        } else if (possibleMethods.size() > 1) {
-            throw new RuntimeException("Multiple constructors with the same argument types?");
         } else {
             return new JavaConstructor(this, possibleMethods.get(0).desc);
         }
