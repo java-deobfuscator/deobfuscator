@@ -254,9 +254,9 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/lang/Class", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("forName(Ljava/lang/String;)Ljava/lang/Class;", (targetObject, args, context) -> new JavaClass(args.get(0).as(String.class), context));
-            put("getDeclaredConstructor(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getDeclaredConstructor(args.get(0).as(String.class), toJavaClass(args.get(1).as(Object[].class))));
+            put("getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getDeclaredConstructor(args.get(0).as(String.class), toJavaClass(args.get(1).as(Object[].class))));
             put("getDeclaredConstructors()[Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getDeclaredConstructors());
-            put("getConstructor(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getConstructor(args.get(0).as(String.class), toJavaClass(args.get(1).as(Object[].class))));
+            put("getConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getConstructor(args.get(0).as(String.class), toJavaClass(args.get(1).as(Object[].class))));
             put("getConstructors()[Ljava/lang/reflect/Constructor;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getConstructors());
             put("getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getDeclaredMethod(args.get(0).as(String.class), toJavaClass(args.get(1).as(Object[].class))));
             put("getDeclaredMethods()[Ljava/lang/reflect/Method;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getDeclaredMethods());
