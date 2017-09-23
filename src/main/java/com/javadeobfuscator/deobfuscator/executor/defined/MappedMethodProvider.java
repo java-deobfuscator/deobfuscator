@@ -36,7 +36,10 @@ public class MappedMethodProvider extends MethodProvider {
 
     public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         WrappedClassNode wrappedClassNode = classpath.get(className);
-        return wrappedClassNode != null;
+        if(wrappedClassNode == null)
+        	return false;
+        MethodNode methodNode = wrappedClassNode.classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
+        return methodNode != null;
     }
 
     @Override
