@@ -375,7 +375,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("setTarget(Ljava/lang/invoke/MethodHandle;)V", (targetObject, args, context) -> {
             	return null;
             });
-            put("getTarget()Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> targetObject);
+            put("getTarget()Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> targetObject.value());
         }});
         put("java/lang/System", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("currentTimeMillis()J", (targetObject, args, context) -> System.currentTimeMillis());
