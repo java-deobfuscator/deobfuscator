@@ -310,7 +310,7 @@ public class JavaClass {
     	return methods.toArray(new JavaConstructor[methods.size()]);
     }
     
-    public JavaConstructor getDeclaredConstructor(String name, JavaClass[] clazz) {
+    public JavaConstructor getDeclaredConstructor(JavaClass[] clazz) {
         StringBuilder descBuilder = new StringBuilder("(");
         for (JavaClass javaClass : clazz) {
             descBuilder.append(javaClass.type.getDescriptor());
@@ -327,7 +327,7 @@ public class JavaClass {
         }
     }
 
-    public JavaConstructor getConstructor(String name, JavaClass[] clazz) {
+    public JavaConstructor getConstructor(JavaClass[] clazz) {
         StringBuilder descBuilder = new StringBuilder("(");
         for (JavaClass javaClass : clazz) {
             descBuilder.append(javaClass.type.getDescriptor());
