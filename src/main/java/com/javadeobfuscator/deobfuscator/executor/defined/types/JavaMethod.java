@@ -96,8 +96,11 @@ public class JavaMethod {
             List<JavaValue> argsobjects = new ArrayList<>();
             if (args != null) {
                 for (Object o : args) {
-                    // I think this should be the case?
-                    argsobjects.add((JavaValue) o);
+                	if(!(o instanceof JavaValue))
+                		//Arrays
+                		argsobjects.add(JavaValue.valueOf(o));
+                	else
+                		argsobjects.add((JavaValue) o);
                 }
             }
 
