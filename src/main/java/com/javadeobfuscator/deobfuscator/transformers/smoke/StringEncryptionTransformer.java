@@ -66,6 +66,7 @@ public class StringEncryptionTransformer extends Transformer {
         							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
         							if(isSmokeMethod(decrypterNode))
         							{
+									context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
 	        							String value = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
 	                                    methodNode.instructions.remove(m.getPrevious().getPrevious());
 	                                    methodNode.instructions.remove(m.getPrevious());
