@@ -17,14 +17,7 @@
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
@@ -226,6 +219,13 @@ public class JavaClass {
 	        node = new JavaClass(node.superName, context).classNode;
         }
         possibleMethods = possibleMethods.stream().filter(methodNode -> methodNode.name.equals(name) && methodNode.desc.startsWith(desc)).collect(Collectors.toList());
+        //Removes abstract methods
+        Iterator<MethodNode> itr = possibleMethods.iterator();
+        while(itr.hasNext())
+        {
+        	if(Modifier.isAbstract(itr.next().access))
+        		itr.remove();
+        }
         if (possibleMethods.size() == 0) {
             Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
             return null;
