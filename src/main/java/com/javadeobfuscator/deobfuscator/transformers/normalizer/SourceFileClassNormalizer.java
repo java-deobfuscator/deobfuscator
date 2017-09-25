@@ -39,12 +39,16 @@ public class SourceFileClassNormalizer extends Transformer {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
             String packageName = classNode.name.lastIndexOf('/') == -1 ? "" : classNode.name.substring(0, classNode.name.lastIndexOf('/') + 1);
             while (true) {
-                String src = classNode.sourceFile.replaceAll(".java", "").replaceAll(" ", "");
+            	boolean hasSrc = classNode.sourceFile != "SourceFile" && classNode.sourceFile != null;
+            	
+            	if(!hasSrc) break;
+                
+            	String src = classNode.sourceFile.replaceAll(".java", "").replaceAll(" ", "");
                 String inner = "";
                 if(classNode.name.contains("$")){
                 	inner = classNode.name.substring(classNode.name.indexOf("$") + 1);
                 }
-            	String newName = packageName + src != null && src != "SourceFile" ? src + (inner == "" ? "_" + num.getAndIncrement() : "$" + inner) : classNode.name;
+            	String newName = packageName + src + (inner == "" ? "_" + num.getAndIncrement() : "$" + inner);
                 if (remapper.map(classNode.name, newName)) {
                     break;
                 }
