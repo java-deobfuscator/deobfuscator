@@ -254,7 +254,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
                       				methodNode.instructions.remove(insn.getPrevious());
                     			}
                     			//Remove extra pop
-                    			if(Type.getReturnType(result.getDesc()).getSort() == 0 &&
+                    			if(Type.getReturnType(result.getDesc()).getSort() == Type.VOID &&
                     				insn.getNext() != null && insn.getNext().getOpcode() == Opcodes.POP)
                     				methodNode.instructions.remove(insn.getNext());
                     			//Removes the casts from a primitive to non primitive (doesn't solve the cast problem completely)
