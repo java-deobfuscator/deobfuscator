@@ -39,6 +39,9 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisit
 import sun.misc.Unsafe;
 
 public class Utils {
+    public static boolean isInstruction(AbstractInsnNode node) {
+        return !(node instanceof LineNumberNode) && !(node instanceof FrameNode) && !(node instanceof LabelNode);
+    }
 
     public static boolean notAbstractOrNative(MethodNode methodNode) {
         return !Modifier.isNative(methodNode.access) && !Modifier.isAbstract(methodNode.access);
@@ -52,7 +55,7 @@ public class Utils {
         if (next.getOpcode() == GOTO) {
             JumpInsnNode cast = (JumpInsnNode) next;
             next = cast.label;
-            while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {
+            while (!Utils.isInstruction(next)) {
                 next = next.getNext();
             }
         }
@@ -61,7 +64,7 @@ public class Utils {
 
     public static AbstractInsnNode getNext(AbstractInsnNode node) {
         AbstractInsnNode next = node.getNext();
-        while (next instanceof LabelNode || next instanceof LineNumberNode || next instanceof FrameNode) {
+        while (!Utils.isInstruction(next)) {
             next = next.getNext();
         }
         return next;
@@ -69,7 +72,7 @@ public class Utils {
 
     public static AbstractInsnNode getPrevious(AbstractInsnNode node) {
         AbstractInsnNode prev = node.getPrevious();
-        while (prev instanceof LabelNode || prev instanceof LineNumberNode || prev instanceof FrameNode) {
+        while (!Utils.isInstruction(prev)) {
             prev = prev.getPrevious();
         }
         return prev;
@@ -366,7 +369,7 @@ public class Utils {
 		if(node instanceof LdcInsnNode)
 		{
 			LdcInsnNode ldc = (LdcInsnNode)node;
-			if(ldc.cst instanceof Number)
+			if(ldc.cst instanceof Integer)
 				return (int)ldc.cst;
 		}
 		return 0;
