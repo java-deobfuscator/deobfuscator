@@ -83,6 +83,19 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [Smoke](https://newtownia.net/smoke)  
 Generic obfuscation
 
+## FAQs
+
+#### I got an error that says "Could not locate a class file"
+You need to specify all the JARs that the input file references. You'll almost always need to add `rt.jar`
+(which contains all the classes used by the Java Runtime)
+
+#### I got an error that says "A StackOverflowError occurred during deobfuscation"
+Increase your stack size. For example, `java -Xss128m -jar deobfuscator.jar`
+
+#### Does this work on Android apps?
+Technically, yes, you could use something like [dex2jar](https://github.com/pxb1988/dex2jar) or [enjarify](https://github.com/storyyeller/enjarify), but try [simplify](https://github.com/CalebFenton/simplify) first.
+It's a deobfuscator of sorts built specifically for Android.
+
 ## Licensing
 
 Java Deobfuscator is licensed under the Apache 2.0 license.
