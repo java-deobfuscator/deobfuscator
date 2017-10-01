@@ -38,7 +38,7 @@ public class ImpossibleSwitchRemover extends Transformer
 	}
 	
 	@Override
-	public void transform() throws Throwable
+	public boolean transform() throws Throwable
 	{
 		AtomicInteger count = new AtomicInteger(0);
 		classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> 
@@ -65,5 +65,6 @@ public class ImpossibleSwitchRemover extends Transformer
 			} 
 		}));
 		System.out.println("Removed " + count.get() + " impossible switches");
+		return true;
 	}
 }

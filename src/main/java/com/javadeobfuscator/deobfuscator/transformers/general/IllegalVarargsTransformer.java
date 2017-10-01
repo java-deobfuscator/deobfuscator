@@ -5,7 +5,6 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.lang.reflect.Modifier;
 import java.util.Map;
 
 public class IllegalVarargsTransformer extends Transformer {
@@ -14,16 +13,15 @@ public class IllegalVarargsTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode ->
-                classNode.methods.forEach(methodNode -> {
-                    if (Modifier.isTransient(methodNode.access)) {
-                        Type type = Type.getType(methodNode.desc);
-                        if (type.getArgumentTypes().length > 0 &&
-                                type.getArgumentTypes()[type.getArgumentTypes().length - 1].getClassName().endsWith("[]")) return;
-
-                        methodNode.access &= ~Opcodes.ACC_VARARGS;
-                    }
-        }));
+    public boolean transform() throws Throwable {
+        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
+                Type[] args = Type.getArgumentTypes(methodNode.desc);
+                if (args.length > 0 && args[args.length - 1].getSort() != Type.ARRAY) {
+                    methodNode.access &= ~Opcodes.ACC_VARARGS;
+                }
+            });
+        });
+        return true;
     }
 }

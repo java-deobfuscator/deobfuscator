@@ -16,58 +16,257 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FrameNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LabelNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
 public class RedundantTrapRemover extends Transformer {
     public RedundantTrapRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
     }
 
+    private boolean doesTrapCatch(TryCatchBlockNode node, String... exceptions) {
+        if (node.type == null) {
+            return true;
+        }
+        if (node.type.equals("java/lang/Throwable")) {
+            return true;
+        }
+        for (String exception : exceptions) {
+            if (deobfuscator.isSubclass(node.type, exception)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         AtomicInteger redudantTraps = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
-                if (methodNode.tryCatchBlocks != null) {
-                    Iterator<TryCatchBlockNode> iterator = methodNode.tryCatchBlocks.iterator();
-                    while (iterator.hasNext()) {
-                        TryCatchBlockNode tcbn = iterator.next();
-                        AbstractInsnNode nextInsn = Utils.getNext(tcbn.handler.getPrevious());
-                        if (nextInsn.getOpcode() == Opcodes.ATHROW) {
-                            iterator.remove();
-                            redudantTraps.incrementAndGet();
-                        } else if (tcbn.start.getNext() == tcbn.end) {
-                            iterator.remove();
-                        }
-                    }
-                    iterator = methodNode.tryCatchBlocks.iterator();
-                    while (iterator.hasNext()) {
-                        TryCatchBlockNode tcbn = iterator.next();
-                        AbstractInsnNode start = tcbn.start;
-                        while (start.getOpcode() == -1) {
-                            if (start == tcbn.end) {
-                                iterator.remove();
-                                System.out.println("Removing empty trap"); //fixme located inside GotoUnconditionalJumpRemover
-                                break;
+                if (methodNode.tryCatchBlocks != null && !methodNode.tryCatchBlocks.isEmpty()) {
+                    {
+                        List<TryCatchBlockNode> remove = new ArrayList<>();
+                        List<TryCatchBlockNode> add = new ArrayList<>();
+                        for (TryCatchBlockNode tryCatchBlockNode : methodNode.tryCatchBlocks) {
+                            boolean containsThrowableInstructions = false;
+                            boolean previousInsnThrows = false;
+                            boolean currentInsnThrows;
+                            // todo static analysis on stuff like IDIV, and check if the throwable is ever used. if not, optimize away
+                            boolean guaranteedThrow = false;
+                            AbstractInsnNode firstThrowable = null;
+                            AbstractInsnNode latestThrowable = null;
+                            AbstractInsnNode guaranteedThrowable = null;
+                            for (AbstractInsnNode cur = tryCatchBlockNode.start; ; cur = cur.getNext()) {
+                                if (cur.getType() != AbstractInsnNode.LABEL && cur.getType() != AbstractInsnNode.FRAME && cur.getType() != AbstractInsnNode.LINE) {
+                                    currentInsnThrows = false;
+                                    switch (cur.getOpcode()) {
+                                        case IALOAD:
+                                        case DALOAD:
+                                        case FALOAD:
+                                        case LALOAD:
+                                        case SALOAD:
+                                        case AALOAD: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/ArrayIndexOutOfBoundsException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case IASTORE:
+                                        case DASTORE:
+                                        case FASTORE:
+                                        case LASTORE:
+                                        case SASTORE:
+                                        case AASTORE: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/ArrayIndexOutOfBoundsException", "java/lang/ArrayStoreException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case NEWARRAY:
+                                        case ANEWARRAY:
+                                        case MULTIANEWARRAY: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NegativeArraySizeException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case RETURN:
+                                        case IRETURN:
+                                        case DRETURN:
+                                        case FRETURN:
+                                        case LRETURN:
+                                        case ARETURN: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/IllegalMonitorStateException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case ARRAYLENGTH: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case ATHROW: {
+                                            containsThrowableInstructions = true;
+                                            currentInsnThrows = true;
+                                            guaranteedThrow = true;
+                                            break;
+                                        }
+                                        case CHECKCAST: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/ClassCastException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case GETFIELD:
+                                        case PUTFIELD: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case GETSTATIC:
+                                        case PUTSTATIC:
+                                        case NEW: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/Error")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case IDIV:
+                                        case IREM:
+                                        case LDIV:
+                                        case LREM: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/ArithmeticException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case INVOKEDYNAMIC:
+                                        case INVOKEINTERFACE:
+                                        case INVOKESPECIAL:
+                                        case INVOKESTATIC:
+                                        case INVOKEVIRTUAL: {
+                                            containsThrowableInstructions = true;
+                                            currentInsnThrows = true;
+                                            break;
+                                        }
+                                        case MONITORENTER: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                        case MONITOREXIT: {
+                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/IllegalMonitorStateException")) {
+                                                containsThrowableInstructions = true;
+                                                currentInsnThrows = true;
+                                            }
+                                            break;
+                                        }
+                                    }
+
+                                    // any instruction can throw this, but is this necessary? can people really trigger stackoverflow/oom/internalerror on demand?
+//                                    if (deobfuscator.isSubclass(tryCatchBlockNode.type, "java/lang/VirtualMachineError")) {
+//                                        containsThrowableInstructions = true;
+//                                        currentInsnThrows = true;
+//                                    }
+
+                                    if (containsThrowableInstructions) {
+                                        if (firstThrowable == null) {
+                                            firstThrowable = cur;
+                                        }
+                                        latestThrowable = cur;
+                                    }
+                                    if (guaranteedThrow) {
+                                        if (guaranteedThrowable == null) {
+                                            guaranteedThrowable = cur;
+                                        }
+                                    }
+
+                                    if (!currentInsnThrows) {
+                                        if (previousInsnThrows) {
+                                            TryCatchBlockNode tcbn = new TryCatchBlockNode(new LabelNode(), new LabelNode(), tryCatchBlockNode.handler, tryCatchBlockNode.type);
+                                            methodNode.instructions.insertBefore(firstThrowable, tcbn.start);
+                                            methodNode.instructions.insert(latestThrowable, tcbn.end);
+                                            firstThrowable = null;
+                                            latestThrowable = null;
+                                            currentInsnThrows = false;
+//                                        containsThrowableInstructions = false;
+//                                        guaranteedThrow = false;
+                                            add.add(tcbn);
+                                        }
+                                    }
+
+                                    previousInsnThrows = currentInsnThrows;
+                                }
+
+                                if (cur == tryCatchBlockNode.end) {
+                                    break;
+                                }
                             }
-                            start = start.getNext();
+
+                            if (!containsThrowableInstructions) {
+                                remove.add(tryCatchBlockNode);
+                                redudantTraps.incrementAndGet();
+                            } else if (firstThrowable != null) {
+                                LabelNode start = new LabelNode();
+                                LabelNode end = new LabelNode();
+                                methodNode.instructions.insertBefore(firstThrowable, start);
+                                methodNode.instructions.insert(latestThrowable, end);
+                                tryCatchBlockNode.start = start;
+                                tryCatchBlockNode.end = end;
+                            }
                         }
+
+                        methodNode.tryCatchBlocks.removeAll(remove);
+                        methodNode.tryCatchBlocks.addAll(add);
+                    }
+
+                    // Now remove duplicates
+                    {
+                        Map<Map.Entry<String, List<AbstractInsnNode>>, List<TryCatchBlockNode>> duplicates = new HashMap<>();
+                        for (TryCatchBlockNode tryCatchBlockNode : methodNode.tryCatchBlocks) {
+                            duplicates.computeIfAbsent(
+                                    new AbstractMap.SimpleEntry<>(
+                                            tryCatchBlockNode.type,
+                                            Arrays.asList(Utils.getNext(tryCatchBlockNode.start), Utils.getNext(tryCatchBlockNode.end), Utils.getNext(tryCatchBlockNode.handler))
+                                    ), key -> new ArrayList<>()).add(tryCatchBlockNode);
+                        }
+
+                        duplicates.forEach((ent, list) -> {
+                            if (list.size() > 1) {
+                                for (int i = 1; i < list.size(); i++) {
+                                    methodNode.tryCatchBlocks.remove(list.get(i));
+                                }
+                            }
+                        });
                     }
                 }
             });
         });
         System.out.println("Removed " + redudantTraps.get() + " redundant traps");
+        return redudantTraps.get() > 0;
     }
 }

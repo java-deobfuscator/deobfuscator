@@ -20,7 +20,7 @@ public class DeadCodeRemover extends Transformer {
     } 
  
     @Override 
-    public void transform() throws Throwable { 
+    public boolean transform() throws Throwable {
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> 
                 classNode.methods.forEach(methodNode -> { 
                     AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode); 
@@ -78,7 +78,8 @@ public class DeadCodeRemover extends Transformer {
  
                     if (methodNode.localVariables != null) 
                         methodNode.localVariables.clear(); // Fix for Procyon AstBuilder.convertLocalVariables 
-        })); 
+        }));
+        return true;
     } 
  
     private boolean hasBackJump(MethodNode methodNode) { 

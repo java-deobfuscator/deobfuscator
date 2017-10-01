@@ -32,7 +32,7 @@ public class LdcSwapInvokeSwapPopRemover extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
@@ -67,5 +67,6 @@ public class LdcSwapInvokeSwapPopRemover extends Transformer {
             });
         });
         System.out.println("Removed " + counter.get() + " ldc-swap-invoke-swap-pop patterns");
+        return counter.get() > 0;
     }
 }

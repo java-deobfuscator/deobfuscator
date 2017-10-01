@@ -88,7 +88,7 @@
             <groupId>org.jooq</groupId>
             <artifactId>jool</artifactId>
             <version>0.9.9</version>
-        </dependency><!-- http://mvnrepository.com/artifact/com.google.code.gson/gson -->
+        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>

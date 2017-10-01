@@ -43,7 +43,7 @@ public abstract class Transformer {
         return this.classes.values();
     }
 
-    public abstract void transform() throws Throwable;
+    public abstract boolean transform() throws Throwable;
 
     // heh
     public void setDeobfuscator(Deobfuscator deobfuscator) {

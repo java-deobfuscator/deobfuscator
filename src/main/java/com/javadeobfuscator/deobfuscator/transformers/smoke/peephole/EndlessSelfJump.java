@@ -16,7 +16,7 @@ public class EndlessSelfJump extends Transformer {
     } 
  
     @Override 
-    public void transform() throws Throwable { 
+    public boolean transform() throws Throwable {
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> 
                 classNode.methods.forEach(methodNode -> { 
                     InsnList copy = Utils.copyInsnList(methodNode.instructions); 
@@ -25,6 +25,7 @@ public class EndlessSelfJump extends Transformer {
                             methodNode.instructions.remove(insn); 
                         } 
                     } 
-        })); 
+        }));
+        return true;
     } 
 }

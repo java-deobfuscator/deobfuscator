@@ -47,7 +47,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         List<ClassNode> decryptors = findDecryptClass();
         List<MethodNode> decryptMethods = new ArrayList<>();
 
@@ -273,6 +273,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + (int) cleanedup + " invokedynamic bootstrap methods");
 
         System.out.println("[Stringer] [HideAccessTransformer] Done");
+        return true;
     }
 
     //XXX: Better detector

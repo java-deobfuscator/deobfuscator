@@ -26,14 +26,15 @@ public class NumberObfuscationTransformer extends Transformer {
     } 
  
     @Override 
-    public void transform() throws Throwable { 
+    public boolean transform() throws Throwable {
         new SyntheticBridgeTransformer(classes, classpath).transform(); 
         new PeepholeOptimizer(classes, classpath).transform(); 
         new IllegalVariableTransformer(classes, classpath).transform(); 
  
         for (int i = 0; i < 2; i++) { 
             transform0(); 
-        } 
+        }
+        return true;
     } 
  
     private void transform0() throws Throwable { 

@@ -16,16 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator;
 
-import java.io.*;
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
-
+import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassWriter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
@@ -40,6 +31,18 @@ import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.lang.reflect.Modifier;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
+
 public class Deobfuscator {
 
     private List<Class<? extends Transformer>> transformers = new ArrayList<>();
@@ -50,13 +53,13 @@ public class Deobfuscator {
     private File input;
     private File output;
 
-    private static final boolean DEBUG = false; 
+    private static final boolean DEBUG = false;
     /**
-     * Some obfuscators like to have junk classes. If ALL your libraries are added, 
+     * Some obfuscators like to have junk classes. If ALL your libraries are added,
      * enable this to dump troublesome classes. Note that this will not get rid of all junk classes.
      */
     private static final boolean DELETE_USELESS_CLASSES = false;
- 
+
     public Deobfuscator withTransformer(Class<? extends Transformer> transformer) {
         this.transformers.add(transformer);
         return this;
@@ -181,9 +184,9 @@ public class Deobfuscator {
         System.out.println("Transforming complete. Writing to file");
         System.out.println();
 
-        if (DEBUG) { 
-            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass); 
-        } 
+        if (DEBUG) {
+            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass);
+        }
 
         classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             try {
@@ -209,7 +212,7 @@ public class Deobfuscator {
         }
         return clazz.classNode;
     }
-    
+
     public ClassNode assureLoadedElseRemove(String referencer, String ref) {
         WrappedClassNode clazz = classpath.get(ref);
         if (clazz == null) {
@@ -224,6 +227,19 @@ public class Deobfuscator {
         Set<String> processed = new HashSet<>();
         LinkedList<ClassNode> toLoad = new LinkedList<>();
         toLoad.addAll(this.classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).collect(Collectors.toList()));
+        while (!toLoad.isEmpty()) {
+            for (ClassNode toProcess : loadHierachy(toLoad.poll())) {
+                if (processed.add(toProcess.name)) {
+                    toLoad.add(toProcess);
+                }
+            }
+        }
+    }
+
+    public void loadHierachyAll(ClassNode classNode) {
+        Set<String> processed = new HashSet<>();
+        LinkedList<ClassNode> toLoad = new LinkedList<>();
+        toLoad.add(classNode);
         while (!toLoad.isEmpty()) {
             for (ClassNode toProcess : loadHierachy(toLoad.poll())) {
                 if (processed.add(toProcess.name)) {
@@ -249,14 +265,13 @@ public class Deobfuscator {
 
         ClassTree thisTree = getClassTree(specificNode.name);
         ClassNode superClass;
-        if(DELETE_USELESS_CLASSES)
-        {
-        	superClass = assureLoadedElseRemove(specificNode.name, specificNode.superName);
-        	if(superClass == null)
-        		//It got removed
-        		return toProcess;
-        }else
-        	superClass = assureLoaded(specificNode.superName);
+        if (DELETE_USELESS_CLASSES) {
+            superClass = assureLoadedElseRemove(specificNode.name, specificNode.superName);
+            if (superClass == null)
+                //It got removed
+                return toProcess;
+        } else
+            superClass = assureLoaded(specificNode.superName);
         if (superClass == null) {
             throw new IllegalArgumentException("Could not load " + specificNode.name);
         }
@@ -267,14 +282,13 @@ public class Deobfuscator {
 
         for (String interfaceReference : specificNode.interfaces) {
             ClassNode interfaceNode;
-            if(DELETE_USELESS_CLASSES)
-            {
-            	interfaceNode = assureLoadedElseRemove(specificNode.name, interfaceReference);
-            	if(interfaceNode == null)
-            		//It got removed
-            		return toProcess;
-            }else
-            	interfaceNode = assureLoaded(interfaceReference);
+            if (DELETE_USELESS_CLASSES) {
+                interfaceNode = assureLoadedElseRemove(specificNode.name, interfaceReference);
+                if (interfaceNode == null)
+                    //It got removed
+                    return toProcess;
+            } else
+                interfaceNode = assureLoaded(interfaceReference);
             if (interfaceNode == null) {
                 throw new IllegalArgumentException("Could not load " + interfaceReference);
             }
@@ -290,6 +304,8 @@ public class Deobfuscator {
         if (possibleParent.equals(possibleChild)) {
             return true;
         }
+        loadHierachyAll(assureLoaded(possibleParent));
+        loadHierachyAll(assureLoaded(possibleChild));
         ClassTree parentTree = hierachy.get(possibleParent);
         if (parentTree != null && hierachy.get(possibleChild) != null) {
             List<String> layer = new ArrayList<>();
@@ -299,8 +315,7 @@ public class Deobfuscator {
                 if (layer.contains(possibleChild)) {
                     return true;
                 }
-                List<String> clone = new ArrayList<>();
-                clone.addAll(layer);
+                List<String> clone = new ArrayList<>(layer);
                 layer.clear();
                 for (String r : clone) {
                     ClassTree tree = hierachy.get(r);
@@ -330,14 +345,14 @@ public class Deobfuscator {
                 }
             });
         }
-        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
         try {
             try {
                 node.accept(writer);
             } catch (RuntimeException e) {
                 if (e instanceof NoClassInPathException) {
                     NoClassInPathException ex = (NoClassInPathException) e;
-                    System.out.println("Error: " + ex.className + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
+                    System.out.println("Error: " + ex.getClassName() + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
                     writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                     node.accept(writer);
                 } else if (e.getMessage() != null) {
@@ -442,12 +457,4 @@ public class Deobfuscator {
         }
     }
 
-    class NoClassInPathException extends RuntimeException {
-        String className;
-
-        public NoClassInPathException(String className) {
-            super(className);
-            this.className = className;
-        }
-    }
 }

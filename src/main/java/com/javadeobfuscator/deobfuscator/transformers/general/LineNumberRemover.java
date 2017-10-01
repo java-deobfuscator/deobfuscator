@@ -30,7 +30,7 @@ public class LineNumberRemover extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 Iterator<AbstractInsnNode> it = methodNode.instructions.iterator();
@@ -41,5 +41,7 @@ public class LineNumberRemover extends Transformer {
                 }
             });
         });
+
+        return true;
     }
 }

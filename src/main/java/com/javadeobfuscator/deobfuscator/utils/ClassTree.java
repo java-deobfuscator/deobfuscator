@@ -17,11 +17,13 @@
 package com.javadeobfuscator.deobfuscator.utils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ClassTree {
     public String thisClass;
 
-    public List<String> subClasses = new ArrayList<>();
-    public List<String> parentClasses = new ArrayList<>();
+    public Set<String> subClasses = new HashSet<>();
+    public Set<String> parentClasses = new HashSet<>();
 }

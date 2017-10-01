@@ -33,7 +33,7 @@ public class PackageNormalizer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
@@ -73,5 +73,6 @@ public class PackageNormalizer extends Transformer {
         removed.forEach(classpath::remove);
         deobfuscator.resetHierachy();
         deobfuscator.loadHierachy();
+        return true;
     }
 }

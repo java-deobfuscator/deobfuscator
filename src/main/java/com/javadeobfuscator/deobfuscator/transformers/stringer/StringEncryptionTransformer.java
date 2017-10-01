@@ -52,7 +52,7 @@ public class StringEncryptionTransformer extends Transformer {
     }
 
     @Override
-    public void transform() {
+    public boolean transform() {
         System.out.println("[Stringer] [StringEncryptionTransformer] Starting");
         int count = count();
         System.out.println("[Stringer] [StringEncryptionTransformer] Found " + count + " encrypted strings");
@@ -63,6 +63,7 @@ public class StringEncryptionTransformer extends Transformer {
             System.out.println("[Stringer] [StringEncryptionTransformer] Removed " + cleanedup + " decryption classes");
         }
         System.out.println("[Stringer] [StringEncryptionTransformer] Done");
+        return true;
     }
 
     private int cleanup() {

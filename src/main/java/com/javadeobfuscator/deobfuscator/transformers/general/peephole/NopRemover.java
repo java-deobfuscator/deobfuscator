@@ -31,7 +31,7 @@ public class NopRemover extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
@@ -46,5 +46,6 @@ public class NopRemover extends Transformer {
             });
         });
         System.out.println("Removed " + counter.get() + " nops");
+        return counter.get() > 0;
     }
 }
