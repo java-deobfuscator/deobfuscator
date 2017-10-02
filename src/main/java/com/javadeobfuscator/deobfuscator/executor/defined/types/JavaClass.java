@@ -16,14 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Modifier;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
@@ -204,6 +198,59 @@ public class JavaClass {
         }
     }
 
+    public JavaMethod getMethod(String name, JavaClass[] clazz) {
+        StringBuilder descBuilder = new StringBuilder("(");
+        for (JavaClass javaClass : clazz) {
+            descBuilder.append(javaClass.type.getDescriptor());
+        }
+        descBuilder.append(")");
+        String desc = descBuilder.toString();
+
+        List<MethodNode> possibleMethods = new ArrayList<>();
+        ClassNode node = this.classNode;
+        while(true)
+        {
+	        for (MethodNode methodNode : node.methods) {
+	        	if(!methodNode.name.startsWith("<") && Modifier.isPublic(methodNode.access))
+	        		possibleMethods.add(methodNode);
+	        }
+	        if(node.superName == null)
+	        	break;
+	        node = new JavaClass(node.superName, context).classNode;
+        }
+        possibleMethods = possibleMethods.stream().filter(methodNode -> methodNode.name.equals(name) && methodNode.desc.startsWith(desc)).collect(Collectors.toList());
+        //Removes abstract methods
+        Iterator<MethodNode> itr = possibleMethods.iterator();
+        while(itr.hasNext())
+        {
+        	if(Modifier.isAbstract(itr.next().access))
+        		itr.remove();
+        }
+        if (possibleMethods.size() == 0) {
+            Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
+            return null;
+        } else if (possibleMethods.size() > 1) {
+            List<Type> returnTypes = new ArrayList<>();
+            for (MethodNode m : possibleMethods) {
+                returnTypes.add(Type.getReturnType(m.desc));
+            }
+            Collections.sort(returnTypes, (o1, o2) -> {
+                String s1 = o1.getInternalName();
+                String s2 = o2.getInternalName();
+                if (isAssignableFrom(s1, s2)) {
+                    return 1;
+                } else if (isAssignableFrom(s2, s1)) {
+                    return -1;
+                }
+                return 0;
+            });
+            MethodNode target = possibleMethods.stream().filter(mn -> mn.desc.endsWith(returnTypes.get(0).getDescriptor())).findFirst().orElse(null);
+            return new JavaMethod(this, target);
+        } else {
+            return new JavaMethod(this, possibleMethods.get(0));
+        }
+    }
+    
     public Type getType() {
         return this.type;
     }
@@ -222,6 +269,82 @@ public class JavaClass {
         return methods.toArray(new JavaMethod[methods.size()]);
     }
 
+    public JavaMethod[] getMethods() {
+        List<JavaMethod> methods = new ArrayList<>();
+        ClassNode node = this.classNode;
+        while(true)
+        {
+	        for (MethodNode methodNode : node.methods) {
+	        	if(!methodNode.name.startsWith("<") && Modifier.isPublic(methodNode.access))
+	        		methods.add(new JavaMethod(this, methodNode));
+	        }
+	        if(node.superName == null)
+	        	break;
+	        node = new JavaClass(node.superName, context).classNode;
+        }
+        return methods.toArray(new JavaMethod[methods.size()]);
+    }
+    
+    public JavaConstructor[] getDeclaredConstructors()
+    {
+    	List<JavaConstructor> methods = new ArrayList<>();
+    	for(MethodNode methodNode : classNode.methods)
+    		if(methodNode.name.equals("<init>"))
+    			methods.add(new JavaConstructor(this, methodNode.desc));
+    	return methods.toArray(new JavaConstructor[methods.size()]);
+    }
+    
+    public JavaConstructor[] getConstructors()
+    {
+    	List<JavaConstructor> methods = new ArrayList<>();
+    	ClassNode node = this.classNode;
+        while(true)
+        {
+        	for(MethodNode methodNode : classNode.methods)
+        		if(methodNode.name.equals("<init>") && Modifier.isPublic(methodNode.access))
+        			methods.add(new JavaConstructor(this, methodNode.desc));
+	        if(node.superName == null)
+	        	break;
+	        node = new JavaClass(node.superName, context).classNode;
+        }
+    	return methods.toArray(new JavaConstructor[methods.size()]);
+    }
+    
+    public JavaConstructor getDeclaredConstructor(JavaClass[] clazz) {
+        StringBuilder descBuilder = new StringBuilder("(");
+        for (JavaClass javaClass : clazz) {
+            descBuilder.append(javaClass.type.getDescriptor());
+        }
+        descBuilder.append(")");
+        String desc = descBuilder.toString();
+
+        List<MethodNode> possibleMethods = classNode.methods.stream().filter(methodNode -> methodNode.name.equals("<init>")  && methodNode.desc.startsWith(desc)).collect(Collectors.toList());
+        if (possibleMethods.size() == 0) {
+            Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
+            return null;
+        } else {
+            return new JavaConstructor(this, possibleMethods.get(0).desc);
+        }
+    }
+
+    public JavaConstructor getConstructor(JavaClass[] clazz) {
+        StringBuilder descBuilder = new StringBuilder("(");
+        for (JavaClass javaClass : clazz) {
+            descBuilder.append(javaClass.type.getDescriptor());
+        }
+        descBuilder.append(")");
+        String desc = descBuilder.toString();
+
+        List<MethodNode> possibleMethods = classNode.methods.stream().filter(methodNode -> 
+        Modifier.isPublic(methodNode.access) && methodNode.name.equals("<init>")  && methodNode.desc.startsWith(desc)).collect(Collectors.toList());
+        if (possibleMethods.size() == 0) {
+            Utils.sneakyThrow(new NoSuchMethodException(this.name + " " + name + desc));
+            return null;
+        } else {
+            return new JavaConstructor(this, possibleMethods.get(0).desc);
+        }
+    }
+    
     public JavaField[] getDeclaredFields() {
         List<JavaField> fields = new ArrayList<>();
         for (FieldNode fieldNode : this.classNode.fields) {
@@ -229,7 +352,23 @@ public class JavaClass {
         }
         return fields.toArray(new JavaField[fields.size()]);
     }
-
+    
+    public JavaField[] getFields() {
+        List<JavaField> fields = new ArrayList<>();
+        ClassNode node = this.classNode;
+        while(true)
+        {
+	        for (FieldNode fieldNode : node.fields) {
+	        	if(Modifier.isPublic(fieldNode.access))
+	        		fields.add(new JavaField(this, fieldNode));
+	        }
+	        if(node.superName == null)
+	        	break;
+	        node = new JavaClass(node.superName, context).classNode;
+        }
+        return fields.toArray(new JavaField[fields.size()]);
+    }
+    
     public JavaField getDeclaredField(String fieldName) {
         for (FieldNode fieldNode : this.classNode.fields) {
             if (fieldNode.name.equals(fieldName))
@@ -239,6 +378,22 @@ public class JavaClass {
         return null;
     }
 
+    public JavaField getField(String fieldName) {
+        ClassNode node = this.classNode;
+        while(true)
+        {
+	        for (FieldNode fieldNode : node.fields) {
+	        	if(Modifier.isPublic(fieldNode.access) && fieldNode.name.equals(fieldName))
+	        		return new JavaField(this, fieldNode);
+	        }
+	        if(node.superName == null)
+	        	break;
+	        node = new JavaClass(node.superName, context).classNode;
+        }
+        Utils.sneakyThrow(new NoSuchFieldException(fieldName));
+        return null;
+    }
+    
     public JavaClass getSuperclass() {
         if (this.type.getSort() == Type.ARRAY) {
             return new JavaClass("java/lang/Object", this.context);

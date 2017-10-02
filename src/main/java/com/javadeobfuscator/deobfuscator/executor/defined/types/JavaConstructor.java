@@ -1,6 +1,14 @@
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaDouble;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaFloat;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 
 import java.util.ArrayList;
@@ -32,6 +40,39 @@ public class JavaConstructor {
         return params.toArray(new JavaClass[params.size()]);
     }
 
+    public Object newInstance(Context context, Object[] args)
+    {
+    	MethodNode method = clazz.getClassNode().methods.stream().filter(m -> m.name.equals("<init>") 
+    		&& m.desc.equals(desc)).findFirst().orElse(null);
+    	List<JavaValue> javaArgs = new ArrayList<>();
+    	for(Object arg : args)
+    	{
+    		if(arg instanceof Type)
+    		{
+                Type type = (Type)arg;
+                arg = new JavaClass(type.getInternalName().replace('/', '.'), context);
+            }
+            if(arg instanceof Integer)
+                javaArgs.add(0, new JavaInteger((Integer)arg));
+            else if(arg instanceof Float)
+                javaArgs.add(0, new JavaFloat((Float)arg));
+            else if(arg instanceof Double)
+                javaArgs.add(0, new JavaDouble((Double)arg));
+            else if(arg instanceof Long)
+                javaArgs.add(0, new JavaLong((Long)arg));
+            else if(arg instanceof String)
+                javaArgs.add(0, new JavaObject(arg, "java/lang/String"));
+            else if(arg instanceof JavaClass)
+                javaArgs.add(0, new JavaObject(arg, "java/lang/Class"));
+            else
+            	javaArgs.add(JavaValue.valueOf(arg));
+    	}
+    	JavaObject instance = new JavaObject(clazz.getName().replace(".", "/"));
+    	context.provider.invokeMethod(clazz.getName().replace(".", "/"), method.name, method.desc,
+    		instance, javaArgs, context);
+    	return instance.value();
+    }
+    
     public void setAccessible(boolean accessible) {
     }
 

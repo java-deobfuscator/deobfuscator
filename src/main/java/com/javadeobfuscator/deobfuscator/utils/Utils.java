@@ -369,7 +369,7 @@ public class Utils {
 		if(node instanceof LdcInsnNode)
 		{
 			LdcInsnNode ldc = (LdcInsnNode)node;
-			if(ldc.cst instanceof Number)
+			if(ldc.cst instanceof Integer)
 				return (int)ldc.cst;
 		}
 		return 0;

@@ -1,5 +1,6 @@
 package com.javadeobfuscator.deobfuscator.transformers.smoke; 
-
+ 
+import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
@@ -66,12 +67,46 @@ public class StringEncryptionTransformer extends Transformer {
         							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
         							if(isSmokeMethod(decrypterNode))
         							{
+        								context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
 	        							String value = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
 	                                    methodNode.instructions.remove(m.getPrevious().getPrevious());
 	                                    methodNode.instructions.remove(m.getPrevious());
 	                                    methodNode.instructions.set(m, new LdcInsnNode(value));
 	                                    count.getAndIncrement();
         							}
+        						}
+        					}else
+        					{
+        						//Reverse bytecode to try to get the previous args
+        						ArgsAnalyzer analyzer = new ArgsAnalyzer(methodNode, index - 1, 2);
+        						List<AbstractInsnNode> args = new ArrayList<>();
+        						try
+        						{
+        							args = analyzer.lookupArgs();
+        						}catch(Exception e)
+        						{
+        							
+        						}
+        						if(args.get(0).getOpcode() == Opcodes.LDC
+        							&& ((LdcInsnNode)args.get(0)).cst instanceof String
+        							&& Utils.isNumber(args.get(1)))
+        						{
+        							int number = Utils.getIntValue(args.get(1));
+            						String obfString = (String)((LdcInsnNode)args.get(0)).cst;
+            						Context context = new Context(provider);
+            						if(classes.containsKey(strCl)) 
+            						{
+            							ClassNode innerClassNode = classes.get(strCl).classNode;
+            							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
+            							if(isSmokeMethod(decrypterNode))
+            							{
+    	        							String value = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
+    	                                    methodNode.instructions.remove(args.get(1));
+    	                                    methodNode.instructions.remove(args.get(0));
+    	                                    methodNode.instructions.set(m, new LdcInsnNode(value));
+    	                                    count.getAndIncrement();
+            							}
+            						}
         						}
         					}
         				}
