@@ -301,7 +301,7 @@ public class JavaClass {
         while(true)
         {
         	for(MethodNode methodNode : classNode.methods)
-        		if(methodNode.name.equals("<init>"))
+        		if(methodNode.name.equals("<init>") && Modifier.isPublic(methodNode.access))
         			methods.add(new JavaConstructor(this, methodNode.desc));
 	        if(node.superName == null)
 	        	break;
