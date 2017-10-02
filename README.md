@@ -58,10 +58,11 @@ Official transformers are linked via the `Transformers` class.
 | Stringer.HIDEACCESS_OBFUSCATION | stringer.HideAccessObfuscationTransformer | Decrypts hide access by Stringer (Included invokedynamic and reflection) |
 | Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
-| General.SYNTHETIC_BRIDGE | general.SyntheticBridgeTransformer | Removes synthetic and bridge modifiers from all methods and fields |
 | General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer| Optimizes the code |
-| General.LINENUMBER_REMOVER | general.LineNumberRemover | Removes line number metadata |
-| General.ILLEGAL_VARARGS | general.IllegalVarargsTransformer | Unmangles methods marked as variadic but aren't really |
+| General.Removers.SYNTHETIC_BRIDGE | general.remover.SyntheticBridgeRemover | Removes synthetic and bridge modifiers from all methods and fields |
+| General.Removers.LINE_NUMBER | general.remover.LineNumberRemover | Removes line number metadata |
+| General.Removers.ILLEGAL_VARARGS | general.remover.IllegalVarargsRemover | Unmangles methods marked as variadic but aren't really |
+| General.Removers.ILLEGAL_SIGNATURE | general.remover.IllegalSignatureRemover | Removes illegal signatures from members |
 | Normalizer.CLASS_NORMALIZER | normalizer.ClassNormalizer | Renames all classes to Class<number> |
 | Normalizer.METHOD_NORMALIZER | normalizer.MethodNormalizer | Renames all methods to Method<number> |
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  

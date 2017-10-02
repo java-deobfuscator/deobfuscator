@@ -21,6 +21,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+// todo maybe make a "recover identifiers from source" transformer? the InnerClasses attribute has more useful info
 public class SourceFileClassNormalizer extends AbstractClassNormalizer {
     public SourceFileClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
@@ -35,7 +36,8 @@ public class SourceFileClassNormalizer extends AbstractClassNormalizer {
                 return;
             }
 
-            String packageName = classNode.name.substring(0, classNode.name.lastIndexOf('/'));
+            // todo handle inner classes gracefully (can we give them numerical ids? don't forget about nested inner classes)
+            String packageName = classNode.name.contains("/") ? classNode.name.substring(0, classNode.name.lastIndexOf('/')) : "";
 
             String sourceFileName = classNode.sourceFile;
             if (classNode.sourceFile.endsWith(".java")) {
@@ -48,7 +50,7 @@ public class SourceFileClassNormalizer extends AbstractClassNormalizer {
                 innerClasses = classNode.name.substring(classNode.name.indexOf("$") + 1);
             }
 
-            String reconstructedName = packageName + "/" + sourceFileName + (innerClasses.isEmpty() ? "" : "$" + innerClasses);
+            String reconstructedName = (packageName.isEmpty() ? "" : packageName + "/") + sourceFileName + (innerClasses.isEmpty() ? "" : "$" + innerClasses);
 
             int id = 0;
             String mappedName = reconstructedName;

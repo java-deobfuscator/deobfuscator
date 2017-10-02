@@ -8,7 +8,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.MathFrame;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes; 
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*; 
 import com.javadeobfuscator.deobfuscator.transformers.Transformer; 
-import com.javadeobfuscator.deobfuscator.transformers.general.SyntheticBridgeTransformer; 
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.SyntheticBridgeRemover;
 import com.javadeobfuscator.deobfuscator.transformers.smoke.peephole.PeepholeOptimizer; 
 import com.javadeobfuscator.deobfuscator.utils.Utils; 
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode; 
@@ -27,7 +27,7 @@ public class NumberObfuscationTransformer extends Transformer {
  
     @Override 
     public boolean transform() throws Throwable {
-        new SyntheticBridgeTransformer(classes, classpath).transform(); 
+        new SyntheticBridgeRemover(classes, classpath).transform();
         new PeepholeOptimizer(classes, classpath).transform(); 
         new IllegalVariableTransformer(classes, classpath).transform(); 
  

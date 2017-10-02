@@ -51,4 +51,12 @@ public class FieldFrame extends Frame {
     public String getOwner() {
         return owner;
     }
+
+    public Frame getInstance() {
+        return instance;
+    }
+
+    public Frame getObj() {
+        return obj;
+    }
 }

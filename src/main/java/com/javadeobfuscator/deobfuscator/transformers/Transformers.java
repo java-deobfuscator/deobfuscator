@@ -16,6 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.transformers;
 
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.IllegalSignatureRemover;
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.IllegalVarargsRemover;
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.LineNumberRemover;
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.SyntheticBridgeRemover;
+
 public class Transformers {
     public static class Allatori {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.allatori.StringEncryptionTransformer.class;
@@ -33,10 +38,14 @@ public class Transformers {
     }
     
     public static class General {
-        public static final Class<? extends Transformer> SYNTHETIC_BRIDGE = com.javadeobfuscator.deobfuscator.transformers.general.SyntheticBridgeTransformer.class;
         public static final Class<? extends Transformer> PEEPHOLE_OPTIMIZER = com.javadeobfuscator.deobfuscator.transformers.general.peephole.PeepholeOptimizer.class;
-        public static final Class<? extends Transformer> LINENUMBER_REMOVER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
-        public static final Class<? extends Transformer> ILLEGAL_VARARGS = com.javadeobfuscator.deobfuscator.transformers.general.IllegalVarargsTransformer.class;
+
+        public static class Removers {
+            public static final Class<? extends Transformer> ILLEGAL_VARARGS = IllegalVarargsRemover.class;
+            public static final Class<? extends Transformer> LINE_NUMBERS = LineNumberRemover.class;
+            public static final Class<? extends Transformer> ILLEGAL_SIGNATURE = IllegalSignatureRemover.class;
+            public static final Class<? extends Transformer> SYNTHETIC_BRIDGE = SyntheticBridgeRemover.class;
+        }
     }
     
     public static class Smoke {

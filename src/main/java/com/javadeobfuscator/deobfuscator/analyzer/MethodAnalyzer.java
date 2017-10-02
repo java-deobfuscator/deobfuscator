@@ -215,6 +215,9 @@ import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.SIPUSH
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.SWAP;
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.TABLESWITCH;
 
+// todo this is seriously broken. right now any jump which share the same end and start (i.e. insn 5 jumps into insn 8) will only be run once
+// however this was based on a flawed assumption that a jump over the same gap would produce the same results every time
+// for example, a -> b -> c -> d and a -> c -> d both do a jump from c -> d, but clearly the behaviour at c will be different
 public class MethodAnalyzer {
     private static final boolean DEBUG = false;
 

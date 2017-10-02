@@ -94,6 +94,9 @@ public class Deobfuscator {
             while (entries.hasMoreElements()) {
                 ZipEntry ent = entries.nextElement();
                 if (ent.getName().endsWith(".class")) {
+                    if (ent.getName().equals("module-info.class")) { // *rolls eyes*
+                        continue;
+                    }
                     ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                     ClassNode node = new ClassNode();
                     node.isLibrary = true;

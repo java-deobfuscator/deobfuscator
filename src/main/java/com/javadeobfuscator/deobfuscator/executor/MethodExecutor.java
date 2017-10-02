@@ -343,6 +343,9 @@ public class MethodExecutor {
                 if (now == null) {
                     throw new FallingOffCodeException();
                 }
+
+                context.doBreakpoint(now, true, stack, locals, null);
+
                 Throwable toThrow = null;
                 switch (now.getOpcode()) {
                     case NOP:
@@ -1459,6 +1462,8 @@ public class MethodExecutor {
                         throw new ExecutionException("Unknown opcode " + now.getClass().getSimpleName() + " " + now.getOpcode() + " ");
                     }
                 }
+
+                context.doBreakpoint(now, false, stack, locals, toThrow);
 
                 if (toThrow != null) {
                     if (DEBUG_PRINT_EXCEPTIONS) {

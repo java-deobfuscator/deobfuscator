@@ -129,6 +129,51 @@ public class ConstantFolder extends Transformer {
                                 }
                                 break;
                             }
+                            case IFGE:
+                            case IFGT:
+                            case IFLE:
+                            case IFLT:
+                            case IFNE:
+                            case IFEQ: {
+                                List<Frame> frames = result.getFrames().get(ain);
+                                if (frames == null) {
+                                    // wat
+                                    break;
+                                }
+                                Set<Boolean> results = new HashSet<>();
+                                for (Frame frame0 : frames) {
+                                    JumpFrame frame = (JumpFrame) frame0;
+                                    if (frame.getComparators().get(0) instanceof LdcFrame) {
+                                        if (ain.getOpcode() == IFGE) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() >= 0);
+                                        } else if (ain.getOpcode() == IFGT) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() > 0);
+                                        } else if (ain.getOpcode() == IFLE) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() <= 0);
+                                        } else if (ain.getOpcode() == IFLT) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() < 0);
+                                        } else if (ain.getOpcode() == IFNE) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() != 0);
+                                        } else if (ain.getOpcode() == IFEQ) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() == 0);
+                                        } else {
+                                            throw new RuntimeException();
+                                        }
+                                    } else {
+                                        break opcodes;
+                                    }
+                                }
+                                if (results.size() == 1) {
+                                    InsnList replacement = new InsnList();
+                                    replacement.add(new InsnNode(Opcodes.POP)); // remove existing args from stack
+                                    if (results.iterator().next()) {
+                                        replacement.add(new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode) ain).label));
+                                    }
+                                    replacements.put(ain, replacement);
+                                    folded.getAndIncrement();
+                                }
+                                break;
+                            }
                             case IF_ICMPNE:
                             case IF_ICMPEQ: {
                                 List<Frame> frames = result.getFrames().get(ain);

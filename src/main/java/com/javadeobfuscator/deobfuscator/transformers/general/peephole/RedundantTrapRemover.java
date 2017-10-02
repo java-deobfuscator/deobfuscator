@@ -56,7 +56,7 @@ public class RedundantTrapRemover extends Transformer {
                 if (methodNode.tryCatchBlocks != null && !methodNode.tryCatchBlocks.isEmpty()) {
                     {
                         List<TryCatchBlockNode> remove = new ArrayList<>();
-                        List<TryCatchBlockNode> add = new ArrayList<>();
+//                        List<TryCatchBlockNode> add = new ArrayList<>();
                         for (TryCatchBlockNode tryCatchBlockNode : methodNode.tryCatchBlocks) {
                             boolean containsThrowableInstructions = false;
                             boolean previousInsnThrows = false;
@@ -199,27 +199,27 @@ public class RedundantTrapRemover extends Transformer {
                                         }
                                         latestThrowable = cur;
                                     }
-                                    if (guaranteedThrow) {
-                                        if (guaranteedThrowable == null) {
-                                            guaranteedThrowable = cur;
-                                        }
-                                    }
+//                                    if (guaranteedThrow) {
+//                                        if (guaranteedThrowable == null) {
+//                                            guaranteedThrowable = cur;
+//                                        }
+//                                    }
 
-                                    if (!currentInsnThrows) {
-                                        if (previousInsnThrows) {
-                                            TryCatchBlockNode tcbn = new TryCatchBlockNode(new LabelNode(), new LabelNode(), tryCatchBlockNode.handler, tryCatchBlockNode.type);
-                                            methodNode.instructions.insertBefore(firstThrowable, tcbn.start);
-                                            methodNode.instructions.insert(latestThrowable, tcbn.end);
-                                            firstThrowable = null;
-                                            latestThrowable = null;
-                                            currentInsnThrows = false;
-//                                        containsThrowableInstructions = false;
-//                                        guaranteedThrow = false;
-                                            add.add(tcbn);
-                                        }
-                                    }
+//                                    if (!currentInsnThrows) {
+//                                        if (previousInsnThrows) {
+//                                            TryCatchBlockNode tcbn = new TryCatchBlockNode(new LabelNode(), new LabelNode(), tryCatchBlockNode.handler, tryCatchBlockNode.type);
+//                                            methodNode.instructions.insertBefore(firstThrowable, tcbn.start);
+//                                            methodNode.instructions.insert(latestThrowable, tcbn.end);
+//                                            firstThrowable = null;
+//                                            latestThrowable = null;
+//                                            currentInsnThrows = false;
+////                                        containsThrowableInstructions = false;
+////                                        guaranteedThrow = false;
+//                                            add.add(tcbn);
+//                                        }
+//                                    }
 
-                                    previousInsnThrows = currentInsnThrows;
+//                                    previousInsnThrows = currentInsnThrows;
                                 }
 
                                 if (cur == tryCatchBlockNode.end) {
@@ -230,7 +230,7 @@ public class RedundantTrapRemover extends Transformer {
                             if (!containsThrowableInstructions) {
                                 remove.add(tryCatchBlockNode);
                                 redudantTraps.incrementAndGet();
-                            } else if (firstThrowable != null) {
+                            } else {
                                 LabelNode start = new LabelNode();
                                 LabelNode end = new LabelNode();
                                 methodNode.instructions.insertBefore(firstThrowable, start);
@@ -241,7 +241,7 @@ public class RedundantTrapRemover extends Transformer {
                         }
 
                         methodNode.tryCatchBlocks.removeAll(remove);
-                        methodNode.tryCatchBlocks.addAll(add);
+//                        methodNode.tryCatchBlocks.addAll(add);
                     }
 
                     // Now remove duplicates
