@@ -59,7 +59,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
     }
 
     @Override
-    public void transform() {
+    public boolean transform() {
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Starting");
         int count = count();
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Found " + count + " reflection obfuscation calls");
@@ -70,6 +70,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
             System.out.println("[Stringer] [ReflectionObfuscationTransformer] Removed " + cleanedup + " reflection obfuscation classes");
         }
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Done");
+        return true;
     }
 
     private int count() {

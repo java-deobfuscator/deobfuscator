@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator.transformers.allatori;
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.LocalFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
@@ -30,6 +31,7 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
@@ -42,7 +44,7 @@ public class StringEncryptionTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
@@ -105,6 +107,35 @@ public class StringEncryptionTransformer extends Transformer {
                                         }
                                     }
                                 }
+                            } else if (frame.getArgs().get(0) instanceof LocalFrame) {
+                                if (!(result.getMapping().get(frame) instanceof MethodInsnNode))
+                                {
+                                    continue;
+                                }
+                                MethodInsnNode insn = (MethodInsnNode) result.getMapping().get(frame);
+                                AbstractInsnNode t = Utils.getPrevious(Utils.getPrevious(insn));
+                                if (t instanceof VarInsnNode) {
+                                    t = Utils.getPrevious(t);
+                                    if (t instanceof LdcInsnNode) {
+                                        LdcInsnNode a = (LdcInsnNode) t;
+                                        Context context = new Context(provider);
+                                        context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
+                                        if (classes.containsKey(strCl)) {
+                                            ClassNode innerClassNode = classes.get(strCl).classNode;
+                                            MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
+                                            try {
+                                                Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(a.cst)), null, context);
+                                                a.cst = o;
+                                                methodNode.instructions.remove(current);
+                                            } catch (Throwable throwable) {
+                                                System.out.println("Error while decrypting Allatori string.");
+                                                System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
+                                                System.out.println(wrappedClassNode.classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
+                                                throwable.printStackTrace(System.out);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -114,6 +145,7 @@ public class StringEncryptionTransformer extends Transformer {
         System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
         System.out.println("[Allatori] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
         System.out.println("[Allatori] [StringEncryptionTransformer] Done");
+        return true;
     }
 
     private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {

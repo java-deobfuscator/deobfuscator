@@ -16,7 +16,7 @@ public class FlowObfuscationTransformer extends Transformer
 	}
 
 	@Override
-	public void transform() throws Throwable
+	public boolean transform() throws Throwable
 	{
 		System.out.println("[Zelix] [FlowObfuscationTransformer] Starting");
 		AtomicInteger counter = new AtomicInteger();
@@ -39,5 +39,6 @@ public class FlowObfuscationTransformer extends Transformer
 		System.out.println("[Zelix] [FlowObfuscationTransformer] Removed "
 			+ counter.get() + " fake try-catch blocks");
 		System.out.println("[Zelix] [FlowObfuscationTransformer] Done");
+		return true;
 	}
 }

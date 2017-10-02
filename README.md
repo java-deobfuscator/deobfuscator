@@ -1,4 +1,4 @@
-# Deobfuscator
+# Deobfuscator [![Build Status](https://ci.samczsun.com/buildStatus/icon?job=java-deobfuscator/Deobfuscator)](https://ci.samczsun.com/job/java-deobfuscator/Deobfuscator)
 
 This is an all-in-one Java deobfuscator which will deobfuscate code obfuscated by most obfuscators available on the market.
 
@@ -60,14 +60,18 @@ Official transformers are linked via the `Transformers` class.
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
 | General.SYNTHETIC_BRIDGE | general.SyntheticBridgeTransformer | Removes synthetic and bridge modifiers from all methods and fields |
 | General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer| Optimizes the code |
+| General.LINENUMBER_REMOVER | general.LineNumberRemover | Removes line number metadata |
+| General.ILLEGAL_VARARGS | general.IllegalVarargsTransformer | Unmangles methods marked as variadic but aren't really |
 | Normalizer.CLASS_NORMALIZER | normalizer.ClassNormalizer | Renames all classes to Class<number> |
 | Normalizer.METHOD_NORMALIZER | normalizer.MethodNormalizer | Renames all methods to Method<number> |
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  
 | Normalizer.PACKAGE_NORMALIZER | normalizer.PackageNormalizer | Renames all packages to Package<number> |
+| Normalizer.SOURCEFILE_CLASS_NORMALIZER | normalizer.SourceFileClassNormalizer | Recovers `SourceFile` attributes when possible |
+| Normalizer.VARIABLE_NORMALIZER | normalizer.VariableNormalizer | Renames all local variables to var<number> |
 
 ## Downloads
 
-The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/job/Deobfuscator/)
+The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator/)
 
 ## Supported Obfuscators
 
@@ -75,9 +79,22 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [Stringer](https://jfxstore.com/stringer/)  
 [Allatori](http://www.allatori.com/)  
 [DashO](https://www.preemptive.com/products/dasho/overview)  
-[DexGuard](https://www.guardsquare.com/dexguard)
-[Smoke](https://newtownia.net/smoke)
+[DexGuard](https://www.guardsquare.com/dexguard)  
+[Smoke](https://newtownia.net/smoke)  
 Generic obfuscation
+
+## FAQs
+
+#### I got an error that says "Could not locate a class file"
+You need to specify all the JARs that the input file references. You'll almost always need to add `rt.jar`
+(which contains all the classes used by the Java Runtime)
+
+#### I got an error that says "A StackOverflowError occurred during deobfuscation"
+Increase your stack size. For example, `java -Xss128m -jar deobfuscator.jar`
+
+#### Does this work on Android apps?
+Technically, yes, you could use something like [dex2jar](https://github.com/pxb1988/dex2jar) or [enjarify](https://github.com/storyyeller/enjarify), but try [simplify](https://github.com/CalebFenton/simplify) first.
+It's a deobfuscator of sorts built specifically for Android.
 
 ## Licensing
 

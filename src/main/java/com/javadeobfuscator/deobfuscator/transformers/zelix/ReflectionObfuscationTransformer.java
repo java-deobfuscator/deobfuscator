@@ -59,7 +59,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Starting");
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Finding reflection obfuscation");
         int count = findReflectionObfuscation();
@@ -69,6 +69,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
             System.out.println("[Zelix] [ReflectionObfuscationTransformer] Inlined " + amount + " reflection obfuscation instructions");
         }
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Done");
+        return true;
     }
 
     public int inlineReflection(int expected) throws Throwable {

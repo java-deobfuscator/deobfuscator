@@ -51,7 +51,7 @@ public class StringEncryptionTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         Map<ClassNode, List<MethodNode>> remove = new HashMap<>();
         ClassNode decryptorClassNode = new ClassNode();
         decryptorClassNode.visit(49, Opcodes.ACC_PUBLIC, "Decryptor", null, "java/lang/Object", null);
@@ -446,5 +446,6 @@ public class StringEncryptionTransformer extends Transformer {
 //        remove.forEach((cn, mn) -> {
 //            cn.methods.removeAll(mn);
 //        });
+        return true;
     }
 }

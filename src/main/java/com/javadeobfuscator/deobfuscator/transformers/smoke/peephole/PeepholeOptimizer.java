@@ -31,11 +31,12 @@ public class PeepholeOptimizer extends Transformer {
     } 
  
     @Override 
-    public void transform() throws Throwable { 
+    public boolean transform() throws Throwable {
         for (Class<? extends Transformer> peepholeTransformerClass : 
                 PEEPHOLE_TRANSFORMERS) { 
             peepholeTransformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath).transform(); 
-        } 
+        }
+        return true;
     } 
  
     static { 

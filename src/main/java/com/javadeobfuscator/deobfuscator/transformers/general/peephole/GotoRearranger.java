@@ -33,39 +33,29 @@ public class GotoRearranger extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
                 Set<LabelNode> never = new HashSet<>();
-                boolean modified = false;
+                boolean modified;
                 outer:
                 do {
                     modified = false;
-                    Map<LabelNode, LabelNode> clone = new HashMap<>();
                     Map<LabelNode, Integer> jumpCount = new HashMap<>();
-                    Consumer<LabelNode> con = (labelNode) -> {
-                        if (jumpCount.containsKey(labelNode)) {
-                            jumpCount.put(labelNode, jumpCount.get(labelNode) + 1);
-                        } else {
-                            jumpCount.put(labelNode, 1);
-                        }
-                    };
                     for (int i = 0; i < methodNode.instructions.size(); i++) {
                         AbstractInsnNode node = methodNode.instructions.get(i);
                         if (node instanceof JumpInsnNode) {
                             JumpInsnNode cast = (JumpInsnNode) node;
-                            con.accept(cast.label);
+                            jumpCount.merge(cast.label, 1, Integer::sum);
                         } else if (node instanceof TableSwitchInsnNode) {
                             TableSwitchInsnNode cast = (TableSwitchInsnNode) node;
-                            con.accept(cast.dflt);
-                            cast.labels.forEach(con);
+                            jumpCount.merge(cast.dflt, 1, Integer::sum);
+                            cast.labels.forEach(l -> jumpCount.merge(l, 1, Integer::sum));
                         } else if (node instanceof LookupSwitchInsnNode) {
                             LookupSwitchInsnNode cast = (LookupSwitchInsnNode) node;
-                            con.accept(cast.dflt);
-                            cast.labels.forEach(con);
-                        } else if (node instanceof LabelNode) {
-                            clone.put((LabelNode) node,(LabelNode)  node);
+                            jumpCount.merge(cast.dflt, 1, Integer::sum);
+                            cast.labels.forEach(l -> jumpCount.merge(l, 1, Integer::sum));
                         }
                     }
                     if (methodNode.tryCatchBlocks != null) {
@@ -89,15 +79,23 @@ public class GotoRearranger extends Transformer {
                                     while (next != null) {
                                         if (next == node) {
                                             ok = false;
-                                        } else if (methodNode.tryCatchBlocks != null) {
+                                        }
+                                        if (methodNode.tryCatchBlocks != null) {
                                             for (TryCatchBlockNode tryCatchBlock : methodNode.tryCatchBlocks) {
                                                 int start = methodNode.instructions.indexOf(tryCatchBlock.start);
                                                 int mid = methodNode.instructions.indexOf(next);
                                                 int end = methodNode.instructions.indexOf(tryCatchBlock.end);
                                                 if (start <= mid && mid < end) {
-                                                    ok = false;
+                                                    // it's not ok if we're relocating the basic block outside the try-catch block
+                                                    int startIndex = methodNode.instructions.indexOf(node);
+                                                    if (startIndex < start || startIndex >= end) {
+                                                        ok = false;
+                                                    }
                                                 }
                                             }
+                                        }
+                                        if (next != cast.label && jumpCount.getOrDefault(next, 0) > 0) {
+                                            ok = false;
                                         }
                                         if (!ok) {
                                             break;
@@ -107,7 +105,7 @@ public class GotoRearranger extends Transformer {
                                         }
                                         next = next.getNext();
                                     }
-                                    next = cast.label;
+                                    next = cast.label.getNext();
                                     if (ok) {
                                         List<AbstractInsnNode> remove = new ArrayList<>();
                                         while (next != null) {
@@ -117,13 +115,7 @@ public class GotoRearranger extends Transformer {
                                             }
                                             next = next.getNext();
                                         }
-                                        InsnList replace = new InsnList();
                                         InsnList list = new InsnList();
-                                        LabelNode ln = new LabelNode();
-                                        replace.add(new JumpInsnNode(Opcodes.GOTO, ln));
-                                        list.add(ln);
-                                        never.add(ln);
-                                        methodNode.instructions.insertBefore(remove.get(0), replace);
                                         remove.forEach(methodNode.instructions::remove);
                                         remove.forEach(list::add);
                                         methodNode.instructions.insert(node, list);
@@ -140,5 +132,6 @@ public class GotoRearranger extends Transformer {
             });
         });
         System.out.println("Rearranged " + counter.get() + " goto blocks");
+        return counter.get() > 0;
     }
 }

@@ -16,54 +16,27 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ClassNormalizer extends Transformer {
+public class ClassNormalizer extends AbstractClassNormalizer {
     public ClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
     }
 
     @Override
-    public void transform() throws Throwable {
-        CustomRemapper remapper = new CustomRemapper();
+    public void remap(CustomRemapper remapper) {
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
-            String packageName = classNode.name.lastIndexOf('/') == -1 ? "" : classNode.name.substring(0, classNode.name.lastIndexOf('/') + 1);
-            while (true) {
-                String newName = packageName + "Class" + id.getAndIncrement();
-                if (remapper.map(classNode.name, newName)) {
-                    break;
-                }
-            }
+            String packageName = classNode.name.substring(0, classNode.name.lastIndexOf('/'));
+
+            String newName = packageName + "/" + "Class";
+            String mappedName;
+            do {
+                mappedName = newName + id.getAndIncrement();
+            } while (!remapper.map(classNode.name, mappedName));
         });
-
-        Map<String, WrappedClassNode> updated = new HashMap<>();
-        Set<String> removed = new HashSet<>();
-
-        classNodes().forEach(wr -> {
-            ClassNode newNode = new ClassNode();
-            RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
-            removed.add(wr.classNode.name);
-            wr.classNode.accept(remap);
-            wr.classNode = newNode;
-            updated.put(newNode.name, wr);
-        });
-
-        classes.putAll(updated);
-        classpath.putAll(updated);
-        removed.forEach(classes::remove);
-        removed.forEach(classpath::remove);
-        deobfuscator.resetHierachy();
-        deobfuscator.loadHierachy();
     }
 }

@@ -37,12 +37,11 @@ public class JumpFrame extends Frame {
         }
     }
 
-    public List<Frame> getComparators() { 
-        return comparators; 
-    } 
- 
-    public List<AbstractInsnNode> getTargets() { 
-        return targets; 
-    } 
+    public List<Frame> getComparators() {
+        return comparators;
+    }
 
+    public List<AbstractInsnNode> getTargets() {
+        return targets;
+    }
 }

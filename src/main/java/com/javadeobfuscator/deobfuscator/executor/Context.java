@@ -40,7 +40,8 @@ public class Context { //FIXME clinit classes
     public StackTraceElement[] getStackTrace() {
         StackTraceElement[] orig = new StackTraceElement[size()];
         for (int i = 0; i < size(); i++) {
-            orig[i] = at(i);
+            StackTraceElement e = at(i);
+            orig[i] = new StackTraceElement(e.getClassName(), e.getMethodName(), null, -1);
         }
         return orig;
     }

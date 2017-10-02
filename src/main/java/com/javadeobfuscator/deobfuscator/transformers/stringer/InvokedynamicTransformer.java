@@ -51,7 +51,7 @@ public class InvokedynamicTransformer extends Transformer {
     }
 
     @Override
-    public void transform() {
+    public boolean transform() {
         System.out.println("[Stringer] [InvokedynamicTransformer] Starting");
         System.out.println("[Stringer] [InvokedynamicTransformer] Finding invokedynamic instructions");
         int amount = findInvokeDynamic();
@@ -67,6 +67,7 @@ public class InvokedynamicTransformer extends Transformer {
             System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + cleanedup + " bootstrap methods");
         }
         System.out.println("[Stringer] [InvokedynamicTransformer] Done");
+        return true;
     }
 
     private int findInvokeDynamic() {

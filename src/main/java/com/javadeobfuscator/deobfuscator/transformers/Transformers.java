@@ -35,7 +35,7 @@ public class Transformers {
     public static class General {
         public static final Class<? extends Transformer> SYNTHETIC_BRIDGE = com.javadeobfuscator.deobfuscator.transformers.general.SyntheticBridgeTransformer.class;
         public static final Class<? extends Transformer> PEEPHOLE_OPTIMIZER = com.javadeobfuscator.deobfuscator.transformers.general.peephole.PeepholeOptimizer.class;
-        public static final Class<? extends Transformer> LINE_NUMBER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
+        public static final Class<? extends Transformer> LINENUMBER_REMOVER = com.javadeobfuscator.deobfuscator.transformers.general.LineNumberRemover.class;
         public static final Class<? extends Transformer> ILLEGAL_VARARGS = com.javadeobfuscator.deobfuscator.transformers.general.IllegalVarargsTransformer.class;
     }
     
@@ -58,6 +58,6 @@ public class Transformers {
         public static final Class<? extends Transformer> FIELD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.FieldNormalizer.class;
         public static final Class<? extends Transformer> METHOD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.MethodNormalizer.class;
         public static final Class<? extends Transformer> VARIABLE_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.VariableNormalizer.class;
-        public static final Class<? extends Transformer> SRC_RENAMER = com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer.class;
+        public static final Class<? extends Transformer> SOURCEFILE_CLASS_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer.class;
     }
 }

@@ -16,62 +16,49 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SourceFileClassNormalizer extends Transformer {
+public class SourceFileClassNormalizer extends AbstractClassNormalizer {
     public SourceFileClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
     }
 
     @Override
-    public void transform() throws Throwable {
-    	AtomicInteger num = new AtomicInteger(1);
-        CustomRemapper remapper = new CustomRemapper();
+    public void remap(CustomRemapper remapper) {
+        AtomicInteger counter = new AtomicInteger();
+
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
-            String packageName = classNode.name.lastIndexOf('/') == -1 ? "" : classNode.name.substring(0, classNode.name.lastIndexOf('/') + 1);
-            while (true) {
-            	boolean hasSrc = classNode.sourceFile != "SourceFile" && classNode.sourceFile != null;
-            	
-            	if(!hasSrc) break;
-                
-            	String src = classNode.sourceFile.replaceAll(".java", "").replaceAll(" ", "");
-                String inner = "";
-                if(classNode.name.contains("$")){
-                	inner = classNode.name.substring(classNode.name.indexOf("$") + 1);
-                }
-            	String newName = packageName + src + (inner == "" ? "_" + num.getAndIncrement() : "$" + inner);
-                if (remapper.map(classNode.name, newName)) {
-                    break;
-                }
+            if (classNode.sourceFile == null) {
+                return;
             }
+
+            String packageName = classNode.name.substring(0, classNode.name.lastIndexOf('/'));
+
+            String sourceFileName = classNode.sourceFile;
+            if (classNode.sourceFile.endsWith(".java")) {
+                sourceFileName = sourceFileName.substring(0, sourceFileName.lastIndexOf("."));
+            }
+
+            String innerClasses = "";
+            if (classNode.name.contains("$")) {
+                // note that there may be nested inner classes (com/package/Outer$Inner$NestedInner)
+                innerClasses = classNode.name.substring(classNode.name.indexOf("$") + 1);
+            }
+
+            String reconstructedName = packageName + "/" + sourceFileName + (innerClasses.isEmpty() ? "" : "$" + innerClasses);
+
+            int id = 0;
+            String mappedName = reconstructedName;
+            while (!remapper.map(classNode.name, mappedName)) {
+                mappedName = reconstructedName + ++id;
+            }
+
+            counter.incrementAndGet();
         });
 
-        Map<String, WrappedClassNode> updated = new HashMap<>();
-        Set<String> removed = new HashSet<>();
-
-        classNodes().forEach(wr -> {
-            ClassNode newNode = new ClassNode();
-            RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
-            removed.add(wr.classNode.name);
-            wr.classNode.accept(remap);
-            wr.classNode = newNode;
-            updated.put(newNode.name, wr);
-        });
-
-        classes.putAll(updated);
-        classpath.putAll(updated);
-        removed.forEach(classes::remove);
-        removed.forEach(classpath::remove);
-//        deobfuscator.resetHierachy();
-//        deobfuscator.loadHierachy();
+        System.out.println("[SourceFileClassNormalizer] Recovered " + counter + " source filenames");
     }
 }

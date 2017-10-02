@@ -37,7 +37,7 @@ public class FieldNormalizer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
@@ -91,5 +91,6 @@ public class FieldNormalizer extends Transformer {
             wr.classNode.accept(remap);
             wr.classNode = newNode;
         });
+        return true;
     }
 }

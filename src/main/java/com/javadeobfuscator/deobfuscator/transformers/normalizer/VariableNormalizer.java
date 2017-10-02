@@ -14,33 +14,32 @@
  *    limitations under the License.
  */
 
-package com.javadeobfuscator.deobfuscator.transformers.normalizer; 
- 
-import com.javadeobfuscator.deobfuscator.transformers.Transformer; 
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode; 
- 
+package com.javadeobfuscator.deobfuscator.transformers.normalizer;
+
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
- 
-public class VariableNormalizer extends Transformer { 
-    public VariableNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) { 
-        super(classes, classpath); 
-    } 
- 
-    @Override 
-    public void transform() throws Throwable { 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> 
-        classNode.methods.forEach(methodNode -> { 
-            if (methodNode.instructions.size() > 0) { 
-            	methodNode.localVariables.forEach(variableNode -> {
-              AtomicInteger id = new AtomicInteger(0);
-            		if (variableNode != null) {
-                        String newName = "var" + id.getAndIncrement();
-            			variableNode.name = newName;
-            		}
-            	});
-            }
-        }));
+
+public class VariableNormalizer extends Transformer {
+    public VariableNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
+        super(classes, classpath);
     }
-    
+
+    @Override
+    public boolean transform() throws Throwable {
+        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
+                if (methodNode.localVariables != null) {
+                    AtomicInteger id = new AtomicInteger(0);
+                    methodNode.localVariables.forEach(variableNode -> {
+                        variableNode.name = "var" + id.getAndIncrement();
+                    });
+                }
+            });
+        });
+        return true;
+    }
+
 } 

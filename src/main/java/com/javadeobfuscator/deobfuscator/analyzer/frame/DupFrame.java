@@ -15,4 +15,7 @@ public class DupFrame extends Frame {
         this.parents.addAll(this.targets);
     }
 
+    public List<Frame> getTargets() {
+        return targets;
+    }
 }

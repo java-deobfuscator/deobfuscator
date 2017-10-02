@@ -35,7 +35,7 @@ public class StringEncryptionTransformer extends Transformer {
     } 
  
     @Override 
-    public void transform() throws Throwable { 
+    public boolean transform() throws Throwable {
     	DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
@@ -117,6 +117,7 @@ public class StringEncryptionTransformer extends Transformer {
         System.out.println("[Smoke] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
         System.out.println("[Smoke] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
         System.out.println("[Smoke] [StringEncryptionTransformer] Done");
+		return true;
     }
     
     private int cleanup(Set<MethodNode> methods)

@@ -39,25 +39,33 @@ public class PeepholeOptimizer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
-        for (Class<? extends Transformer> peepholeTransformerClass :
-                PEEPHOLE_TRANSFORMERS) {
-            peepholeTransformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath).transform();
-        }
+    public boolean transform() throws Throwable {
+        boolean actuallyMadeModifications = false;
+        boolean madeModifications;
+        do {
+            madeModifications = false;
+            for (Class<? extends Transformer> peepholeTransformerClass :
+                    PEEPHOLE_TRANSFORMERS) {
+                Transformer transformer = peepholeTransformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath);
+                transformer.setDeobfuscator(deobfuscator);
+                if (transformer.transform()) {
+                    madeModifications = true;
+                }
+            }
+            actuallyMadeModifications = actuallyMadeModifications || madeModifications;
+        } while (madeModifications);
+
+        return actuallyMadeModifications;
     }
 
     static {
+        PEEPHOLE_TRANSFORMERS.add(RedundantTrapRemover.class);
+//        PEEPHOLE_TRANSFORMERS.add(TrapHandlerMerger.class); // still experimental
         PEEPHOLE_TRANSFORMERS.add(GotoRearranger.class);
-        PEEPHOLE_TRANSFORMERS.add(ContinousGotoRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(UnconditionalSwitchRemover.class);
         PEEPHOLE_TRANSFORMERS.add(DeadCodeRemover.class);
         PEEPHOLE_TRANSFORMERS.add(NopRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(GotoUnconditionalJumpRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(LdcPopRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(DupPopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(LdcSwapInvokeSwapPopRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(RedundantTrapRemover.class);
-//        PEEPHOLE_TRANSFORMERS.add(Test.class);
+        PEEPHOLE_TRANSFORMERS.add(ConstantFolder.class);
     }
 
 }

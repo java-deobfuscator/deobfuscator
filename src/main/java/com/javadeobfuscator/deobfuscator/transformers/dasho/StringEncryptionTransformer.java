@@ -16,31 +16,29 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.dasho;
 
-import java.util.Arrays;
-import java.util.Map;
-
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.Method;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.IntInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LdcInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 //BUG: redo
 public class StringEncryptionTransformer extends Transformer {
@@ -50,22 +48,26 @@ public class StringEncryptionTransformer extends Transformer {
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+
         DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
 
         classNodes().forEach(wrappedClassNode -> {
             wrappedClassNode.classNode.methods.forEach(methodNode -> {
-
                 AnalyzerResult result = MethodAnalyzer.analyze(wrappedClassNode.classNode, methodNode);
 
+                insns:
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
                     AbstractInsnNode current = methodNode.instructions.get(index);
                     if (!(current instanceof MethodInsnNode))
                         continue;
 
                     MethodInsnNode methodInsnNode = (MethodInsnNode) current;
+                    if (methodInsnNode.getOpcode() != Opcodes.INVOKESTATIC) // only invokestatic is supported right now
+                        continue;
 
                     Type[] argTypes = Type.getArgumentTypes(methodInsnNode.desc);
 
@@ -89,44 +91,49 @@ public class StringEncryptionTransformer extends Transformer {
                         continue;
 
                     MethodFrame frame = (MethodFrame) result.getFrames().get(methodInsnNode).get(0);
-//
-//                    if (current instanceof LdcInsnNode) {
-//                        LdcInsnNode ldc = (LdcInsnNode) current;
-//                        if (ldc.cst instanceof String) {
-//                            if (Utils.getNext(Utils.getNext(ldc)) instanceof MethodInsnNode) {
-//                                MethodInsnNode m = (MethodInsnNode) Utils.getNext(Utils.getNext(ldc));
-//                                String strCl = m.owner;
-//                                if (m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
-//                                    Context context = new Context(provider);
-//                                    context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
-//                                    ClassNode innerClassNode = classes.get(strCl).classNode;
-//                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
-//
-//                                    int intConstant = Integer.MIN_VALUE;
-//                                    if (Utils.getNext(ldc) instanceof IntInsnNode) {
-//                                        intConstant = ((IntInsnNode) Utils.getNext(ldc)).operand;
-//                                    } else {
-//                                        intConstant = Utils.iconstToInt(Utils.getNext(ldc).getOpcode());
-//                                    }
-//                                    if (intConstant != Integer.MAX_VALUE) {
-//                                        try {
-//                                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(new JavaObject(ldc.cst, "java/lang/String"), new JavaInteger(intConstant)), null, context);
-//                                            ldc.cst = o;
-//                                            methodNode.instructions.remove(Utils.getNext(ldc));
-//                                            methodNode.instructions.remove(Utils.getNext(ldc));
-//                                        } catch (Throwable t) {
-//                                            System.out.println("Error while decrypting DashO string.");
-//                                            System.out.println("Are you sure you're deobfuscating something obfuscated by DashO?");
-//                                            t.printStackTrace(System.out);
-//                                        }
-//                                    }
-//
-//                                }
-//                            }
-//                        }
-//                    }
+
+                    List<JavaValue> args = new ArrayList<>();
+
+                    for (Frame arg : frame.getArgs()) {
+                        if (!(arg instanceof LdcFrame)) {
+                            continue insns;
+                        }
+                        Object cst = ((LdcFrame) arg).getConstant();
+                        if (cst == null) {
+                            continue insns;
+                        }
+                        if (cst instanceof String) {
+                            args.add(new JavaObject(cst, "java/lang/String"));
+                        } else {
+                            args.add(new JavaInteger(((Number) cst).intValue()));
+                        }
+                    }
+                    if (classes.containsKey(methodInsnNode.owner)) {
+                        Context context = new Context(provider);
+                        context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
+                        ClassNode innerClassNode = classes.get(methodInsnNode.owner).classNode;
+                        MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
+                        try {
+                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, args, null, context);
+                            InsnList list = new InsnList();
+                            for (int i = 0; i < args.size(); i++) {
+                                list.add(new InsnNode(Opcodes.POP));
+                            }
+                            list.add(new LdcInsnNode(o));
+                            methodNode.instructions.insertBefore(methodInsnNode, list);
+                            methodNode.instructions.remove(methodInsnNode);
+                            counter.getAndIncrement();
+                        } catch (Throwable t) {
+                            System.out.println("Error while decrypting DashO string. " + methodInsnNode.owner + " " + methodInsnNode.name + methodInsnNode.desc);
+                            System.out.println("Are you sure you're deobfuscating something obfuscated by DashO?");
+                            t.printStackTrace(System.out);
+                        }
+                    }
                 }
             });
         });
+
+        System.out.println("[DashO] [StringEncryptionTransformer] Decrypted " + counter + " strings");
+        return true;
     }
 }

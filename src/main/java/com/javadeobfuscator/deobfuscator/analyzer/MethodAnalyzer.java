@@ -24,6 +24,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.ReturnFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.SwapFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.SwitchFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.ThrowFrame;
+import com.javadeobfuscator.deobfuscator.exceptions.PreventableStackOverflowError;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
@@ -215,6 +216,7 @@ import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.SWAP;
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.TABLESWITCH;
 
 public class MethodAnalyzer {
+    private static final boolean DEBUG = false;
 
     @Deprecated
     public static AnalyzerResult analyze(WrappedClassNode classNode, MethodNode method) {
@@ -253,18 +255,20 @@ public class MethodAnalyzer {
             for (TryCatchBlockNode node : method.tryCatchBlocks) {
                 AbstractInsnNode start = node.start;
                 while (start != node.end) {
-                    List<TryCatchBlockNode> handler = handlers.get(start);
-                    if (handler == null) {
-                        handler = new ArrayList<>();
-                        handlers.put(start, handler);
-                    }
-                    handler.add(node);
+                    handlers.computeIfAbsent(start, k -> new ArrayList<>()).add(node);
                     start = start.getNext();
                 }
             }
         }
 
-        execute(classNode, method, method.instructions.getFirst(), stack, locals, handlers, result, new HashSet<>());
+        try {
+            execute(classNode, method, method.instructions.getFirst(), stack, locals, handlers, result, new HashSet<>());
+        } catch (StackOverflowError e) {
+            if (Boolean.getBoolean("com.javadeobfuscator.MethodAnalyzer.debug") || DEBUG) {
+                throw e;
+            }
+            throw new PreventableStackOverflowError("Ran out of stack space while analyzing a method");
+        }
         return result;
     }
 
@@ -959,11 +963,7 @@ public class MethodAnalyzer {
 //            System.out.println("\t Locals: " + locals); 
 //            System.out.println();
             if (currentFrame != null) {
-                List<Frame> thisFrame = result.frames.get(now);
-                if (thisFrame == null) {
-                    thisFrame = new ArrayList<>();
-                    result.frames.put(now, thisFrame);
-                }
+                List<Frame> thisFrame = result.frames.computeIfAbsent(now, k -> new ArrayList<>());
                 thisFrame.add(currentFrame);
                 result.maxLocals = Math.max(result.maxLocals, locals.size());
                 result.maxStack = Math.max(result.maxStack, stack.size());
