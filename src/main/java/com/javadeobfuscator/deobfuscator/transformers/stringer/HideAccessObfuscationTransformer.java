@@ -385,13 +385,13 @@ public class HideAccessObfuscationTransformer extends Transformer {
                             methodNode.instructions.remove(checkcast);
                         }else
                         {
-	                        String class2pre = type2.getInternalName();
+	                        String class2pre = type2.getClassName().replace(".", "/");
 	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
-	                        String class2 = class2pre.endsWith("[]") ? 
+	                        String class2 = type2.getSort() == Type.ARRAY ? 
 	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getInternalName();
+	                        String class1pre = type1.getClassName().replace(".", "/");
 	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
-	                        String class1 = class1pre.endsWith("[]") ? 
+	                        String class1 = type1.getSort() == Type.ARRAY ? 
 	                        	class1pre.substring(0, class1pre.length() - 2) : class1pre;
 	                        if(!class1.equals("void") && !class1.equals("java/lang/Object")) {
 	                        	JavaClass clazz = new JavaClass(class1, context);
@@ -409,7 +409,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
 	                        //Invokespecial
 	                        if(((MethodInsnNode)previous).getOpcode() == Opcodes.INVOKESPECIAL)
 	                        {
-	                        	if(((MethodInsnNode)previous).owner.equals(type2.getInternalName()))
+	                        	if(((MethodInsnNode)previous).owner.equals(type2.getClassName().replace(".", "/")))
 	                        		methodNode.instructions.remove(checkcast);
 	                        	else
 	                        	{
@@ -445,13 +445,13 @@ public class HideAccessObfuscationTransformer extends Transformer {
                             methodNode.instructions.remove(checkcast);
                         }else
                         {
-	                        String class2pre = type2.getInternalName();
+	                        String class2pre = type2.getClassName().replace(".", "/");
 	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
-	                        String class2 = class2pre.endsWith("[]") ? 
+	                        String class2 = type2.getSort() == Type.ARRAY ? 
 	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getInternalName();
+	                        String class1pre = type1.getClassName().replace(".", "/");
 	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
-	                        String class1 = class1pre.endsWith("[]") ? 
+	                        String class1 = type1.getSort() == Type.ARRAY ? 
 	                        	class1pre.substring(1, class1pre.length() - 2) : class1pre;
 	                        if(!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")) {
 	                        	JavaClass clazz = new JavaClass(class1, context);
@@ -478,13 +478,13 @@ public class HideAccessObfuscationTransformer extends Transformer {
                         Type type2 = getType(checkcast.desc).getReturnType();
                         if(type1.getClassName().equals(type2.getClassName()))
                         	methodNode.instructions.remove(checkcast);
-                        String class2pre = type2.getInternalName();
+                        String class2pre = type2.getClassName().replace(".", "/");
                         class2pre = convertPrimitiveToClassArray(class2pre, 1);
-                        String class2 = class2pre.endsWith("[]") ? 
+                        String class2 = type2.getSort() == Type.ARRAY ? 
                         	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-                        String class1pre = type1.getInternalName();
+                        String class1pre = type1.getClassName().replace(".", "/");
                         class1pre = convertPrimitiveToClassArray(class1pre, 0);
-                        String class1 = class1pre.endsWith("[]") ? 
+                        String class1 = type1.getSort() == Type.ARRAY ? 
                         	class1pre.substring(1, class1pre.length() - 2) : class1pre;
                         if(!class1.equals("void") && !class1.equals("java/lang/Object")) {
                         	JavaClass clazz = new JavaClass(class1, context);
