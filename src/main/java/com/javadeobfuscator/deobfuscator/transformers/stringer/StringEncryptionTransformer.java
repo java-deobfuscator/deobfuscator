@@ -43,7 +43,7 @@ public class StringEncryptionTransformer extends Transformer {
     }
 
     @Override
-    public void transform() {
+    public boolean transform() {
         System.out.println("[Stringer] [StringEncryptionTransformer] Starting");
         int count = count();
         System.out.println("[Stringer] [StringEncryptionTransformer] Found " + count + " encrypted strings");
@@ -54,6 +54,7 @@ public class StringEncryptionTransformer extends Transformer {
             System.out.println("[Stringer] [StringEncryptionTransformer] Removed " + cleanedup + " decryption classes");
         }
         System.out.println("[Stringer] [StringEncryptionTransformer] Done");
+        return true;
     }
 
     private int cleanup() {
@@ -336,7 +337,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             	{
                                             		AbstractInsnNode ain = clinitMethod.instructions.get(i);
                                             		if(ain.getOpcode() == Opcodes.PUTSTATIC
-                                            			&& ((FieldInsnNode)ain).desc.contains("BigInteger")
+                                            			&& ((FieldInsnNode)ain).desc.equals("java/math/BigInteger")
                             							&& ain.getPrevious() != null
                             							&& ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY
                             							&& ain.getPrevious().getPrevious() != null
