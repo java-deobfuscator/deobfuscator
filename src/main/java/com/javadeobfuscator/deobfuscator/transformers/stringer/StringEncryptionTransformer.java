@@ -337,7 +337,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             	{
                                             		AbstractInsnNode ain = clinitMethod.instructions.get(i);
                                             		if(ain.getOpcode() == Opcodes.PUTSTATIC
-                                            			&& ((FieldInsnNode)ain).desc.equals("java/math/BigInteger")
+                                            			&& ((FieldInsnNode)ain).desc.equals("[Ljava/math/BigInteger;")
                             							&& ain.getPrevious() != null
                             							&& ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY
                             							&& ain.getPrevious().getPrevious() != null
@@ -420,7 +420,7 @@ public class StringEncryptionTransformer extends Transformer {
                                                 	{
                                                 		AbstractInsnNode ain = clinitMethod.instructions.get(i);
                                                 		if(ain.getOpcode() == Opcodes.PUTSTATIC
-                                                			&& ((FieldInsnNode)ain).desc.contains("BigInteger")
+                                                			&& ((FieldInsnNode)ain).desc.equals("[Ljava/math/BigInteger;")
                                 							&& ain.getPrevious() != null
                                 							&& ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY
                                 							&& ain.getPrevious().getPrevious() != null
