@@ -47,12 +47,22 @@ import java.util.stream.Collectors;
 
 //TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer {
+	private static final String[][] CLASS_TO_PRIMITIVE = {
+        {"java/lang/Byte", "byte"},
+        {"java/lang/Short", "short"},
+        {"java/lang/Integer", "int"},
+        {"java/lang/Long", "long"},
+        {"java/lang/Float", "float"},
+        {"java/lang/Double", "double"},
+        {"java/lang/Character", "char"},
+        {"java/lang/Boolean", "boolean"}
+	};
     public HideAccessObfuscationTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
         super(classes, classpath);
     }
 
     @Override
-    public void transform() throws Throwable {
+    public boolean transform() throws Throwable {
         List<ClassNode> decryptors = findDecryptClass();
         List<MethodNode> decryptMethods = new ArrayList<>();
 
@@ -351,6 +361,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + (int) cleanedup + " invokedynamic bootstrap methods");
 
         System.out.println("[Stringer] [HideAccessTransformer] Done");
+        return true;
     }
     
     private void castFix(Context context)
@@ -374,11 +385,11 @@ public class HideAccessObfuscationTransformer extends Transformer {
                             methodNode.instructions.remove(checkcast);
                         }else
                         {
-	                        String class2pre = type2.getClassName().replace(".", "/");
+	                        String class2pre = type2.getInternalName();
 	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
 	                        String class2 = class2pre.endsWith("[]") ? 
 	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getClassName().replace(".", "/");
+	                        String class1pre = type1.getInternalName();
 	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
 	                        String class1 = class1pre.endsWith("[]") ? 
 	                        	class1pre.substring(0, class1pre.length() - 2) : class1pre;
@@ -434,11 +445,11 @@ public class HideAccessObfuscationTransformer extends Transformer {
                             methodNode.instructions.remove(checkcast);
                         }else
                         {
-	                        String class2pre = type2.getClassName().replace(".", "/");
+	                        String class2pre = type2.getInternalName();
 	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
 	                        String class2 = class2pre.endsWith("[]") ? 
 	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getClassName().replace(".", "/");
+	                        String class1pre = type1.getInternalName();
 	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
 	                        String class1 = class1pre.endsWith("[]") ? 
 	                        	class1pre.substring(1, class1pre.length() - 2) : class1pre;
@@ -467,11 +478,11 @@ public class HideAccessObfuscationTransformer extends Transformer {
                         Type type2 = getType(checkcast.desc).getReturnType();
                         if(type1.getClassName().equals(type2.getClassName()))
                         	methodNode.instructions.remove(checkcast);
-                        String class2pre = type2.getClassName().replace(".", "/");
+                        String class2pre = type2.getInternalName();
                         class2pre = convertPrimitiveToClassArray(class2pre, 1);
                         String class2 = class2pre.endsWith("[]") ? 
                         	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-                        String class1pre = type1.getClassName().replace(".", "/");
+                        String class1pre = type1.getInternalName();
                         class1pre = convertPrimitiveToClassArray(class1pre, 0);
                         String class1 = class1pre.endsWith("[]") ? 
                         	class1pre.substring(1, class1pre.length() - 2) : class1pre;
@@ -688,18 +699,7 @@ public class HideAccessObfuscationTransformer extends Transformer {
     }
     
     private String getPrimitiveFromClass(String clazz) {
-        String[][] types = {
-                {"java/lang/Byte", "byte"},
-                {"java/lang/Short", "short"},
-                {"java/lang/Integer", "int"},
-                {"java/lang/Long", "long"},
-                {"java/lang/Float", "float"},
-                {"java/lang/Double", "double"},
-                {"java/lang/Character", "char"},
-                {"java/lang/Boolean", "boolean"}
-        };
-
-        for (String[] type : types) {
+        for (String[] type : CLASS_TO_PRIMITIVE) {
         	if(clazz.equals(type[0]))
         		return type[1];
         }
