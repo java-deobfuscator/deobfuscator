@@ -20,6 +20,7 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
@@ -59,7 +60,7 @@ public class JavaClass {
                 this.wrappedClassNode = context.dictionary.get(elementType.getInternalName());
                 if (this.wrappedClassNode == null) {
                     System.out.println("Could not find classnode " + this.name);
-                    throw new NoClassDefFoundError(this.name);
+                    throw new NoClassInPathException(this.name);
                 }
                 this.classNode = this.wrappedClassNode.classNode;
                 this.isPrimitive = false;
