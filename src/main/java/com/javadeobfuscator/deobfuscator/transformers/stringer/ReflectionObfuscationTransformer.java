@@ -53,10 +53,6 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class ReflectionObfuscationTransformer extends Transformer {
     private Set<ClassNode> remove = new HashSet<>();
-    
-    public ReflectionObfuscationTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() {
@@ -182,7 +178,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                     if (initted.add(target) || true) {
                                         Context context = new Context(provider);
                                         context.dictionary = this.classpath;
-                                        context.file = deobfuscator.getFile();
+                                        context.file = getDeobfuscator().getConfig().getInput();
                                         MethodNode clinit = target.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         MethodExecutor.execute(wrappedTarget, clinit, new ArrayList<>(), null, context);
                                     }
@@ -198,7 +194,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                     }
                                     Context context = new Context(provider);
                                     context.dictionary = this.classpath;
-                                    context.file = deobfuscator.getFile();
+                                    context.file = getDeobfuscator().getConfig().getInput();
                                     try {
                                         MethodExecutor.execute(wrappedTarget, method, args, null, context);
                                     } catch (StopExecution ex) {

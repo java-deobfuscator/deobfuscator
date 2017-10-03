@@ -22,10 +22,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClassNormalizer extends AbstractClassNormalizer {
-    public ClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public void remap(CustomRemapper remapper) {
         AtomicInteger id = new AtomicInteger(0);

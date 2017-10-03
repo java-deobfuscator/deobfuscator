@@ -30,9 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
 public class TrapHandlerMerger extends Transformer {
-    public TrapHandlerMerger(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {

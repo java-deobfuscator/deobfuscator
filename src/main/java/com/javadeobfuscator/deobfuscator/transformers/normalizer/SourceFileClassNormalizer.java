@@ -23,9 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 // todo maybe make a "recover identifiers from source" transformer? the InnerClasses attribute has more useful info
 public class SourceFileClassNormalizer extends AbstractClassNormalizer {
-    public SourceFileClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public void remap(CustomRemapper remapper) {

@@ -39,10 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer {
 
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         DelegatingProvider provider = new DelegatingProvider();

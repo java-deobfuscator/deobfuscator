@@ -32,16 +32,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FieldNormalizer extends Transformer {
-    public FieldNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
-            ClassTree tree = this.deobfuscator.getClassTree(classNode.name);
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> allClasses = new HashSet<>();
             Set<String> tried = new HashSet<>();
             LinkedList<String> toTry = new LinkedList<>();
@@ -49,7 +46,7 @@ public class FieldNormalizer extends Transformer {
             while (!toTry.isEmpty()) {
                 String t = toTry.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
-                    ClassTree ct = this.deobfuscator.getClassTree(t);
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
                     allClasses.addAll(ct.subClasses);
@@ -60,7 +57,7 @@ public class FieldNormalizer extends Transformer {
             for (FieldNode fieldNode : classNode.fields) {
                 List<String> references = new ArrayList<>();
                 for (String possibleClass : allClasses) {
-                    ClassNode otherNode = this.deobfuscator.assureLoaded(possibleClass);
+                    ClassNode otherNode = this.getDeobfuscator().assureLoaded(possibleClass);
                     boolean found = false;
                     for (FieldNode otherField : otherNode.fields) {
                         if (otherField.name.equals(fieldNode.name) && otherField.desc.equals(fieldNode.desc)) {

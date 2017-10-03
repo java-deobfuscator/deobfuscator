@@ -29,10 +29,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DeadCodeRemover extends Transformer {
-    public DeadCodeRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger deadInstructions = new AtomicInteger();

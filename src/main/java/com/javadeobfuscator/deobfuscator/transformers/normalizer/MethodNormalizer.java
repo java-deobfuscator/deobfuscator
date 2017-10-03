@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
@@ -24,6 +26,7 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
+import java.io.File;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,10 +38,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@TransformerConfig.ConfigOptions(configClass = MethodNormalizer.MethodNormalizerConfig.class)
 public class MethodNormalizer extends Transformer {
-    public MethodNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {
@@ -46,15 +47,15 @@ public class MethodNormalizer extends Transformer {
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
             Set<String> allClasses = new HashSet<>();
-            ClassTree tree = this.deobfuscator.getClassTree(classNode.name);
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> tried = new HashSet<>();
             LinkedList<String> toTry = new LinkedList<>();
             toTry.add(tree.thisClass);
             while (!toTry.isEmpty()) {
                 String t = toTry.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
-                    ClassNode cn = this.deobfuscator.assureLoaded(t);
-                    ClassTree ct = this.deobfuscator.getClassTree(t);
+                    ClassNode cn = this.getDeobfuscator().assureLoaded(t);
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
                     toTry.addAll(ct.parentClasses);
@@ -76,7 +77,7 @@ public class MethodNormalizer extends Transformer {
                     if (methodType.getSort() == Type.METHOD) {
                         throw new IllegalArgumentException("Did not expect method");
                     }
-                    allClasses.stream().map(name -> this.deobfuscator.assureLoaded(name)).forEach(node -> {
+                    allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
                         boolean foundSimilar = false;
                         boolean equals = false;
                         MethodNode equalsMethod = null;
@@ -103,7 +104,7 @@ public class MethodNormalizer extends Transformer {
                     Type elementType = methodType.getElementType();
                     if (elementType.getSort() == Type.OBJECT) {
                         String parent = elementType.getInternalName();
-                        allClasses.stream().map(name -> this.deobfuscator.assureLoaded(name)).forEach(node -> {
+                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
                             boolean foundSimilar = false;
                             boolean equals = false;
                             MethodNode equalsMethod = null;
@@ -114,9 +115,9 @@ public class MethodNormalizer extends Transformer {
                                     if (otherType.getReturnType().getSort() == Type.OBJECT) {
                                         foundSimilar = true;
                                         String child = otherType.getReturnType().getInternalName();
-                                        this.deobfuscator.assureLoaded(parent);
-                                        this.deobfuscator.assureLoaded(child);
-                                        if (this.deobfuscator.isSubclass(parent, child) || this.deobfuscator.isSubclass(child, parent)) {
+                                        this.getDeobfuscator().assureLoaded(parent);
+                                        this.getDeobfuscator().assureLoaded(child);
+                                        if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
                                             equals = true;
                                             equalsMethod = method;
                                         }
@@ -132,7 +133,7 @@ public class MethodNormalizer extends Transformer {
                             }
                         });
                     } else {
-                        allClasses.stream().map(name -> this.deobfuscator.assureLoaded(name)).forEach(node -> {
+                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
                             boolean foundSimilar = false;
                             boolean equals = false;
                             MethodNode equalsMethod = null;
@@ -158,7 +159,7 @@ public class MethodNormalizer extends Transformer {
                     }
                 } else if (methodType.getSort() == Type.OBJECT) {
                     String parent = methodType.getInternalName();
-                    allClasses.stream().map(name -> this.deobfuscator.assureLoaded(name)).forEach(node -> {
+                    allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
                         boolean foundSimilar = false;
                         boolean equals = false;
                         MethodNode equalsMethod = null;
@@ -169,9 +170,9 @@ public class MethodNormalizer extends Transformer {
                                 if (otherType.getReturnType().getSort() == Type.OBJECT) {
                                     foundSimilar = true;
                                     String child = otherType.getReturnType().getInternalName();
-                                    this.deobfuscator.assureLoaded(parent);
-                                    this.deobfuscator.assureLoaded(child);
-                                    if (this.deobfuscator.isSubclass(parent, child) || this.deobfuscator.isSubclass(child, parent)) {
+                                    this.getDeobfuscator().assureLoaded(parent);
+                                    this.getDeobfuscator().assureLoaded(child);
+                                    if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
                                         equals = true;
                                         equalsMethod = method;
                                     }
@@ -219,5 +220,19 @@ public class MethodNormalizer extends Transformer {
             wr.classNode = newNode;
         });
         return true;
+    }
+
+    @Override
+    public MethodNormalizerConfig getConfig() {
+        return (MethodNormalizerConfig) super.getConfig();
+    }
+
+    public static class MethodNormalizerConfig extends TransformerConfig {
+        @JsonProperty(value = "mapping-file")
+        private File mappingFile;
+
+        public MethodNormalizerConfig(Class<? extends Transformer> target) {
+            super(target);
+        }
     }
 }

@@ -27,9 +27,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LdcSwapInvokeSwapPopRemover extends Transformer {
-    public LdcSwapInvokeSwapPopRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {

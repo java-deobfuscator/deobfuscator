@@ -29,10 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
 public class RedundantTrapRemover extends Transformer {
-    public RedundantTrapRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     private boolean doesTrapCatch(TryCatchBlockNode node, String... exceptions) {
         if (node.type == null) {
             return true;
@@ -41,7 +37,7 @@ public class RedundantTrapRemover extends Transformer {
             return true;
         }
         for (String exception : exceptions) {
-            if (deobfuscator.isSubclass(node.type, exception)) {
+            if (getDeobfuscator().isSubclass(node.type, exception)) {
                 return true;
             }
         }

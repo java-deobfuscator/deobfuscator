@@ -29,10 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger; 
  
-public class StringEncryptionTransformer extends Transformer { 
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) { 
-        super(classes, classpath); 
-    } 
+public class StringEncryptionTransformer extends Transformer {
  
     @Override 
     public boolean transform() throws Throwable {

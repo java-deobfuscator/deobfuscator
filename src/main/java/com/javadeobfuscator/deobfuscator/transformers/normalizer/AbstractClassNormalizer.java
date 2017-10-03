@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -26,11 +27,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@TransformerConfig.ConfigOptions(configClass = AbstractClassNormalizer.AbstractClassNormalizerConfig.class)
 public abstract class AbstractClassNormalizer extends Transformer {
-    public AbstractClassNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public final boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
@@ -53,10 +51,16 @@ public abstract class AbstractClassNormalizer extends Transformer {
         removed.forEach(classpath::remove);
         classes.putAll(updated);
         classpath.putAll(updated);
-        deobfuscator.resetHierachy();
-        deobfuscator.loadHierachy();
+        getDeobfuscator().resetHierachy();
+        getDeobfuscator().loadHierachy();
         return true;
     }
 
     public abstract void remap(CustomRemapper remapper);
+
+    public static class AbstractClassNormalizerConfig extends TransformerConfig {
+        public AbstractClassNormalizerConfig(Class<? extends Transformer> implementation) {
+            super(implementation);
+        }
+    }
 }

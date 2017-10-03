@@ -23,10 +23,6 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class SyntheticBridgeRemover extends Transformer {
-    public SyntheticBridgeRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

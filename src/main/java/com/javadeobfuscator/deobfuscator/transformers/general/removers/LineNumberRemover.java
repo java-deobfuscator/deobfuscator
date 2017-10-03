@@ -25,10 +25,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class LineNumberRemover extends Transformer {
-    public LineNumberRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

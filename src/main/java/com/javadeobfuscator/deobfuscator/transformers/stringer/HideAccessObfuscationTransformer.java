@@ -57,9 +57,6 @@ public class HideAccessObfuscationTransformer extends Transformer {
         {"java/lang/Character", "char"},
         {"java/lang/Boolean", "boolean"}
 	};
-    public HideAccessObfuscationTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {

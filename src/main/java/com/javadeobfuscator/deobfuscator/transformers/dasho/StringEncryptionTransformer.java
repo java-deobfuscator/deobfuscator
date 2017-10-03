@@ -42,11 +42,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 //BUG: redo
 public class StringEncryptionTransformer extends Transformer {
-
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();

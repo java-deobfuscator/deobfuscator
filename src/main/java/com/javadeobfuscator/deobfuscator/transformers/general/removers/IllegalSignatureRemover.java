@@ -23,10 +23,6 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.Map;
 
 public class IllegalSignatureRemover extends Transformer {
-    public IllegalSignatureRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

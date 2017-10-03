@@ -20,6 +20,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 
@@ -45,10 +46,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer {
-
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
 
     @Override
     public boolean transform() throws Throwable {
@@ -152,7 +149,7 @@ public class StringEncryptionTransformer extends Transformer {
         }
         for (int i = 0; i < 3; i++) {
             try {
-                new PeepholeOptimizer(classes, classpath).transform();
+                getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
             } catch (Throwable t) {
                 t.printStackTrace();
             }
@@ -306,7 +303,7 @@ public class StringEncryptionTransformer extends Transformer {
 
         for (int i = 0; i < 3; i++) {
             try {
-                new PeepholeOptimizer(classes, classpath).transform();
+                getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
             } catch (Throwable t) {
                 t.printStackTrace();
             }

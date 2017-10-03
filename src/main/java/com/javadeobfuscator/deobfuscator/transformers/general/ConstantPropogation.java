@@ -49,10 +49,6 @@ import java.util.Map;
 // can be represented by constant values
 // obviously this is much more complicated than it sounds, but hey. it'll be nice to have
 public class ConstantPropogation extends Transformer {
-    public ConstantPropogation(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

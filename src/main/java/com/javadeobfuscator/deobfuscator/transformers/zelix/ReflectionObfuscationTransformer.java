@@ -54,10 +54,6 @@ public class ReflectionObfuscationTransformer extends Transformer {
         PRIMITIVES.put("long", "java/lang/Long");
     }
 
-    public ReflectionObfuscationTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Starting");

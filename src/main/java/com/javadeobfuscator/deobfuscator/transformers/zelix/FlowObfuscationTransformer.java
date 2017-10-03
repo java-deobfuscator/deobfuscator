@@ -9,12 +9,6 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class FlowObfuscationTransformer extends Transformer
 {
-	public FlowObfuscationTransformer(Map<String, WrappedClassNode> classes,
-		Map<String, WrappedClassNode> classpath)
-	{
-		super(classes, classpath);
-	}
-
 	@Override
 	public boolean transform() throws Throwable
 	{

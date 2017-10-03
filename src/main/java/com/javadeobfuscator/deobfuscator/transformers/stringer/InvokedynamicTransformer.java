@@ -46,10 +46,6 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class InvokedynamicTransformer extends Transformer {
-    public InvokedynamicTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() {
         System.out.println("[Stringer] [InvokedynamicTransformer] Starting");

@@ -31,10 +31,6 @@ import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
 public class ConstantFolder extends Transformer {
 
-    public ConstantFolder(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger folded = new AtomicInteger();
