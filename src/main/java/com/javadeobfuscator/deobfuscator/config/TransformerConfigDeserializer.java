@@ -26,7 +26,6 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -62,7 +61,9 @@ public class TransformerConfigDeserializer extends JsonDeserializer<TransformerC
             } else if (configs.size() == 1) {
                 return configs.get(0);
             } else {
-                return new DelegatingTransformer.DelegatingTransformerConfig(configs);
+                DelegatingTransformer.Config config = new DelegatingTransformer.Config();
+                config.setConfigs(configs);
+                return config;
             }
         } else if (node.isTextual()) {
             return getById(p, ctxt, node.asText());

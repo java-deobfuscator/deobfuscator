@@ -90,14 +90,16 @@ public class Deobfuscator {
     }
 
     public void start() throws Throwable {
-        for (File file : configuration.getPath()) {
-            if (file.isFile()) {
-                classpath.putAll(loadClasspathFile(file));
-            } else {
-                File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
-                if (files != null) {
-                    for (File child : files) {
-                        classpath.putAll(loadClasspathFile(child));
+        if (configuration.getPath() != null) {
+            for (File file : configuration.getPath()) {
+                if (file.isFile()) {
+                    classpath.putAll(loadClasspathFile(file));
+                } else {
+                    File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
+                    if (files != null) {
+                        for (File child : files) {
+                            classpath.putAll(loadClasspathFile(child));
+                        }
                     }
                 }
             }
@@ -172,9 +174,10 @@ public class Deobfuscator {
         System.out.println("Transforming");
         System.out.println();
 
-
-        for (TransformerConfig config : configuration.getTransformers()) {
-            runFromConfig(config);
+        if (configuration.getTransformers() != null) {
+            for (TransformerConfig config : configuration.getTransformers()) {
+                runFromConfig(config);
+            }
         }
 
         System.out.println();

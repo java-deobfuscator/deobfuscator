@@ -1,6 +1,7 @@
 package com.javadeobfuscator.deobfuscator.transformers.smoke; 
  
 import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
@@ -29,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger; 
  
-public class StringEncryptionTransformer extends Transformer {
+public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
  
     @Override 
     public boolean transform() throws Throwable {

@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
-public class NumberObfuscationTransformer extends Transformer {
+public class NumberObfuscationTransformer extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

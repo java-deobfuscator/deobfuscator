@@ -17,6 +17,7 @@
 package com.javadeobfuscator.deobfuscator.transformers.stringer;
 
 import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
@@ -46,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 //TODO: Support Java6(50) and below (Reflection obfuscation)
-public class HideAccessObfuscationTransformer extends Transformer {
+public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
 	private static final String[][] CLASS_TO_PRIMITIVE = {
         {"java/lang/Byte", "byte"},
         {"java/lang/Short", "short"},

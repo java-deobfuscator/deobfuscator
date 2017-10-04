@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -23,7 +24,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.Map;
 
-public class IllegalVarargsRemover extends Transformer {
+public class IllegalVarargsRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {

@@ -101,7 +101,7 @@ public class DeobfuscatorMain {
             }
         }
 
-        if (configuration.getTransformers().size() == 0) {
+        if (configuration.getTransformers() == null || configuration.getTransformers().size() == 0) {
             logger.error("At least one transformer must be specified");
             return 6;
         }

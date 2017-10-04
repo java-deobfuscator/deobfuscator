@@ -31,79 +31,40 @@ public class Configuration {
     private File output;
 
     @JsonProperty
-    private boolean generateIntermediateJars;
-
-    @JsonProperty
     private List<TransformerConfig> transformers;
 
     @JsonProperty
     private List<File> path;
 
-    private Configuration() {
-    }
-
-    private Configuration(File input, File output, boolean generateIntermediateJars, List<TransformerConfig> transformers, List<File> path) {
-        this.input = input;
-        this.output = output;
-        this.generateIntermediateJars = generateIntermediateJars;
-        this.transformers = transformers;
-        this.path = path;
-    }
-
     public File getInput() {
         return input;
+    }
+
+    public void setInput(File input) {
+        this.input = input;
     }
 
     public File getOutput() {
         return output;
     }
 
-    public boolean isGenerateIntermediateJars() {
-        return generateIntermediateJars;
+    public void setOutput(File output) {
+        this.output = output;
     }
 
     public List<TransformerConfig> getTransformers() {
-        return transformers == null ? Collections.emptyList() : transformers;
+        return transformers;
+    }
+
+    public void setTransformers(List<TransformerConfig> transformers) {
+        this.transformers = transformers;
     }
 
     public List<File> getPath() {
-        return path == null ? Collections.emptyList() : path;
+        return path;
     }
 
-    public static class ConfigurationBuilder {
-        private File input;
-        private File output;
-        private boolean generateIntermediateJars;
-        private List<TransformerConfig> transformers;
-        private List<File> path;
-
-        public ConfigurationBuilder setInput(File input) {
-            this.input = input;
-            return this;
-        }
-
-        public ConfigurationBuilder setOutput(File output) {
-            this.output = output;
-            return this;
-        }
-
-        public ConfigurationBuilder setGenerateIntermediateJars(boolean generateIntermediateJars) {
-            this.generateIntermediateJars = generateIntermediateJars;
-            return this;
-        }
-
-        public ConfigurationBuilder setTransformers(List<TransformerConfig> transformers) {
-            this.transformers = transformers;
-            return this;
-        }
-
-        public ConfigurationBuilder setPath(List<File> path) {
-            this.path = path;
-            return this;
-        }
-
-        public Configuration createConfiguration() {
-            return new Configuration(input, output, generateIntermediateJars, transformers, path);
-        }
+    public void setPath(List<File> path) {
+        this.path = path;
     }
 }

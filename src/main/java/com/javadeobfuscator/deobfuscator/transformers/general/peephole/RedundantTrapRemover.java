@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LabelNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TryCatchBlockNode;
@@ -28,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
-public class RedundantTrapRemover extends Transformer {
+public class RedundantTrapRemover extends Transformer<TransformerConfig> {
     private boolean doesTrapCatch(TryCatchBlockNode node, String... exceptions) {
         if (node.type == null) {
             return true;

@@ -45,7 +45,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StringEncryptionTransformer extends Transformer {
+public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

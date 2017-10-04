@@ -38,8 +38,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@TransformerConfig.ConfigOptions(configClass = MethodNormalizer.MethodNormalizerConfig.class)
-public class MethodNormalizer extends Transformer {
+@TransformerConfig.ConfigOptions(configClass = MethodNormalizer.Config.class)
+public class MethodNormalizer extends Transformer<MethodNormalizer.Config> {
 
     @Override
     public boolean transform() throws Throwable {
@@ -222,17 +222,20 @@ public class MethodNormalizer extends Transformer {
         return true;
     }
 
-    @Override
-    public MethodNormalizerConfig getConfig() {
-        return (MethodNormalizerConfig) super.getConfig();
-    }
-
-    public static class MethodNormalizerConfig extends TransformerConfig {
+    public static class Config extends TransformerConfig {
         @JsonProperty(value = "mapping-file")
         private File mappingFile;
 
-        public MethodNormalizerConfig(Class<? extends Transformer> target) {
+        public Config(Class<? extends Transformer> target) {
             super(target);
+        }
+
+        public File getMappingFile() {
+            return mappingFile;
+        }
+
+        public void setMappingFile(File mappingFile) {
+            this.mappingFile = mappingFile;
         }
     }
 }

@@ -44,12 +44,12 @@ public class TransformerConfig {
         if (options != null) {
             Class<? extends TransformerConfig> configClass = options.configClass();
 
-            try {
-                return configClass.getConstructor(Class.class).newInstance(implementation);
-            } catch (NoSuchMethodException ignored) {
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException("Error instantiating TransformerConfig for " + implementation.getCanonicalName(), e);
-            }
+//            try {
+//                return configClass.getConstructor(Class.class).newInstance(implementation);
+//            } catch (NoSuchMethodException ignored) {
+//            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+//                throw new RuntimeException("Error instantiating TransformerConfig for " + implementation.getCanonicalName(), e);
+//            }
 
             try {
                 return configClass.getConstructor().newInstance();

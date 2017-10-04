@@ -16,13 +16,14 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // todo maybe make a "recover identifiers from source" transformer? the InnerClasses attribute has more useful info
-public class SourceFileClassNormalizer extends AbstractClassNormalizer {
+@TransformerConfig.ConfigOptions(configClass = SourceFileClassNormalizer.Config.class)
+public class SourceFileClassNormalizer extends AbstractClassNormalizer<SourceFileClassNormalizer.Config> {
 
     @Override
     public void remap(CustomRemapper remapper) {
@@ -59,5 +60,11 @@ public class SourceFileClassNormalizer extends AbstractClassNormalizer {
         });
 
         System.out.println("[SourceFileClassNormalizer] Recovered " + counter + " source filenames");
+    }
+
+    public static class Config extends AbstractClassNormalizer.Config {
+        public Config() {
+            super(SourceFileClassNormalizer.class);
+        }
     }
 }

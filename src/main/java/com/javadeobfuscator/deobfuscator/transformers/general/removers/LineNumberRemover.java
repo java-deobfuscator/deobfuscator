@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LineNumberNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -24,7 +25,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.Iterator;
 import java.util.Map;
 
-public class LineNumberRemover extends Transformer {
+public class LineNumberRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

@@ -16,19 +16,21 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-@TransformerConfig.ConfigOptions(configClass = AbstractClassNormalizer.AbstractClassNormalizerConfig.class)
-public abstract class AbstractClassNormalizer extends Transformer {
+@TransformerConfig.ConfigOptions(configClass = AbstractClassNormalizer.Config.class)
+public abstract class AbstractClassNormalizer<T extends AbstractClassNormalizer.Config> extends Transformer<T> {
     @Override
     public final boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
@@ -58,9 +60,20 @@ public abstract class AbstractClassNormalizer extends Transformer {
 
     public abstract void remap(CustomRemapper remapper);
 
-    public static class AbstractClassNormalizerConfig extends TransformerConfig {
-        public AbstractClassNormalizerConfig(Class<? extends Transformer> implementation) {
+    public static abstract class Config extends TransformerConfig {
+        @JsonProperty(value = "mapping-file")
+        private File mappingFile;
+
+        public Config(Class<? extends Transformer> implementation) {
             super(implementation);
+        }
+
+        public File getMappingFile() {
+            return mappingFile;
+        }
+
+        public void setMappingFile(File mappingFile) {
+            this.mappingFile = mappingFile;
         }
     }
 }

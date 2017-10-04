@@ -16,18 +16,21 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PackageNormalizer extends Transformer {
+public class PackageNormalizer extends Transformer<PackageNormalizer.Config> {
 
     @Override
     public boolean transform() throws Throwable {
@@ -71,5 +74,22 @@ public class PackageNormalizer extends Transformer {
         getDeobfuscator().resetHierachy();
         getDeobfuscator().loadHierachy();
         return true;
+    }
+
+    public static class Config extends TransformerConfig {
+        @JsonProperty(value = "mapping-file")
+        private File mappingFile;
+
+        public Config(Class<? extends Transformer> target) {
+            super(target);
+        }
+
+        public File getMappingFile() {
+            return mappingFile;
+        }
+
+        public void setMappingFile(File mappingFile) {
+            this.mappingFile = mappingFile;
+        }
     }
 }

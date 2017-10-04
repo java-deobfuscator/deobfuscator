@@ -20,8 +20,8 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 
 import java.util.List;
 
-@TransformerConfig.ConfigOptions(configClass = DelegatingTransformer.DelegatingTransformerConfig.class)
-public class DelegatingTransformer extends Transformer {
+@TransformerConfig.ConfigOptions(configClass = DelegatingTransformer.Config.class)
+public class DelegatingTransformer extends Transformer<DelegatingTransformer.Config> {
     @Override
     public boolean transform() throws Throwable {
         for (TransformerConfig childConfig : getConfig().getConfigs()) {
@@ -31,34 +31,19 @@ public class DelegatingTransformer extends Transformer {
         return true;
     }
 
-    @Override
-    public DelegatingTransformer.DelegatingTransformerConfig getConfig() {
-        return (DelegatingTransformer.DelegatingTransformerConfig) super.getConfig();
-    }
-
-    public static class DelegatingTransformerConfig extends TransformerConfig {
+    public static class Config extends TransformerConfig {
         private List<TransformerConfig> configs;
 
-        public DelegatingTransformerConfig(List<TransformerConfig> configs) {
+        public Config() {
             super(DelegatingTransformer.class);
-            this.configs = configs;
         }
 
         public List<TransformerConfig> getConfigs() {
             return configs;
         }
-    }
 
-    public class DelegatingTransformerConfigBuilder {
-        private List<TransformerConfig> configs;
-
-        public DelegatingTransformerConfigBuilder setConfigs(List<TransformerConfig> configs) {
+        public void setConfigs(List<TransformerConfig> configs) {
             this.configs = configs;
-            return this;
-        }
-
-        public DelegatingTransformer.DelegatingTransformerConfig createDelegatingTransformerConfig() {
-            return new DelegatingTransformer.DelegatingTransformerConfig(configs);
         }
     }
 }

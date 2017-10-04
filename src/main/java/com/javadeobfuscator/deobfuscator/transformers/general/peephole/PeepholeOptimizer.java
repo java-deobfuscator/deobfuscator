@@ -22,7 +22,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 
-public class PeepholeOptimizer extends Transformer {
+public class PeepholeOptimizer extends Transformer<TransformerConfig> {
     private static final Set<Class<? extends Transformer>> PEEPHOLE_TRANSFORMERS = new LinkedHashSet<>();
 
     @Override

@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -29,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
-public class ConstantFolder extends Transformer {
+public class ConstantFolder extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

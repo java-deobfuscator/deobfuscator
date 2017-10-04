@@ -16,10 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-public class LocalVariableRemover extends Transformer {
+public class LocalVariableRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

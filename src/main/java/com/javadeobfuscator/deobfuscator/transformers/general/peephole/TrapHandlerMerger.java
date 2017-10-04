@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.JumpInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LabelNode;
@@ -29,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
 
-public class TrapHandlerMerger extends Transformer {
+public class TrapHandlerMerger extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

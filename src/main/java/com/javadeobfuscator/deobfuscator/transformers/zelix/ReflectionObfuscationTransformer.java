@@ -19,6 +19,8 @@ package com.javadeobfuscator.deobfuscator.transformers.zelix;
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.*;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
@@ -26,8 +28,6 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-
-import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
@@ -40,7 +40,7 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ReflectionObfuscationTransformer extends Transformer {
+public class ReflectionObfuscationTransformer extends Transformer<TransformerConfig> {
     static Map<String, String> PRIMITIVES = new HashMap<>();
 
     static {
@@ -476,7 +476,7 @@ public class ReflectionObfuscationTransformer extends Transformer {
                                                         methodNode.instructions.remove(reverseMapping.get(fr));
                                                     } else if (fr instanceof DupFrame) {
                                                         methodNode.instructions.remove(reverseMapping.get(fr));
-                                                    } else if (fr != instance){
+                                                    } else if (fr != instance) {
                                                         throw new IllegalArgumentException(fr.toString());
                                                     }
                                                 });
