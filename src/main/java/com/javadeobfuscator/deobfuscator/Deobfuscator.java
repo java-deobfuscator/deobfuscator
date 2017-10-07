@@ -32,16 +32,20 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
-import sun.security.krb5.Config;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -53,7 +57,11 @@ public class Deobfuscator {
     private Map<String, ClassTree> hierachy = new HashMap<>();
     private Set<ClassNode> libraryClassnodes = new HashSet<>();
 
+    // Entries from the input jar that will be passed through to the output
+    private Map<String, byte[]> inputPassthrough = new HashMap<>();
+
     private final Configuration configuration;
+    private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
 
     public Deobfuscator(Configuration configuration) {
         this.configuration = configuration;
@@ -86,11 +94,7 @@ public class Deobfuscator {
         return map;
     }
 
-    public boolean isLibrary(ClassNode classNode) {
-        return libraryClassnodes.contains(classNode);
-    }
-
-    public void start() throws Throwable {
+    private void loadClasspath() throws IOException {
         if (configuration.getPath() != null) {
             for (File file : configuration.getPath()) {
                 if (file.isFile()) {
@@ -106,42 +110,81 @@ public class Deobfuscator {
             }
             libraryClassnodes.addAll(classpath.values().stream().map(WrappedClassNode::getClassNode).collect(Collectors.toList()));
         }
+    }
 
-        ZipFile zipIn = new ZipFile(configuration.getInput());
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
-        Enumeration<? extends ZipEntry> e = zipIn.entries();
-        while (e.hasMoreElements()) {
-            ZipEntry next = e.nextElement();
-            if (next.getName().endsWith(".class")) {
-                try {
-                    InputStream in = zipIn.getInputStream(next);
-                    ClassReader reader = new ClassReader(in);
-                    ClassNode node = new ClassNode();
-                    reader.accept(node, ClassReader.SKIP_FRAMES); //TODO: Skip classpath mode
-                    for (int i = 0; i < node.methods.size(); i++) {
-                        MethodNode methodNode = node.methods.get(i);
-                        JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
-                        methodNode.accept(adapter);
-                        node.methods.set(i, adapter);
-                    }
-                    WrappedClassNode wr = new WrappedClassNode(node, reader.getItemCount());
-                    classes.put(node.name, wr);
-                } catch (IllegalArgumentException x) {
-                    System.out.println("Could not parse " + next.getName() + " (is it a class?)");
-                    x.printStackTrace(System.out);
-                    zipOut.putNextEntry(new ZipEntry(next.getName()));
-                    Utils.copy(zipIn.getInputStream(next), zipOut);
-                    zipOut.closeEntry();
-                }
-            } else if (!next.isDirectory()) {
-                zipOut.putNextEntry(new ZipEntry(next.getName()));
-                Utils.copy(zipIn.getInputStream(next), zipOut);
-                zipOut.closeEntry();
-            }
+    private boolean isClassIgnored(ClassNode classNode) {
+        if (configuration.getIgnoredClasses() == null) {
+            return false;
         }
 
-        classpath.putAll(classes);
+        for (String ignored : configuration.getIgnoredClasses()) {
+            Pattern pattern;
+            try {
+                pattern = Pattern.compile(ignored);
+            } catch (PatternSyntaxException e) {
+                logger.error("Error while compiling pattern for ignore statement {}", ignored, e);
+                continue;
+            }
+            Matcher matcher = pattern.matcher(classNode.name);
+            if (matcher.find()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
+    private void loadInput() throws IOException {
+        try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
+            Enumeration<? extends ZipEntry> e = zipIn.entries();
+            while (e.hasMoreElements()) {
+                ZipEntry next = e.nextElement();
+                if (next.isDirectory()) {
+                    continue;
+                }
+
+                boolean passthrough = true;
+
+                byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
+
+                if (next.getName().endsWith(".class")) {
+                    try {
+                        ClassReader reader = new ClassReader(data);
+                        ClassNode node = new ClassNode();
+                        reader.accept(node, ClassReader.SKIP_FRAMES);
+
+                        if (!isClassIgnored(node)) {
+                            for (int i = 0; i < node.methods.size(); i++) {
+                                MethodNode methodNode = node.methods.get(i);
+                                JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
+                                methodNode.accept(adapter);
+                                node.methods.set(i, adapter);
+                            }
+
+                            WrappedClassNode wr = new WrappedClassNode(node, reader.getItemCount());
+                            classes.put(node.name, wr);
+                            passthrough = false;
+                        } else {
+                            classpath.put(node.name, new WrappedClassNode(node, reader.getItemCount()));
+                        }
+                    } catch (IllegalArgumentException x) {
+                        logger.error("Could not parse {} (is it a class file?)", next.getName(), x);
+                    }
+                }
+
+                if (passthrough) {
+                    inputPassthrough.put(next.getName(), data);
+                }
+            }
+
+            classpath.putAll(classes);
+        }
+    }
+
+    /**
+     * @deprecated do we need this?
+     */
+    @Deprecated
+    private void computeCallers() {
         Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers = new HashMap<>();
         classes.values().forEach(wrappedClassNode -> {
             wrappedClassNode.classNode.methods.forEach(methodNode -> {
@@ -153,42 +196,49 @@ public class Deobfuscator {
                         if (targetNode != null) {
                             MethodNode targetMethod = targetNode.classNode.methods.stream().filter(m -> m.name.equals(mn.name) && m.desc.equals(mn.desc)).findFirst().orElse(null);
                             if (targetMethod != null) {
-                                List<Entry<WrappedClassNode, MethodNode>> caller = callers.get(targetMethod);
-                                if (caller == null) {
-                                    caller = new ArrayList<>();
-                                    callers.put(targetMethod, caller);
-                                }
-                                caller.add(new SimpleEntry<>(wrappedClassNode, methodNode));
+                                callers.computeIfAbsent(targetMethod, k -> new ArrayList<>()).add(new SimpleEntry<>(wrappedClassNode, methodNode));
                             }
                         }
                     }
                 }
             });
         });
+    }
 
-        System.out.println();
-        System.out.println("Reading complete. Loading hierachy");
-        System.out.println();
+    public void start() throws Throwable {
+        logger.info("Loading classpath");
+        loadClasspath();
 
-        loadHierachy();
+        logger.info("Loading input");
+        loadInput();
 
-        System.out.println();
-        System.out.println("Transforming");
-        System.out.println();
+        logger.info("Computing callers");
+        computeCallers();
 
+        logger.info("Transforming");
         if (configuration.getTransformers() != null) {
             for (TransformerConfig config : configuration.getTransformers()) {
+                logger.info("Running {}", config.getImplementation().getCanonicalName());
                 runFromConfig(config);
             }
         }
 
-        System.out.println();
-        System.out.println("Transforming complete. Writing to file");
-        System.out.println();
-
+        logger.info("Writing");
         if (DEBUG) {
             classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass);
         }
+
+        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
+        inputPassthrough.forEach((name, val) -> {
+            ZipEntry entry = new ZipEntry(name);
+            try {
+                zipOut.putNextEntry(entry);
+                zipOut.write(val);
+                zipOut.closeEntry();
+            } catch (IOException e) {
+                logger.error("Error writing entry {}", name, e);
+            }
+        });
 
         classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
             try {
@@ -198,13 +248,12 @@ public class Deobfuscator {
                     zipOut.write(b);
                     zipOut.closeEntry();
                 }
-            } catch (Throwable t) {
-                System.out.println("Uncaught error");
-                t.printStackTrace(System.out);
+            } catch (IOException e) {
+                logger.error("Error writing entry {}", classNode.name, e);
             }
         });
+
         zipOut.close();
-        zipIn.close();
     }
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
@@ -261,17 +310,21 @@ public class Deobfuscator {
         this.hierachy.clear();
     }
 
+    private ClassTree getOrCreateClassTree(String name) {
+        return this.hierachy.computeIfAbsent(name, ClassTree::new);
+    }
+
     public List<ClassNode> loadHierachy(ClassNode specificNode) {
         if (specificNode.name.equals("java/lang/Object")) {
             return Collections.emptyList();
         }
         if ((specificNode.access & Opcodes.ACC_INTERFACE) != 0) {
-            getClassTree(specificNode.name).parentClasses.add("java/lang/Object");
+            getOrCreateClassTree(specificNode.name).parentClasses.add("java/lang/Object");
             return Collections.emptyList();
         }
         List<ClassNode> toProcess = new ArrayList<>();
 
-        ClassTree thisTree = getClassTree(specificNode.name);
+        ClassTree thisTree = getOrCreateClassTree(specificNode.name);
         ClassNode superClass;
         if (DELETE_USELESS_CLASSES) {
             superClass = assureLoadedElseRemove(specificNode.name, specificNode.superName);
@@ -283,7 +336,7 @@ public class Deobfuscator {
         if (superClass == null) {
             throw new IllegalArgumentException("Could not load " + specificNode.name);
         }
-        ClassTree superTree = getClassTree(superClass.name);
+        ClassTree superTree = getOrCreateClassTree(superClass.name);
         superTree.subClasses.add(specificNode.name);
         thisTree.parentClasses.add(superClass.name);
         toProcess.add(superClass);
@@ -300,7 +353,7 @@ public class Deobfuscator {
             if (interfaceNode == null) {
                 throw new IllegalArgumentException("Could not load " + interfaceReference);
             }
-            ClassTree interfaceTree = getClassTree(interfaceReference);
+            ClassTree interfaceTree = getOrCreateClassTree(interfaceReference);
             interfaceTree.subClasses.add(specificNode.name);
             thisTree.parentClasses.add(interfaceReference);
             toProcess.add(interfaceNode);
@@ -338,9 +391,8 @@ public class Deobfuscator {
     public ClassTree getClassTree(String classNode) {
         ClassTree tree = hierachy.get(classNode);
         if (tree == null) {
-            tree = new ClassTree();
-            tree.thisClass = classNode;
-            hierachy.put(classNode, tree);
+            loadHierachyAll(assureLoaded(classNode));
+            return getClassTree(classNode);
         }
         return tree;
     }
@@ -377,12 +429,14 @@ public class Deobfuscator {
             }
             byte[] classBytes = writer.toByteArray();
 
-            ClassReader cr = new ClassReader(classBytes);
-            try {
-                cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
-            } catch (Throwable t) {
-                System.out.println("Error: " + node.name + " failed verification");
-//                t.printStackTrace(System.out);
+            if (configuration.isVerify()) {
+                ClassReader cr = new ClassReader(classBytes);
+                try {
+                    cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
+                } catch (Throwable t) {
+                    System.out.println("Error: " + node.name + " failed verification");
+                    t.printStackTrace(System.out);
+                }
             }
             return classBytes;
         } catch (Throwable t) {
