@@ -19,7 +19,7 @@ package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 import java.util.Map;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 

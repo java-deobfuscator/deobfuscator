@@ -16,8 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FieldNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 
 public class JavaField {

@@ -19,15 +19,15 @@ package com.javadeobfuscator.deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.Configuration;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassWriter;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.JSRInlinerAdapter;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.util.CheckClassAdapter;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
@@ -51,6 +51,7 @@ public class Deobfuscator {
     private Map<String, WrappedClassNode> classpath = new HashMap<>();
     private Map<String, WrappedClassNode> classes = new HashMap<>();
     private Map<String, ClassTree> hierachy = new HashMap<>();
+    private Set<ClassNode> libraryClassnodes = new HashSet<>();
 
     private final Configuration configuration;
 
@@ -73,12 +74,8 @@ public class Deobfuscator {
         while (entries.hasMoreElements()) {
             ZipEntry ent = entries.nextElement();
             if (ent.getName().endsWith(".class")) {
-                if (ent.getName().equals("module-info.class")) { // *rolls eyes*
-                    continue;
-                }
                 ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                 ClassNode node = new ClassNode();
-                node.isLibrary = true;
                 reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
                 map.put(node.name, wrappedClassNode);
@@ -87,6 +84,10 @@ public class Deobfuscator {
         zipIn.close();
 
         return map;
+    }
+
+    public boolean isLibrary(ClassNode classNode) {
+        return libraryClassnodes.contains(classNode);
     }
 
     public void start() throws Throwable {
@@ -103,6 +104,7 @@ public class Deobfuscator {
                     }
                 }
             }
+            libraryClassnodes.addAll(classpath.values().stream().map(WrappedClassNode::getClassNode).collect(Collectors.toList()));
         }
 
         ZipFile zipIn = new ZipFile(configuration.getInput());

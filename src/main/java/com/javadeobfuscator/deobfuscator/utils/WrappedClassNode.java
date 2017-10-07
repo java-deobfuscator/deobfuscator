@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.ClassNode;
 
 public class WrappedClassNode {
     public ClassNode classNode;

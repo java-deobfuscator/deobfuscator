@@ -21,8 +21,8 @@ import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;

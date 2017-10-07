@@ -18,9 +18,9 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.commons.RemappingClassAdapter;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;

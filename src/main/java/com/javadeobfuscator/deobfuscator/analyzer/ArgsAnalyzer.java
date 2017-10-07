@@ -3,11 +3,11 @@ package com.javadeobfuscator.deobfuscator.analyzer;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 /**

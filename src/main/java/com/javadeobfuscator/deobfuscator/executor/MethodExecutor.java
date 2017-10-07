@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.executor;
 
-import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.*;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
@@ -38,8 +38,8 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaShort;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaTop;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
@@ -975,7 +975,7 @@ public class MethodExecutor {
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
                         Object provided = context.provider.getField(cast.owner, cast.name, cast.desc, null, context);
 
-                        switch (type.getReturnType().getSort()) {
+                        switch (type.getSort()) {
                             case Type.BOOLEAN:
                                 stack.add(0, new JavaBoolean((Boolean) provided));
                                 break;
@@ -1021,7 +1021,7 @@ public class MethodExecutor {
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
                         Object provided = context.provider.getField(cast.owner, cast.name, cast.desc, obj, context);
-                        switch (type.getReturnType().getSort()) {
+                        switch (type.getSort()) {
                             case Type.BOOLEAN:
                                 stack.add(0, new JavaBoolean((Boolean) provided));
                                 break;
@@ -1081,7 +1081,7 @@ public class MethodExecutor {
                             try {
                                 if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                                     Object provided = context.provider.invokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
-                                    switch (type.getReturnType().getSort()) {
+                                    switch (type.getSort()) {
                                         case Type.BOOLEAN:
                                             stack.add(0, new JavaBoolean((Boolean) provided));
                                             break;
@@ -1150,7 +1150,7 @@ public class MethodExecutor {
                             try {
                                 if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                                     Object provided = context.provider.invokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
-                                    switch (type.getReturnType().getSort()) {
+                                    switch (type.getSort()) {
                                         case Type.BOOLEAN:
                                             stack.add(0, new JavaBoolean((Boolean) provided));
                                             break;
@@ -1217,7 +1217,7 @@ public class MethodExecutor {
                         }
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, null, args, context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, null, args, context);
-                            switch (type.getReturnType().getSort()) {
+                            switch (type.getSort()) {
                                 case Type.BOOLEAN:
                                     stack.add(0, new JavaBoolean((Boolean) provided));
                                     break;
@@ -1270,7 +1270,7 @@ public class MethodExecutor {
                         args.add(stack.remove(0));
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
-                            switch (type.getReturnType().getSort()) {
+                            switch (type.getSort()) {
                                 case Type.BOOLEAN:
                                     stack.add(0, new JavaBoolean((Boolean) provided));
                                     break;

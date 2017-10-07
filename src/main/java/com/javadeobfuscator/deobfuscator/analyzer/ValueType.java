@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.analyzer;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
+import org.objectweb.asm.Type;
 
 public enum ValueType {
     TOP(null),

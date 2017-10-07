@@ -17,10 +17,10 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.JumpInsnNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.LabelNode;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.TryCatchBlockNode;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
@@ -28,7 +28,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.*;
 
 public class TrapHandlerMerger extends Transformer<TransformerConfig> {
 
@@ -49,10 +49,11 @@ public class TrapHandlerMerger extends Transformer<TransformerConfig> {
                         loop:
                         for (AbstractInsnNode now = tryCatchBlockNode.handler; ; ) {
                             if (now.getType() != AbstractInsnNode.LABEL && now.getType() != AbstractInsnNode.FRAME && now.getType() != AbstractInsnNode.LINE) {
-                                int oldindex = now.index;
-                                now.index = 0;
-                                insns.add(Utils.prettyprint(now));
-                                now.index = oldindex;
+                                // todo need some way of comparing insns
+//                                int oldindex = now.index;
+//                                now.index = 0;
+//                                insns.add(Utils.prettyprint(now));
+//                                now.index = oldindex;
                                 switch (now.getOpcode()) {
                                     case RETURN:
                                     case ARETURN:
