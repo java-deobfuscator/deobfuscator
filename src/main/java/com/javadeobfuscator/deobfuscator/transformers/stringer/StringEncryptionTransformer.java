@@ -20,6 +20,7 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 
@@ -37,10 +38,7 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-public class StringEncryptionTransformer extends Transformer {
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
+public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() {
@@ -314,7 +312,7 @@ public class StringEncryptionTransformer extends Transformer {
 											methodNode.name,
 											classNode.constantPoolSize);
 										context.file =
-											deobfuscator.getFile();
+											getDeobfuscator().getConfig().getInput();
 										// Stringer3
 										if(innerClassNode.superName
 											.equals("java/lang/Thread"))
@@ -408,7 +406,7 @@ public class StringEncryptionTransformer extends Transformer {
                                             Context context = new Context(provider);
                                             context.dictionary = classpath;
                                             context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
-                                            context.file = deobfuscator.getFile();
+                                            context.file = getDeobfuscator().getConfig().getInput();
 
                                             // Stringer3
                                             if (innerClassNode.superName.equals("java/lang/Thread")) {

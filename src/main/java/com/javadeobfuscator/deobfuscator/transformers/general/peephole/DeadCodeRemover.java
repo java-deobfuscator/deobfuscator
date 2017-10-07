@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
@@ -28,11 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DeadCodeRemover extends Transformer {
-    public DeadCodeRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
+public class DeadCodeRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger deadInstructions = new AtomicInteger();

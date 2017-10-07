@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 
@@ -45,11 +46,7 @@ import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-public class InvokedynamicTransformer extends Transformer {
-    public InvokedynamicTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
+public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() {
         System.out.println("[Stringer] [InvokedynamicTransformer] Starting");

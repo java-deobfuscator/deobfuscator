@@ -21,6 +21,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.FieldFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
@@ -48,11 +49,7 @@ import java.util.Map;
 // the idea is, at the end of every INVOKE* call, and before every PUT{STATIC,FIELD} call, check if anything on the stack
 // can be represented by constant values
 // obviously this is much more complicated than it sounds, but hey. it'll be nice to have
-public class ConstantPropogation extends Transformer {
-    public ConstantPropogation(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
+public class ConstantPropogation extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

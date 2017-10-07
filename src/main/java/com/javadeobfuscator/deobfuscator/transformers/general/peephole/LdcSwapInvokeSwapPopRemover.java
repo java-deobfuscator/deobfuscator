@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodInsnNode;
@@ -26,10 +27,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class LdcSwapInvokeSwapPopRemover extends Transformer {
-    public LdcSwapInvokeSwapPopRemover(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
+public class LdcSwapInvokeSwapPopRemover extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

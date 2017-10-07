@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator;
 
+import com.javadeobfuscator.deobfuscator.config.Configuration;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassReader;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.ClassWriter;
@@ -30,9 +32,11 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import sun.security.krb5.Config;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleEntry;
@@ -44,14 +48,15 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class Deobfuscator {
-
-    private List<Class<? extends Transformer>> transformers = new ArrayList<>();
-    private List<File> classpathFiles = new ArrayList<>();
     private Map<String, WrappedClassNode> classpath = new HashMap<>();
     private Map<String, WrappedClassNode> classes = new HashMap<>();
     private Map<String, ClassTree> hierachy = new HashMap<>();
-    private File input;
-    private File output;
+
+    private final Configuration configuration;
+
+    public Deobfuscator(Configuration configuration) {
+        this.configuration = configuration;
+    }
 
     private static final boolean DEBUG = false;
     /**
@@ -60,55 +65,48 @@ public class Deobfuscator {
      */
     private static final boolean DELETE_USELESS_CLASSES = false;
 
-    public Deobfuscator withTransformer(Class<? extends Transformer> transformer) {
-        this.transformers.add(transformer);
-        return this;
-    }
+    private Map<String, WrappedClassNode> loadClasspathFile(File file) throws IOException {
+        Map<String, WrappedClassNode> map = new HashMap<>();
 
-    public Deobfuscator withClasspath(File file) {
-        if (file.isDirectory()) {
-            File[] files = file.listFiles((dir, name) -> name.endsWith(".jar"));
-            if (files != null) {
-                classpathFiles.addAll(Arrays.asList(files));
+        ZipFile zipIn = new ZipFile(file);
+        Enumeration<? extends ZipEntry> entries = zipIn.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry ent = entries.nextElement();
+            if (ent.getName().endsWith(".class")) {
+                if (ent.getName().equals("module-info.class")) { // *rolls eyes*
+                    continue;
+                }
+                ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
+                ClassNode node = new ClassNode();
+                node.isLibrary = true;
+                reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
+                map.put(node.name, wrappedClassNode);
             }
-        } else {
-            this.classpathFiles.add(file);
         }
-        return this;
-    }
+        zipIn.close();
 
-    public Deobfuscator withInput(File input) {
-        this.input = input;
-        return this;
-    }
-
-    public Deobfuscator withOutput(File output) {
-        this.output = output;
-        return this;
+        return map;
     }
 
     public void start() throws Throwable {
-        for (File file : classpathFiles) {
-            ZipFile zipIn = new ZipFile(file);
-            Enumeration<? extends ZipEntry> entries = zipIn.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry ent = entries.nextElement();
-                if (ent.getName().endsWith(".class")) {
-                    if (ent.getName().equals("module-info.class")) { // *rolls eyes*
-                        continue;
+        if (configuration.getPath() != null) {
+            for (File file : configuration.getPath()) {
+                if (file.isFile()) {
+                    classpath.putAll(loadClasspathFile(file));
+                } else {
+                    File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
+                    if (files != null) {
+                        for (File child : files) {
+                            classpath.putAll(loadClasspathFile(child));
+                        }
                     }
-                    ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
-                    ClassNode node = new ClassNode();
-                    node.isLibrary = true;
-                    reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                    WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
-                    classpath.put(node.name, wrappedClassNode);
                 }
             }
-            zipIn.close();
         }
-        ZipFile zipIn = new ZipFile(input);
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(output));
+
+        ZipFile zipIn = new ZipFile(configuration.getInput());
+        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
         Enumeration<? extends ZipEntry> e = zipIn.entries();
         while (e.hasMoreElements()) {
             ZipEntry next = e.nextElement();
@@ -176,11 +174,10 @@ public class Deobfuscator {
         System.out.println("Transforming");
         System.out.println();
 
-
-        for (Class<? extends Transformer> transformerClass : transformers) {
-            Transformer transformer = transformerClass.getConstructor(Map.class, Map.class).newInstance(classes, classpath);
-            transformer.setDeobfuscator(this);
-            transformer.transform();
+        if (configuration.getTransformers() != null) {
+            for (TransformerConfig config : configuration.getTransformers()) {
+                runFromConfig(config);
+            }
         }
 
         System.out.println();
@@ -206,6 +203,12 @@ public class Deobfuscator {
         });
         zipOut.close();
         zipIn.close();
+    }
+
+    public boolean runFromConfig(TransformerConfig config) throws Throwable {
+        Transformer transformer = config.getImplementation().newInstance();
+        transformer.init(this, config, classes, classpath);
+        return transformer.transform();
     }
 
     public ClassNode assureLoaded(String ref) {
@@ -387,8 +390,8 @@ public class Deobfuscator {
         return null;
     }
 
-    public File getFile() {
-        return input;
+    public Configuration getConfig() {
+        return this.configuration;
     }
 
     public class CustomClassWriter extends ClassWriter {

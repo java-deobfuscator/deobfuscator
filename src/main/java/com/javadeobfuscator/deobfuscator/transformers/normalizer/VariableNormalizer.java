@@ -16,17 +16,14 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class VariableNormalizer extends Transformer {
-    public VariableNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
-
+public class VariableNormalizer extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {

@@ -22,21 +22,28 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-public abstract class Transformer {
+public abstract class Transformer<T extends TransformerConfig> {
 
-    protected final Map<String, WrappedClassNode> classes;
-    protected final Map<String, WrappedClassNode> classpath;
-    protected final Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers;
+    protected Map<String, WrappedClassNode> classes;
+    protected Map<String, WrappedClassNode> classpath;
+    protected Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers;
 
-    protected Deobfuscator deobfuscator;
+    private Deobfuscator deobfuscator;
+    private T config;
 
-    public Transformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
+    public void init(Deobfuscator deobfuscator, TransformerConfig config, Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
+        this.deobfuscator = deobfuscator;
         this.classes = classes;
         this.classpath = classpath;
-        this.callers = null;
+        this.config = (T) config;
+    }
+
+    public T getConfig() {
+        return this.config;
     }
 
     public Collection<WrappedClassNode> classNodes() {
@@ -45,8 +52,7 @@ public abstract class Transformer {
 
     public abstract boolean transform() throws Throwable;
 
-    // heh
-    public void setDeobfuscator(Deobfuscator deobfuscator) {
-        this.deobfuscator = deobfuscator;
+    public Deobfuscator getDeobfuscator() {
+        return this.deobfuscator;
     }
 }

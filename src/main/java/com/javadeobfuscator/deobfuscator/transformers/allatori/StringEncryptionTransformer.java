@@ -21,6 +21,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LocalFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
@@ -37,11 +38,7 @@ import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StringEncryptionTransformer extends Transformer {
-
-    public StringEncryptionTransformer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
+public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {

@@ -16,23 +16,16 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
-import java.util.Map;
-
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-public class SyntheticBridgeRemover extends Transformer<TransformerConfig> {
+public class LocalVariableRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
-            classNode.access &= ~(Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
             classNode.methods.forEach(methodNode -> {
-                methodNode.access &= ~(Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
-            });
-            classNode.fields.forEach(fieldNode -> {
-                fieldNode.access &= ~(Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
+                methodNode.localVariables = null;
             });
         });
         return true;

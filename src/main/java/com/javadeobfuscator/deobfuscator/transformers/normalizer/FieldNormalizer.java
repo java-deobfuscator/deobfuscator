@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.RemappingClassAdapter;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.FieldNode;
@@ -23,25 +25,18 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.File;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FieldNormalizer extends Transformer {
-    public FieldNormalizer(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
+public class FieldNormalizer extends Transformer<FieldNormalizer.Config> {
 
     @Override
     public boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
         AtomicInteger id = new AtomicInteger(0);
         classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
-            ClassTree tree = this.deobfuscator.getClassTree(classNode.name);
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> allClasses = new HashSet<>();
             Set<String> tried = new HashSet<>();
             LinkedList<String> toTry = new LinkedList<>();
@@ -49,7 +44,7 @@ public class FieldNormalizer extends Transformer {
             while (!toTry.isEmpty()) {
                 String t = toTry.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
-                    ClassTree ct = this.deobfuscator.getClassTree(t);
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
                     allClasses.addAll(ct.subClasses);
@@ -60,7 +55,7 @@ public class FieldNormalizer extends Transformer {
             for (FieldNode fieldNode : classNode.fields) {
                 List<String> references = new ArrayList<>();
                 for (String possibleClass : allClasses) {
-                    ClassNode otherNode = this.deobfuscator.assureLoaded(possibleClass);
+                    ClassNode otherNode = this.getDeobfuscator().assureLoaded(possibleClass);
                     boolean found = false;
                     for (FieldNode otherField : otherNode.fields) {
                         if (otherField.name.equals(fieldNode.name) && otherField.desc.equals(fieldNode.desc)) {
@@ -92,5 +87,22 @@ public class FieldNormalizer extends Transformer {
             wr.classNode = newNode;
         });
         return true;
+    }
+
+    public static class Config extends TransformerConfig {
+        @JsonProperty(value = "mapping-file")
+        private File mappingFile;
+
+        public Config() {
+            super(FieldNormalizer.class);
+        }
+
+        public File getMappingFile() {
+            return mappingFile;
+        }
+
+        public void setMappingFile(File mappingFile) {
+            this.mappingFile = mappingFile;
+        }
     }
 }

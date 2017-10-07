@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Label;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
@@ -27,10 +28,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-public class GotoRearranger extends Transformer {
-    public GotoRearranger(Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
-        super(classes, classpath);
-    }
+public class GotoRearranger extends Transformer<TransformerConfig> {
 
     @Override
     public boolean transform() throws Throwable {
