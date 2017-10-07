@@ -1406,7 +1406,7 @@ class MethodWriter extends MethodVisitor {
             if (ClassReader.RESIZE) {
                 resizeInstructions();
             } else {
-                throw new RuntimeException("Method code too large!");
+                //throw new RuntimeException("Method code too large!");
             }
         }
         if (ClassReader.FRAMES && compute == FRAMES) {
@@ -2033,7 +2033,7 @@ class MethodWriter extends MethodVisitor {
         int size = 8;
         if (code.length > 0) {
             if (code.length > 65536) {
-                throw new RuntimeException("Method code too large!");
+                //throw new RuntimeException("Method code too large!");
             }
             cw.newUTF8("Code");
             size += 18 + code.length + 8 * handlerCount;
