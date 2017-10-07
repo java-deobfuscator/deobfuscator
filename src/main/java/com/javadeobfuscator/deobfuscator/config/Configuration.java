@@ -36,6 +36,12 @@ public class Configuration {
     @JsonProperty
     private List<File> path;
 
+    @JsonProperty
+    private List<String> ignoredClasses;
+
+    @JsonProperty
+    private boolean verify;
+
     public File getInput() {
         return input;
     }
@@ -66,5 +72,21 @@ public class Configuration {
 
     public void setPath(List<File> path) {
         this.path = path;
+    }
+
+    public boolean isVerify() {
+        return verify;
+    }
+
+    public void setVerify(boolean verify) {
+        this.verify = verify;
+    }
+
+    public List<String> getIgnoredClasses() {
+        return ignoredClasses;
+    }
+
+    public void setIgnoredClasses(List<String> ignoredClasses) {
+        this.ignoredClasses = ignoredClasses;
     }
 }

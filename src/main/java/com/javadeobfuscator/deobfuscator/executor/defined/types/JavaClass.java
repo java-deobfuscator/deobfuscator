@@ -98,8 +98,7 @@ public class JavaClass {
     public ClassTree getClassTree(String classNode) {
         ClassTree tree = hierachy.get(classNode);
         if (tree == null) {
-            tree = new ClassTree();
-            tree.thisClass = classNode;
+            tree = new ClassTree(classNode);
             hierachy.put(classNode, tree);
             loadHierachy(context.dictionary.get(classNode).classNode);
         }

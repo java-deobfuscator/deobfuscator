@@ -26,4 +26,8 @@ public class ClassTree {
 
     public Set<String> subClasses = new HashSet<>();
     public Set<String> parentClasses = new HashSet<>();
+
+    public ClassTree(String thisClass) {
+        this.thisClass = thisClass;
+    }
 }
