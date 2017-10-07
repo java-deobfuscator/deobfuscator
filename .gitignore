@@ -4,8 +4,9 @@
 /src/test/resources/Krakatau
 /src/test/resources/testcases/*.class
 /sn/
+/libraries/
+/samples/
 /issues/
-/src/main/java/com/javadeobfuscator/deobfuscator/analyzernew/
 .classpath
 .project
 deobfuscator.iml
@@ -15,4 +16,5 @@ deobfuscator.iml
 *.txt
 *.ser
 *.DS_Store
+*.yaml
 dependency-reduced-pom.xml
