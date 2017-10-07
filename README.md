@@ -75,17 +75,23 @@ Official transformers are linked via the `Transformers` class.
 | Stringer.HIDEACCESS_OBFUSCATION | stringer.HideAccessObfuscationTransformer | Decrypts hide access by Stringer (Included invokedynamic and reflection) |
 | Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
-| General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer| Optimizes the code |
+| Zelix.FLOW_OBFUSCATION | zelix.FlowObfuscationTransformer | Removes flow obfuscation by Zelix |
+| Smoke.STRING_ENCRYPTION | smoke.StringEncryptionTransformer | Removes string encryption by Smoke |
+| Smoke.NUMBER_OBFUSCATION | smoke.NumberObfuscationTransformer | Removes number obfuscation by Smoke |
+| Smoke.ILLEGAL_VARIABLE | smoke.IllegalVariableTransformer | Removes illegal variables by Smoke |
+| General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer | Optimizes the code |
 | General.Removers.SYNTHETIC_BRIDGE | general.remover.SyntheticBridgeRemover | Removes synthetic and bridge modifiers from all methods and fields |
 | General.Removers.LINE_NUMBER | general.remover.LineNumberRemover | Removes line number metadata |
 | General.Removers.ILLEGAL_VARARGS | general.remover.IllegalVarargsRemover | Unmangles methods marked as variadic but aren't really |
 | General.Removers.ILLEGAL_SIGNATURE | general.remover.IllegalSignatureRemover | Removes illegal signatures from members |
+| General.Removers.LOCAL_VARIABLE | general.remover.LocalVariableRemover | Removes local variables from methods |
 | Normalizer.CLASS_NORMALIZER | normalizer.ClassNormalizer | Renames all classes to Class<number> |
 | Normalizer.METHOD_NORMALIZER | normalizer.MethodNormalizer | Renames all methods to Method<number> |
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  
 | Normalizer.PACKAGE_NORMALIZER | normalizer.PackageNormalizer | Renames all packages to Package<number> |
 | Normalizer.SOURCEFILE_CLASS_NORMALIZER | normalizer.SourceFileClassNormalizer | Recovers `SourceFile` attributes when possible |
 | Normalizer.VARIABLE_NORMALIZER | normalizer.VariableNormalizer | Renames all local variables to var<number> |
+| Normalizer.DUPLICATE_RENAMER | normalizer.DuplicateRenamer | Renames all classes, methods, and fields with name clashes |
 
 ## Downloads
 
