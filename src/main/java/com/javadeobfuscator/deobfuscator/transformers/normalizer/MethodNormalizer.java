@@ -226,8 +226,8 @@ public class MethodNormalizer extends Transformer<MethodNormalizer.Config> {
         @JsonProperty(value = "mapping-file")
         private File mappingFile;
 
-        public Config(Class<? extends Transformer> target) {
-            super(target);
+        public Config() {
+            super(MethodNormalizer.class);
         }
 
         public File getMappingFile() {

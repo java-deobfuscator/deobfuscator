@@ -80,8 +80,8 @@ public class PackageNormalizer extends Transformer<PackageNormalizer.Config> {
         @JsonProperty(value = "mapping-file")
         private File mappingFile;
 
-        public Config(Class<? extends Transformer> target) {
-            super(target);
+        public Config() {
+            super(PackageNormalizer.class);
         }
 
         public File getMappingFile() {
