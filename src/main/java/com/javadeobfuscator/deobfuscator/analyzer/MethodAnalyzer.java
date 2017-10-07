@@ -899,7 +899,15 @@ public class MethodAnalyzer {
                     TypeInsnNode cast = (TypeInsnNode) now;
                     currentFrame = new NewArrayFrame(now.getOpcode(), cast.desc, len);
                     String desc = null;
-                    Type type = Type.getType(cast.desc);
+                    Type type;
+                    try {
+                        // if array is multidimensional, type is a descriptor
+                        type = Type.getType(cast.desc);
+                    } catch (Throwable ignored) {
+                        // however, if array is single dimensional, type is an object type
+                        // this is especially bad if the object type is something like "LongHashMap" because it starts with an "L"
+                        type = Type.getObjectType(cast.desc);
+                    }
                     if (type.getSort() == Type.ARRAY) {
                         desc = type.getDescriptor();
                     } else {
@@ -968,6 +976,7 @@ public class MethodAnalyzer {
             if (currentFrame != null) {
                 List<Frame> thisFrame = result.frames.computeIfAbsent(now, k -> new ArrayList<>());
                 thisFrame.add(currentFrame);
+                result.mapping = null;
                 result.maxLocals = Math.max(result.maxLocals, locals.size());
                 result.maxStack = Math.max(result.maxStack, stack.size());
 
