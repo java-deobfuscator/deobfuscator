@@ -19,6 +19,11 @@ package com.javadeobfuscator.deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.Configuration;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.ClassTree;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -28,11 +33,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.util.CheckClassAdapter;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.ClassTree;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -203,6 +203,10 @@ public class Deobfuscator {
                 }
             });
         });
+    }
+
+    public boolean isLibrary(ClassNode classNode) {
+        return libraryClassnodes.contains(classNode);
     }
 
     public void start() throws Throwable {
