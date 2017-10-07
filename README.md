@@ -17,32 +17,49 @@ Things like method names, class names, etc cannot be deobfuscated because there 
 ```java
 public class SomeRandomDeobfuscator {
     public static void main(String[] args) throws Throwable {
-        new Deobfuscator()
-            .withInput(new File("input.jar"))
-            .withOutput(new File("output.jar"))
-            .withClasspath(new File("path/to/rt.jar"))
-            .withTransformer(Transformers.General.SYNTHETIC_BRIDGE)
-            .start();
+        Configuration config = new Configuration();
+        config.setInput(new File("input.jar"));
+        config.setOutput(new File("output.jar"));
+        config.setPath(Arrays.asList(
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\rt.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\jce.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\ext\\jfxrt.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\lib\\tools.jar")
+        ));
+        config.setTransformers(Arrays.asList(
+                TransformerConfig.configFor(PeepholeOptimizer.class)
+        ));
+        new Deobfuscator(config).start();
     }
 }
 ```
 
 ### CLI
 
-If you don't want to import the project, you can always use the command line interface. There are four arguments that are taken.
+If you don't want to import the project, you can always use the command line interface.
 
 | Argument | Description |
 | --- | --- |
-| -input | The JAR to deobfuscate |
-| -output | The file to write to |
-| -transformer | A canonical name of the transformer class|
-| -path | A dependency of the JAR being deobfuscated |
+| --config | The configuration file |
 
 You may specify multiple transformers, and they will be applied in the order given. Order does matter as sometimes one transformation depends on another not being present.
 
-If you wish to use one of the default transformers, then you may remove the `com.javadeobfuscator.deobfuscator.transformers` prefix. For example, the command below will do the same as the example above.
+If you wish to use one of the default transformers, then you may remove the `com.javadeobfuscator.deobfuscator.transformers` prefix.
 
-`java -jar deobfuscator.jar -input input.jar -output output.jar -transformer general.SyntheticBridgeTransformer -path path/to/rt.jar`
+Here is a sample `config.yaml`:
+
+```yaml
+input: input.jar
+output: output.jar
+transformers:
+  - normalizer.MethodNormalizer:
+      mapping-file: normalizer.txt
+  - stringer.StringEncryptionTransformer
+  - normalizer.ClassNormalizer: {}
+    normalizer.FieldNormalizer: {}
+```
+
+For more details, please take a look at the wiki.
 
 ## Transformers
 
