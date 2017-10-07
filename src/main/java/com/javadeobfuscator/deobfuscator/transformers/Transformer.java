@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public abstract class Transformer<T extends TransformerConfig> {

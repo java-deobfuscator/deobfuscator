@@ -20,7 +20,7 @@ import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
+import org.objectweb.asm.Type;
 
 public class JVMComparisonProvider extends ComparisonProvider {
     @Override

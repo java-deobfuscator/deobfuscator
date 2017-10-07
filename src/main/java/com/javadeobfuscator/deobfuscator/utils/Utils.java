@@ -28,14 +28,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import static com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.*;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.*;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Printer;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.Textifier;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.util.TraceMethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.Printer;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceMethodVisitor;
 import sun.misc.Unsafe;
 
 public class Utils {

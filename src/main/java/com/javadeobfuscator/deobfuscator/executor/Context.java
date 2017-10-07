@@ -2,7 +2,7 @@ package com.javadeobfuscator.deobfuscator.executor;
 
 import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.io.File;

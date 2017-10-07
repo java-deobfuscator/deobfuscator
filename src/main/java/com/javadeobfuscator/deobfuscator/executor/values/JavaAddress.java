@@ -16,7 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.executor.values;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.tree.AbstractInsnNode;
 
 public class JavaAddress extends JavaValue {
 
@@ -36,6 +37,6 @@ public class JavaAddress extends JavaValue {
     }
 
     public String toString() {
-        return "JavaAddress(addr=" + value.index + ")";
+        return "JavaAddress(addr=" + Utils.prettyprint(this.value) + ")";
     }
 }

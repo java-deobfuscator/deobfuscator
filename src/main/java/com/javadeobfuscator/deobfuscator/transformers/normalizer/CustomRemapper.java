@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.commons.Remapper;
 
 import java.util.HashMap;
 import java.util.Map;

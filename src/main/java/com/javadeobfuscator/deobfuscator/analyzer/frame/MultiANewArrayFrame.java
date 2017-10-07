@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 
 import java.util.List;
 

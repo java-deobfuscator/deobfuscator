@@ -1,7 +1,7 @@
 package com.javadeobfuscator.deobfuscator.transformers.zelix;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 
 import java.util.concurrent.atomic.AtomicInteger;

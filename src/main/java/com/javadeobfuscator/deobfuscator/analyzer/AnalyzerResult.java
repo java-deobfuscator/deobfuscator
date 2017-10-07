@@ -17,7 +17,7 @@
 package com.javadeobfuscator.deobfuscator.analyzer;
 
 import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
-import com.javadeobfuscator.deobfuscator.org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.util.Collections;
 import java.util.HashMap;
