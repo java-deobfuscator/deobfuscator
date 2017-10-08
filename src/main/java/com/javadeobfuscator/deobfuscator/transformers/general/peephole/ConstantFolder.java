@@ -30,7 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.objectweb.asm.Opcodes.*;
 
-public class ConstantFolder extends Transformer<TransformerConfig> {
+@TransformerConfig.ConfigOptions(configClass = ConstantFolder.Config.class)
+public class ConstantFolder extends Transformer<ConstantFolder.Config> {
 
     @Override
     public boolean transform() throws Throwable {
@@ -234,6 +235,10 @@ public class ConstantFolder extends Transformer<TransformerConfig> {
                             }
                             case POP:
                             case POP2: {
+                                if (!getConfig().isExperimentalPopFolding()) {
+                                    break;
+                                }
+
                                 List<Frame> frames = result.getFrames().get(ain);
                                 if (frames == null) {
                                     // wat
@@ -276,5 +281,21 @@ public class ConstantFolder extends Transformer<TransformerConfig> {
         System.out.println("Folded " + folded.get() + " constants");
 
         return folded.get() > 0;
+    }
+
+    public static class Config extends TransformerConfig {
+        private boolean experimentalPopFolding;
+
+        public Config() {
+            super(ConstantFolder.class);
+        }
+
+        public boolean isExperimentalPopFolding() {
+            return experimentalPopFolding;
+        }
+
+        public void setExperimentalPopFolding(boolean experimentalPopFolding) {
+            this.experimentalPopFolding = experimentalPopFolding;
+        }
     }
 }
