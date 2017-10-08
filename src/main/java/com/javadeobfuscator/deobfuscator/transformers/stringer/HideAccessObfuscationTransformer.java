@@ -377,8 +377,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                     if (previous.getOpcode() == Opcodes.CHECKCAST) {
                         methodNode.instructions.remove(checkcast);
                     } else if (previous instanceof MethodInsnNode) {
-                        Type type1 = getType(((MethodInsnNode) previous).desc).getReturnType();
-                        Type type2 = getType(checkcast.desc).getReturnType();
+                        Type type1 = getReturnType(((MethodInsnNode) previous).desc);
+                        Type type2 = getReturnType(checkcast.desc);
                         
                         if (type1.getClassName().equals(type2.getClassName())) {
                             methodNode.instructions.remove(checkcast);
@@ -439,8 +439,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 	                        }
                         }
                     } else if (previous instanceof FieldInsnNode) {
-                    	Type type1 = getType(((FieldInsnNode) previous).desc).getReturnType();
-                    	Type type2 = getType(checkcast.desc).getReturnType();
+                    	Type type1 = getReturnType(((FieldInsnNode) previous).desc);
+                    	Type type2 = getReturnType(checkcast.desc);
 
                         if (type1.getClassName().equals(type2.getClassName())) {
                             methodNode.instructions.remove(checkcast);
@@ -489,8 +489,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                     	|| previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETFIELD))
                     {
                     	FieldInsnNode fieldNode = (FieldInsnNode)previous.getPrevious().getPrevious();
-                    	Type type1 = getType(fieldNode.desc).getReturnType();
-                        Type type2 = getType(checkcast.desc).getReturnType();
+                    	Type type1 = getReturnType(fieldNode.desc);
+                        Type type2 = getReturnType(checkcast.desc);
                         
                         if(type1.getClassName().equals(type2.getClassName()))
                         	methodNode.instructions.remove(checkcast);
@@ -533,8 +533,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                 AbstractInsnNode insn = copy.get(i);
                 AbstractInsnNode previous = insn.getPrevious();
                 if (insn instanceof FieldInsnNode && isValueOf(previous)) {
-                    Type type1 = getType(((MethodInsnNode) previous).desc).getReturnType();
-                    Type type2 = getType(((FieldInsnNode) insn).desc).getReturnType();
+                    Type type1 = getReturnType(((MethodInsnNode) previous).desc);
+                    Type type2 = getReturnType(((FieldInsnNode) insn).desc);
 
                     if (isObjectType(type1.getClassName()) && isPrimitive(type2.getClassName())) {
                         methodNode.instructions.remove(previous);
@@ -686,13 +686,13 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         return false;
     }
 
-    private Type getType(String desc) {
+    private Type getReturnType(String desc) {
         if (desc.startsWith("(") || desc.startsWith("L")) {
-            return Type.getType(desc);
+            return Type.getReturnType(desc);
         } else if (desc.startsWith("[")) {
-            return Type.getType("()[" + desc.substring(1, desc.length()));
+            return Type.getReturnType("()[" + desc.substring(1, desc.length()));
         } else {
-            return Type.getType("L" + desc + ";");
+            return Type.getReturnType("L" + desc + ";");
         }
     }
 
