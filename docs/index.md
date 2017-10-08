@@ -17,32 +17,49 @@ Things like method names, class names, etc cannot be deobfuscated because there 
 ```java
 public class SomeRandomDeobfuscator {
     public static void main(String[] args) throws Throwable {
-        new Deobfuscator()
-            .withInput(new File("input.jar"))
-            .withOutput(new File("output.jar"))
-            .withClasspath(new File("path/to/rt.jar"))
-            .withTransformer(Transformers.General.SYNTHETIC_BRIDGE)
-            .start();
+        Configuration config = new Configuration();
+        config.setInput(new File("input.jar"));
+        config.setOutput(new File("output.jar"));
+        config.setPath(Arrays.asList(
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\rt.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\jce.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\jre\\lib\\ext\\jfxrt.jar"),
+                new File("C:\\Program Files\\Java\\jdk_8\\lib\\tools.jar")
+        ));
+        config.setTransformers(Arrays.asList(
+                TransformerConfig.configFor(PeepholeOptimizer.class)
+        ));
+        new Deobfuscator(config).start();
     }
 }
 ```
 
 ### CLI
 
-If you don't want to import the project, you can always use the command line interface. There are four arguments that are taken.
+If you don't want to import the project, you can always use the command line interface.
 
 | Argument | Description |
 | --- | --- |
-| -input | The JAR to deobfuscate |
-| -output | The file to write to |
-| -transformer | A canonical name of the transformer class|
-| -path | A dependency of the JAR being deobfuscated |
+| --config | The configuration file |
 
 You may specify multiple transformers, and they will be applied in the order given. Order does matter as sometimes one transformation depends on another not being present.
 
-If you wish to use one of the default transformers, then you may remove the `com.javadeobfuscator.deobfuscator.transformers` prefix. For example, the command below will do the same as the example above.
+If you wish to use one of the default transformers, then you may remove the `com.javadeobfuscator.deobfuscator.transformers` prefix.
 
-`java -jar deobfuscator.jar -input input.jar -output output.jar -transformer general.SyntheticBridgeTransformer -path path/to/rt.jar`
+Here is a sample `config.yaml`:
+
+```yaml
+input: input.jar
+output: output.jar
+transformers:
+  - normalizer.MethodNormalizer:
+      mapping-file: normalizer.txt
+  - stringer.StringEncryptionTransformer
+  - normalizer.ClassNormalizer: {}
+    normalizer.FieldNormalizer: {}
+```
+
+For more details, please take a look at the wiki.
 
 ## Transformers
 
@@ -58,17 +75,22 @@ Official transformers are linked via the `Transformers` class.
 | Stringer.HIDEACCESS_OBFUSCATION | stringer.HideAccessObfuscationTransformer | Decrypts hide access by Stringer (Included invokedynamic and reflection) |
 | Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
-| General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer| Optimizes the code |
+| Zelix.FLOW_OBFUSCATION | zelix.FlowObfuscationTransformer | Removes flow obfuscation by Zelix |
+| Smoke.STRING_ENCRYPTION | smoke.StringEncryptionTransformer | Removes string encryption by Smoke |
+| Smoke.NUMBER_OBFUSCATION | smoke.NumberObfuscationTransformer | Removes number obfuscation by Smoke |
+| Smoke.ILLEGAL_VARIABLE | smoke.IllegalVariableTransformer | Removes illegal variables by Smoke |
+| General.PEEPHOLE_OPTIMIZER | general.peephole.PeepholeOptimizer | Optimizes the code |
 | General.Removers.SYNTHETIC_BRIDGE | general.remover.SyntheticBridgeRemover | Removes synthetic and bridge modifiers from all methods and fields |
 | General.Removers.LINE_NUMBER | general.remover.LineNumberRemover | Removes line number metadata |
 | General.Removers.ILLEGAL_VARARGS | general.remover.IllegalVarargsRemover | Unmangles methods marked as variadic but aren't really |
 | General.Removers.ILLEGAL_SIGNATURE | general.remover.IllegalSignatureRemover | Removes illegal signatures from members |
+| General.Removers.LOCAL_VARIABLE | general.remover.LocalVariableRemover | Removes local variables from methods |
 | Normalizer.CLASS_NORMALIZER | normalizer.ClassNormalizer | Renames all classes to Class<number> |
 | Normalizer.METHOD_NORMALIZER | normalizer.MethodNormalizer | Renames all methods to Method<number> |
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  
 | Normalizer.PACKAGE_NORMALIZER | normalizer.PackageNormalizer | Renames all packages to Package<number> |
 | Normalizer.SOURCEFILE_CLASS_NORMALIZER | normalizer.SourceFileClassNormalizer | Recovers `SourceFile` attributes when possible |
-| Normalizer.VARIABLE_NORMALIZER | normalizer.VariableNormalizer | Renames all local variables to var<number> |
+| Normalizer.DUPLICATE_RENAMER | normalizer.DuplicateRenamer | Renames all classes, methods, and fields with name clashes |
 
 ## Downloads
 

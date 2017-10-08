@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.Configuration;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.exceptions.PreventableStackOverflowError;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
@@ -209,55 +210,82 @@ public class Deobfuscator {
         return libraryClassnodes.contains(classNode);
     }
 
-    public void start() throws Throwable {
-        logger.info("Loading classpath");
-        loadClasspath();
-
-        logger.info("Loading input");
-        loadInput();
-
-        logger.info("Computing callers");
-        computeCallers();
-
-        logger.info("Transforming");
-        if (configuration.getTransformers() != null) {
-            for (TransformerConfig config : configuration.getTransformers()) {
-                logger.info("Running {}", config.getImplementation().getCanonicalName());
-                runFromConfig(config);
-            }
+    public int start() {
+    	try {
+	        logger.info("Loading classpath");
+	        loadClasspath();
+	
+	        logger.info("Loading input");
+	        loadInput();
+	
+	        logger.info("Computing callers");
+	        computeCallers();
+	
+	        logger.info("Transforming");
+	        if (configuration.getTransformers() != null) {
+	            for (TransformerConfig config : configuration.getTransformers()) {
+	                logger.info("Running {}", config.getImplementation().getCanonicalName());
+	                runFromConfig(config);
+	            }
+	        }
+	
+	        logger.info("Writing");
+	        if (DEBUG) {
+	            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass);
+	        }
+	
+	        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
+	        inputPassthrough.forEach((name, val) -> {
+	            ZipEntry entry = new ZipEntry(name);
+	            try {
+	                zipOut.putNextEntry(entry);
+	                zipOut.write(val);
+	                zipOut.closeEntry();
+	            } catch (IOException e) {
+	                logger.error("Error writing entry {}", name, e);
+	            }
+	        });
+	
+	        classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+	            try {
+	                byte[] b = toByteArray(classNode);
+	                if (b != null) {
+	                    zipOut.putNextEntry(new ZipEntry(classNode.name + ".class"));
+	                    zipOut.write(b);
+	                    zipOut.closeEntry();
+	                }
+	            } catch (IOException e) {
+	                logger.error("Error writing entry {}", classNode.name, e);
+	            }
+	        });
+	
+	        zipOut.close();
+	        return 0;
+    	} catch (NoClassInPathException ex) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("** DO NOT OPEN AN ISSUE ON GITHUB **");
+            System.out.println("Could not locate a class file.");
+            System.out.println("Have you added the necessary files to the -path argument?");
+            System.out.println("The error was:");
+            ex.printStackTrace(System.out);
+            return -2;
+        } catch (PreventableStackOverflowError ex) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("** DO NOT OPEN AN ISSUE ON GITHUB **");
+            System.out.println("A StackOverflowError occurred during deobfuscation, but it is preventable");
+            System.out.println("Try increasing your stack size using the -Xss flag");
+            System.out.println("The error was:");
+            ex.printStackTrace(System.out);
+            return -3;
+        } catch (Throwable t) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("Deobfuscation failed. Please open a ticket on GitHub and provide the following error:");
+            t.printStackTrace(System.out);
+            return -1;
         }
-
-        logger.info("Writing");
-        if (DEBUG) {
-            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass);
-        }
-
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
-        inputPassthrough.forEach((name, val) -> {
-            ZipEntry entry = new ZipEntry(name);
-            try {
-                zipOut.putNextEntry(entry);
-                zipOut.write(val);
-                zipOut.closeEntry();
-            } catch (IOException e) {
-                logger.error("Error writing entry {}", name, e);
-            }
-        });
-
-        classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
-            try {
-                byte[] b = toByteArray(classNode);
-                if (b != null) {
-                    zipOut.putNextEntry(new ZipEntry(classNode.name + ".class"));
-                    zipOut.write(b);
-                    zipOut.closeEntry();
-                }
-            } catch (IOException e) {
-                logger.error("Error writing entry {}", classNode.name, e);
-            }
-        });
-
-        zipOut.close();
     }
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
@@ -409,7 +437,7 @@ public class Deobfuscator {
                 }
             });
         }
-        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
         try {
             try {
                 node.accept(writer);
