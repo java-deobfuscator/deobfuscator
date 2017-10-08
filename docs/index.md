@@ -90,7 +90,6 @@ Official transformers are linked via the `Transformers` class.
 | Normalizer.FIELD_NORMALIZER | normalizer.FieldNormalizer | Renames all fields to Field<number> |  
 | Normalizer.PACKAGE_NORMALIZER | normalizer.PackageNormalizer | Renames all packages to Package<number> |
 | Normalizer.SOURCEFILE_CLASS_NORMALIZER | normalizer.SourceFileClassNormalizer | Recovers `SourceFile` attributes when possible |
-| Normalizer.VARIABLE_NORMALIZER | normalizer.VariableNormalizer | Renames all local variables to var<number> |
 | Normalizer.DUPLICATE_RENAMER | normalizer.DuplicateRenamer | Renames all classes, methods, and fields with name clashes |
 
 ## Downloads
