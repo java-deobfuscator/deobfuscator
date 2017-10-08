@@ -108,6 +108,33 @@ public class DeobfuscatorMain {
 
         Deobfuscator deobfuscator = new Deobfuscator(configuration);
 
-        return deobfuscator.start();
+        try {
+            deobfuscator.start();
+            return 0;
+        } catch (NoClassInPathException ex) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("** DO NOT OPEN AN ISSUE ON GITHUB **");
+            System.out.println("Could not locate a class file.");
+            System.out.println("Have you added the necessary files to the -path argument?");
+            System.out.println("The error was:");
+            ex.printStackTrace(System.out);
+            return -2;
+        } catch (PreventableStackOverflowError ex) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("** DO NOT OPEN AN ISSUE ON GITHUB **");
+            System.out.println("A StackOverflowError occurred during deobfuscation, but it is preventable");
+            System.out.println("Try increasing your stack size using the -Xss flag");
+            System.out.println("The error was:");
+            ex.printStackTrace(System.out);
+            return -3;
+        } catch (Throwable t) {
+            for (int i = 0; i < 5; i++)
+                System.out.println();
+            System.out.println("Deobfuscation failed. Please open a ticket on GitHub and provide the following error:");
+            t.printStackTrace(System.out);
+            return -1;
+        }
     }
 }
