@@ -794,9 +794,9 @@ public class MethodAnalyzer {
                         args.add(0, stack.remove(0).value);
                     }
                     currentFrame = new MethodFrame(now.getOpcode(), cast.owner, cast.name, cast.desc, stack.remove(0).value, args);
-                    if (type.getReturnType().getSort() != Type.VOID) {
+                    if (type.getSort() != Type.VOID) {
                         if (clazz == null) {
-                            stack.add(0, new StackObject(Object.class, currentFrame, type.getReturnType().getInternalName()));
+                            stack.add(0, new StackObject(Object.class, currentFrame, type.getInternalName()));
                         } else {
                             stack.add(0, new StackObject(clazz, currentFrame));
                         }
@@ -816,9 +816,9 @@ public class MethodAnalyzer {
                     //                    throw new IllegalArgumentException("Already initialized");
                     instance.initialize();
                     currentFrame = new MethodFrame(now.getOpcode(), cast.owner, cast.name, cast.desc, instance.value, args);
-                    if (type.getReturnType().getSort() != Type.VOID) {
+                    if (type.getSort() != Type.VOID) {
                         if (clazz == null) {
-                            stack.add(0, new StackObject(Object.class, currentFrame, type.getReturnType().getInternalName()));
+                            stack.add(0, new StackObject(Object.class, currentFrame, type.getInternalName()));
                         } else {
                             stack.add(0, new StackObject(clazz, currentFrame));
                         }
@@ -834,9 +834,9 @@ public class MethodAnalyzer {
                         args.add(0, stack.remove(0).value);
                     }
                     currentFrame = new MethodFrame(now.getOpcode(), cast.owner, cast.name, cast.desc, null, args);
-                    if (type.getReturnType().getSort() != Type.VOID) {
+                    if (type.getSort() != Type.VOID) {
                         if (clazz == null) {
-                            stack.add(0, new StackObject(Object.class, currentFrame, type.getReturnType().getInternalName()));
+                            stack.add(0, new StackObject(Object.class, currentFrame, type.getInternalName()));
                         } else {
                             stack.add(0, new StackObject(clazz, currentFrame));
                         }
@@ -852,9 +852,9 @@ public class MethodAnalyzer {
                         args.add(0, stack.remove(0).value);
                     }
                     currentFrame = new MethodFrame(now.getOpcode(), cast.owner, cast.name, cast.desc, stack.remove(0).value, args);
-                    if (type.getReturnType().getSort() != Type.VOID) {
+                    if (type.getSort() != Type.VOID) {
                         if (clazz == null) {
-                            stack.add(0, new StackObject(Object.class, currentFrame, type.getReturnType().getInternalName()));
+                            stack.add(0, new StackObject(Object.class, currentFrame, type.getInternalName()));
                         } else {
                             stack.add(0, new StackObject(clazz, currentFrame));
                         }
@@ -870,9 +870,9 @@ public class MethodAnalyzer {
                         args.add(0, stack.remove(0).value);
                     }
                     currentFrame = new MethodFrame(now.getOpcode(), "", cast.name, cast.desc, null, args);
-                    if (type.getReturnType().getSort() != Type.VOID) {
+                    if (type.getSort() != Type.VOID) {
                         if (clazz == null) {
-                            stack.add(0, new StackObject(Object.class, currentFrame, type.getReturnType().getInternalName()));
+                            stack.add(0, new StackObject(Object.class, currentFrame, type.getInternalName()));
                         } else {
                             stack.add(0, new StackObject(clazz, currentFrame));
                         }

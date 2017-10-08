@@ -107,8 +107,8 @@ public class ArgsAnalyzer
 				//Note that we add one for the instance
 				MethodInsnNode cast = (MethodInsnNode)node;
 				neededNodes += Type.getArgumentTypes(cast.desc).length + 1;
-				if(Type.getReturnType(cast.desc).getReturnType().getSort() > 0
-					&& Type.getReturnType(cast.desc).getReturnType().getSort() < 11)
+				if(Type.getReturnType(cast.desc).getSort() > 0
+					&& Type.getReturnType(cast.desc).getSort() < 11)
 				{
 					stack.add(0, node);
 					if(neededNodes > 0)
@@ -128,8 +128,8 @@ public class ArgsAnalyzer
 			{
 				MethodInsnNode cast = (MethodInsnNode)node;
 				neededNodes += Type.getArgumentTypes(cast.desc).length;
-				if(Type.getReturnType(cast.desc).getReturnType().getSort() > 0
-					&& Type.getReturnType(cast.desc).getReturnType().getSort() < 11)
+				if(Type.getReturnType(cast.desc).getSort() > 0
+					&& Type.getReturnType(cast.desc).getSort() < 11)
 				{
 					stack.add(0, node);
 					if(neededNodes > 0)
