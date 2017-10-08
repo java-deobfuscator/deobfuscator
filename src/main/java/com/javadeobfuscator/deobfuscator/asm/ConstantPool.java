@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package com.javadeobfuscator.deobfuscator.transformers.general.removers;
+package com.javadeobfuscator.deobfuscator.asm;
 
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import org.objectweb.asm.ClassReader;
 
-public class LocalVariableRemover extends Transformer<TransformerConfig> {
-    @Override
-    public boolean transform() throws Throwable {
-        classNodes().forEach(classNode -> {
-            classNode.methods.forEach(methodNode -> {
-                methodNode.localVariables = null;
-            });
-        });
-        return true;
+public class ConstantPool {
+    private final ClassReader classReader;
+
+    // todo load constants lazily (to prevent abuse with large constant pools)
+    public ConstantPool(ClassReader classReader) {
+        this.classReader = classReader;
+    }
+
+    public int getSize() {
+        return this.classReader.getItemCount();
     }
 }

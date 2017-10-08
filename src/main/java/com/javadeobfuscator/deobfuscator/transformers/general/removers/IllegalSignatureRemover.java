@@ -19,14 +19,11 @@ package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.util.CheckClassAdapter;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
-
-import java.util.Map;
 
 public class IllegalSignatureRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             if (classNode.signature != null) {
                 try {
                     CheckClassAdapter.checkClassSignature(classNode.signature);

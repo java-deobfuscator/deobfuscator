@@ -20,6 +20,8 @@ import com.javadeobfuscator.deobfuscator.transformers.general.removers.IllegalSi
 import com.javadeobfuscator.deobfuscator.transformers.general.removers.IllegalVarargsRemover;
 import com.javadeobfuscator.deobfuscator.transformers.general.removers.LineNumberRemover;
 import com.javadeobfuscator.deobfuscator.transformers.general.removers.SyntheticBridgeRemover;
+import com.javadeobfuscator.deobfuscator.transformers.normalizer.ClassNormalizer;
+import com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer;
 
 public class Transformers {
     public static class Allatori {
@@ -66,10 +68,10 @@ public class Transformers {
 
     public static class Normalizer {
         public static final Class<? extends Transformer> PACKAGE_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.PackageNormalizer.class;
-        public static final Class<? extends Transformer> CLASS_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.ClassNormalizer.class;
+        public static final Class<? extends Transformer> CLASS_NORMALIZER = ClassNormalizer.class;
         public static final Class<? extends Transformer> FIELD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.FieldNormalizer.class;
         public static final Class<? extends Transformer> METHOD_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.MethodNormalizer.class;
         public static final Class<? extends Transformer> VARIABLE_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.VariableNormalizer.class;
-        public static final Class<? extends Transformer> SOURCEFILE_CLASS_NORMALIZER = com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer.class;
+        public static final Class<? extends Transformer> SOURCEFILE_CLASS_NORMALIZER = SourceFileClassNormalizer.class;
     }
 }

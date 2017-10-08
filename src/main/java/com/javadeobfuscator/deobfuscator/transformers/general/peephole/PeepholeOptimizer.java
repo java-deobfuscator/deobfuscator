@@ -18,7 +18,6 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 

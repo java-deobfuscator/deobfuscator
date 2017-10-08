@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 import com.google.common.base.Optional;
+import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.*;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaAddress;
@@ -42,7 +43,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class MethodExecutor {
     private static final boolean VERIFY;
@@ -59,7 +59,7 @@ public class MethodExecutor {
         DEBUG_METHODS_WITH_DESC = Arrays.asList();
     }
 
-    public static <T> T execute(WrappedClassNode classNode, MethodNode method, List<JavaValue> args, Object instance, Context context) {
+    public static <T> T execute(ClassNode classNode, MethodNode method, List<JavaValue> args, Object instance, Context context) {
         if (context == null)
             throw new IllegalArgumentException("Null context");
         List<JavaValue> stack = new LinkedList<>();
@@ -326,15 +326,15 @@ public class MethodExecutor {
     /*
      * Main executor. This will go through each instruction and execute the instruction using a switch statement
      */
-    private static <T> T execute(WrappedClassNode classNode, MethodNode method, AbstractInsnNode now, List<JavaValue> stack, List<JavaValue> locals, Context context) {
-        context.push(classNode.classNode.name, method.name, classNode.constantPoolSize);
+    private static <T> T execute(ClassNode classNode, MethodNode method, AbstractInsnNode now, List<JavaValue> stack, List<JavaValue> locals, Context context) {
+        context.push(classNode.name, method.name, 0); // constantPoolSize isn't even used, is it?
         if (DEBUG) {
-            System.out.println("Executing " + classNode.classNode.name + " " + method.name + method.desc);
+            System.out.println("Executing " + classNode.name + " " + method.name + method.desc);
         }
         forever:
         while (true) {
             try {
-                if (DEBUG && (DEBUG_CLASSES.isEmpty() || DEBUG_CLASSES.contains(classNode.classNode.name)) && (DEBUG_METHODS_WITH_DESC.isEmpty() || DEBUG_METHODS_WITH_DESC.contains(method.name + method.desc))) {
+                if (DEBUG && (DEBUG_CLASSES.isEmpty() || DEBUG_CLASSES.contains(classNode.name)) && (DEBUG_METHODS_WITH_DESC.isEmpty() || DEBUG_METHODS_WITH_DESC.contains(method.name + method.desc))) {
                     System.out.println("\t Stack: " + stack);
                     System.out.println("\t Locals: " + locals);
                     System.out.println();
@@ -1118,9 +1118,8 @@ public class MethodExecutor {
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
-                                WrappedClassNode ownerWrappedClass = context.dictionary.get(owner);
-                                if (ownerWrappedClass != null) {
-                                    ClassNode ownerClass = ownerWrappedClass.classNode;
+                                ClassNode ownerClass = context.dictionary.get(owner);
+                                if (ownerClass != null) {
                                     if (ownerClass.superName != null) {
                                         owner = ownerClass.superName;
                                         continue;
@@ -1187,9 +1186,8 @@ public class MethodExecutor {
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
-                                WrappedClassNode ownerWrappedClass = context.dictionary.get(owner);
-                                if (ownerWrappedClass != null) {
-                                    ClassNode ownerClass = ownerWrappedClass.classNode;
+                                ClassNode ownerClass = context.dictionary.get(owner);
+                                if (ownerClass != null) {
                                     if (ownerClass.superName != null) {
                                         owner = ownerClass.superName;
                                         continue;
@@ -1478,9 +1476,8 @@ public class MethodExecutor {
                                     now = tcbn.handler;
                                     continue forever;
                                 } else {
-                                    WrappedClassNode wr = context.dictionary.get(Type.getType(toThrow.getClass()).getInternalName());
-                                    if (wr.classNode != null) {
-                                        ClassNode cn = wr.classNode;
+                                    ClassNode cn = context.dictionary.get(Type.getType(toThrow.getClass()).getInternalName());
+                                    if (cn != null) {
                                         boolean ok = false;
                                         while (cn != null) {
                                             if (cn.name.equals(tcbn.type)) {
@@ -1490,10 +1487,7 @@ public class MethodExecutor {
                                             if (cn.superName == null) {
                                                 break;
                                             }
-                                            wr = context.dictionary.get(cn.superName);
-                                            if (wr != null) {
-                                                cn = wr.classNode;
-                                            }
+                                            cn = context.dictionary.get(cn.superName);
                                         }
                                         if (ok) {
                                             stack.clear();
@@ -1511,7 +1505,7 @@ public class MethodExecutor {
                 now = now.getNext();
             } catch (ExecutionException e) {
                 if (e.clazz.isEmpty()) {
-                    e.clazz = classNode.classNode.name;
+                    e.clazz = classNode.name;
                     e.method = method.name + method.desc;
                 }
                 throw e;
@@ -1528,9 +1522,8 @@ public class MethodExecutor {
                                 now = tcbn.handler;
                                 continue forever;
                             } else {
-                                WrappedClassNode wr = context.dictionary.get(Type.getType(t.getClass()).getInternalName());
-                                if (wr.classNode != null) {
-                                    ClassNode cn = wr.classNode;
+                                ClassNode cn = context.dictionary.get(Type.getType(t.getClass()).getInternalName());
+                                if (cn != null) {
                                     boolean ok = false;
                                     while (cn != null) {
                                         if (cn.name.equals(tcbn.type)) {
@@ -1540,10 +1533,7 @@ public class MethodExecutor {
                                         if (cn.superName == null) {
                                             break;
                                         }
-                                        wr = context.dictionary.get(cn.superName);
-                                        if (wr != null) {
-                                            cn = wr.classNode;
-                                        }
+                                        cn = context.dictionary.get(cn.superName);
                                     }
                                     if (ok) {
                                         stack.clear();

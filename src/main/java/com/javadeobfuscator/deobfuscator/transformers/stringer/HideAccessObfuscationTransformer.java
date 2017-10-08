@@ -23,41 +23,39 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstructor;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 //TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
-	private static final String[][] CLASS_TO_PRIMITIVE = {
-        {"java/lang/Byte", "byte"},
-        {"java/lang/Short", "short"},
-        {"java/lang/Integer", "int"},
-        {"java/lang/Long", "long"},
-        {"java/lang/Float", "float"},
-        {"java/lang/Double", "double"},
-        {"java/lang/Character", "char"},
-        {"java/lang/Boolean", "boolean"}
-	};
+    private static final String[][] CLASS_TO_PRIMITIVE = {
+            {"java/lang/Byte", "byte"},
+            {"java/lang/Short", "short"},
+            {"java/lang/Integer", "int"},
+            {"java/lang/Long", "long"},
+            {"java/lang/Float", "float"},
+            {"java/lang/Double", "double"},
+            {"java/lang/Character", "char"},
+            {"java/lang/Boolean", "boolean"}
+    };
 
     @Override
     public boolean transform() throws Throwable {
@@ -112,246 +110,231 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
             MethodNode clinit = decryptor.methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
             if (clinit == null) throw new RuntimeException("Could not find a method <clinit> in " + decryptor.name);
 
-            MethodExecutor.execute(classes.get(decryptor.name), clinit, Collections.emptyList(), null, context);
+            MethodExecutor.execute(decryptor, clinit, Collections.emptyList(), null, context);
         });
 
         String bootstrapDesc = "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode ->
+        classNodes().forEach(classNode ->
                 classNode.methods.stream().filter(methodNode -> !methodNode.desc.equals(bootstrapDesc)).forEach(methodNode -> {
-            InsnList copy = Utils.copyInsnList(methodNode.instructions);
-            for (int i = 0; i < copy.size(); i++) {
-                AbstractInsnNode insn = copy.get(i);
-                if (insn instanceof InvokeDynamicInsnNode) {
-                    Handle bootstrap = ((InvokeDynamicInsnNode) insn).bsm;
+                    InsnList copy = Utils.copyInsnList(methodNode.instructions);
+                    for (int i = 0; i < copy.size(); i++) {
+                        AbstractInsnNode insn = copy.get(i);
+                        if (insn instanceof InvokeDynamicInsnNode) {
+                            Handle bootstrap = ((InvokeDynamicInsnNode) insn).bsm;
 
-                    if (bootstrap.getDesc().equals(bootstrapDesc)) {
-                        MethodNode bootstrapMethod = classNode.methods.stream().filter(m -> m.name.equals(bootstrap.getName()) && m.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
+                            if (bootstrap.getDesc().equals(bootstrapDesc)) {
+                                MethodNode bootstrapMethod = classNode.methods.stream().filter(m -> m.name.equals(bootstrap.getName()) && m.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
 
-                        if (bootstrapMethod == null) throw new RuntimeException("Could not find bootstrap");
-                        decryptMethods.add(bootstrapMethod);
+                                if (bootstrapMethod == null) throw new RuntimeException("Could not find bootstrap");
+                                decryptMethods.add(bootstrapMethod);
 
-                        List<JavaValue> args = new ArrayList<>();
-                        args.add(JavaValue.valueOf(null));
-                        args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) insn).name));
-                        args.add(JavaValue.valueOf(null));
+                                List<JavaValue> args = new ArrayList<>();
+                                args.add(JavaValue.valueOf(null));
+                                args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) insn).name));
+                                args.add(JavaValue.valueOf(null));
 
-                        JavaMethodHandle result = MethodExecutor.execute(classes.get(classNode.name), bootstrapMethod, args, null, context);
-                        switch (result.type) {
-                            case "virtual":
-                                methodNode.instructions.set(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, result.clazz, result.name, result.desc, false));
-                                break;
-                            case "static":
-                                methodNode.instructions.set(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, result.clazz, result.name, result.desc, false));
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown type");
-                        }
-                        count.getAndIncrement();
-                    }
-                }
-            }
-        }));
-
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).filter(classNode -> !decryptors.contains(classNode)).forEach(classNode ->
-                classNode.methods.stream().filter(methodNode -> !methodNode.desc.equals(bootstrapDesc)).forEach(methodNode -> {
-            InsnList copy = Utils.copyInsnList(methodNode.instructions);
-            for (int i = 0; i < copy.size(); i++) {
-                AbstractInsnNode insn = copy.get(i);
-                if (insn instanceof MethodInsnNode && decryptors.stream().map(decryptor -> decryptor.name).collect(Collectors.toList()).contains(((MethodInsnNode) insn).owner)) {
-                    String owner = ((MethodInsnNode) insn).owner;
-                    String name = ((MethodInsnNode) insn).name;
-                    String desc = ((MethodInsnNode) insn).desc;
-                    switch (desc) {
-                    	case "(I[Ljava/lang/Object;)Ljava/lang/Object;": { // INVOKESTATIC and INVOKESPECIAL
-                    		MethodNode hideAccessMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals(desc) && m.name.equals(name)).findFirst().orElse(null);
-                    		if(hideAccessMethod != null && hideAccessMethod.instructions.size() > 2
-                    			&& hideAccessMethod.instructions.get(2).getOpcode() == Opcodes.LDC)
-                    		{
-                    			if(insn.getPrevious().getOpcode() == Opcodes.SWAP) 
-                        		{
-                    				Integer value = (Integer)((LdcInsnNode)insn.getPrevious().getPrevious()).cst;
-	                    			AbstractInsnNode returnInsert = null;
-	                    			//Invokespecial
-	                    			//Patches the hide access method first to return a constructor
-	                    			for(AbstractInsnNode ain : hideAccessMethod.instructions.toArray())
-	                    			{
-	                    				if(ain.getOpcode() == Opcodes.INVOKEVIRTUAL
-	                    					&& ((MethodInsnNode)ain).name.equals("newInstance")
-	                    					&& ((MethodInsnNode)ain).owner.equals("java/lang/reflect/Constructor")
-	                    					&& ain.getPrevious() != null 
-	                    					&& ain.getPrevious().getOpcode() == Opcodes.ALOAD
-	                    					&& ain.getPrevious().getPrevious() != null
-	                    					&& ain.getPrevious().getPrevious().getOpcode() == Opcodes.ALOAD)
-	                    				{
-	                    					hideAccessMethod.instructions.insert(ain.getPrevious().getPrevious(),
-	                    						returnInsert = new InsnNode(Opcodes.ARETURN));
-	                    					break;
-	                    				}
-	                    			}
-	                    			//Execute the method
-	                    			List<JavaValue> args = new ArrayList<>();
-	                    			args.add(new JavaInteger(value));
-	                    			args.add(new JavaObject(null, "java/lang/Object"));
-	                    			JavaConstructor result = MethodExecutor.execute(classes.get(owner), hideAccessMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-	                    			hideAccessMethod.instructions.remove(returnInsert);
-	                    			//Remove the array of objects
-	                    			while(insn.getPrevious() != null)
-	                    			{
-	                    				if(insn.getPrevious().getOpcode() == Opcodes.ANEWARRAY)
-	                    				{
-	                    					methodNode.instructions.remove(insn.getPrevious().getPrevious());
-	                    					methodNode.instructions.remove(insn.getPrevious());
-	                    					break;
-	                    				}else if(insn.getPrevious().getOpcode() == Opcodes.ACONST_NULL)
-	                    				{
-	                    					methodNode.instructions.remove(insn.getPrevious());
-	                    					break;
-	                    				}     					
-	                      				methodNode.instructions.remove(insn.getPrevious());
-	                    			}
-	                    			//Reverse bytecode analysis to get the previous X arguments
-	                    			ArgsAnalyzer analyzer = new ArgsAnalyzer(
-	                    				methodNode, methodNode.instructions.indexOf(insn) - 1, 
-	                    				Type.getArgumentTypes(result.getDesc()).length);
-	                    			List<AbstractInsnNode> numberArgs;
-	                    			try
-	                    			{
-	                    				numberArgs = analyzer.lookupArgs();
-	                    			}catch(RuntimeException e)
-	                    			{
-	                    				numberArgs = new ArrayList<>();
-	                    			}
-	                    			//Writes the "add" part before the first insn
-									AbstractInsnNode firstArgInsn; 
-									if(numberArgs.size() > 0)
-										firstArgInsn = numberArgs.get(0);
-									else
-										firstArgInsn = insn;
-	                    			methodNode.instructions.insertBefore(firstArgInsn, new TypeInsnNode(Opcodes.NEW, result.getClassName()));
-	                    			methodNode.instructions.insertBefore(firstArgInsn, new InsnNode(Opcodes.DUP));
-	                    			//The constructor is used to write a desc
-	                    			methodNode.instructions.set(insn, new MethodInsnNode(
-	                    				Opcodes.INVOKESPECIAL, result.getClassName(), 
-	                    					"<init>", result.getDesc(), false));
-	                    			count.getAndIncrement();
-                        		}
-                    			break;
-                    		}
-                    		//Invokestatic goes below
-                    	}
-                    	case "(Ljava/lang/Object;I[Ljava/lang/Object;)Ljava/lang/Object;": { // INVOKEVIRTUAL
-                    		MethodNode decryptMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Method;")).findFirst().orElse(null);
-                    		if(insn.getPrevious().getOpcode() == Opcodes.SWAP) 
-                    		{
-                    			Integer value = (Integer)((LdcInsnNode)insn.getPrevious().getPrevious()).cst;
-                    			JavaMethod result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-                    			//Remove the array of objects
-                    			while(insn.getPrevious() != null)
-                    			{
-                    				if(insn.getPrevious().getOpcode() == Opcodes.ANEWARRAY)
-                    				{
-                    					methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                    					methodNode.instructions.remove(insn.getPrevious());
-                    					break;
-                    				}else if(insn.getPrevious().getOpcode() == Opcodes.ACONST_NULL)
-                    				{
-                    					methodNode.instructions.remove(insn.getPrevious());
-                    					break;
-                    				}
-                      				methodNode.instructions.remove(insn.getPrevious());
-                    			}
-                    			//Remove extra pop
-                    			if(Type.getReturnType(result.getDesc()).getSort() == Type.VOID &&
-                    				insn.getNext() != null && insn.getNext().getOpcode() == Opcodes.POP)
-                    				methodNode.instructions.remove(insn.getNext());
-                    			//Removes the casts from a primitive to non primitive (doesn't solve the cast problem completely)
-                    			if(insn.getNext() != null && insn.getNext().getOpcode() == Opcodes.CHECKCAST 
-                    				&& insn.getNext().getNext() != null && insn.getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL)
-                    			{
-                    				TypeInsnNode next = (TypeInsnNode)insn.getNext();
-                    				if(isUnboxingMethod(next) 
-                    					&& Type.getReturnType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(next.desc))) 
-                    				{
-                    					methodNode.instructions.remove(next.getNext());
-                    					methodNode.instructions.remove(next);
-                    				}
-                    			}
-                    			//Uses invokeinterface if owner class is interface
-                    			boolean useInterface = false;
-                    			JavaClass clazz = new JavaClass(result.getOwner(), context);
-                    			if((clazz.getClassNode().access & Opcodes.ACC_INTERFACE) != 0)
-                    				useInterface = true;
-                    			int opcode = desc.equals("(Ljava/lang/Object;I[Ljava/lang/Object;)Ljava/lang/Object;") ? Opcodes.INVOKEVIRTUAL :
-                					Opcodes.INVOKESTATIC;
-                    			if(opcode == Opcodes.INVOKEVIRTUAL && useInterface)
-                    				opcode = Opcodes.INVOKEINTERFACE;
-                    			methodNode.instructions.set(insn, new MethodInsnNode(
-                    				opcode, result.getOwner(), result.getName(), result.getDesc(), opcode == Opcodes.INVOKEINTERFACE));
-                    			count.getAndIncrement();
-                    		}
-                    		break;
-                    	}
-                        case "(I)Ljava/lang/Object;": {  // GETSTATIC
-                            MethodNode decryptMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
-                            Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
-                            JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
-                            if (isValueOf(insn.getPrevious().getPrevious()))
-                                methodNode.instructions.remove(insn.getPrevious().getPrevious());
-
-                            methodNode.instructions.remove(insn.getPrevious());
-                            methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETSTATIC, result.getClassName(), result.getName(), result.getDesc()));
-                            count.getAndIncrement();
-                            break;
-                        }
-                        case "(ILjava/lang/Object;)V": { // PUTSTATIC
-                            MethodNode decryptMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
-                            if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
-                                Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
-                                methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                                methodNode.instructions.remove(insn.getPrevious());
-
-                                methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTSTATIC, result.getClassName(), result.getName(), result.getDesc()));
+                                JavaMethodHandle result = MethodExecutor.execute(classNode, bootstrapMethod, args, null, context);
+                                switch (result.type) {
+                                    case "virtual":
+                                        methodNode.instructions.set(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, result.clazz, result.name, result.desc, false));
+                                        break;
+                                    case "static":
+                                        methodNode.instructions.set(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, result.clazz, result.name, result.desc, false));
+                                        break;
+                                    default:
+                                        throw new RuntimeException("Unknown type");
+                                }
                                 count.getAndIncrement();
                             }
-                            break;
-                        }
-                        case "(Ljava/lang/Object;I)Ljava/lang/Object;": { // GETFIELD
-                            MethodNode decryptMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
-                            Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
-                            JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
-                            if (isValueOf(insn.getPrevious().getPrevious())) {
-                                methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                            }
-
-                            methodNode.instructions.remove(insn.getPrevious());
-                            methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETFIELD, result.getClassName(), result.getName(), result.getDesc()));
-                            count.getAndIncrement();
-                            break;
-                        }
-                        case "(Ljava/lang/Object;ILjava/lang/Object;)V": { // PUTFIELD
-                            MethodNode decryptMethod = classes.get(owner).getClassNode().methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
-
-                            if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
-                                Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
-                                methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                                methodNode.instructions.remove(insn.getPrevious());
-
-                                methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTFIELD, result.getClassName(), result.getName(), result.getDesc()));
-                                count.getAndIncrement();
-                            }
-                            break;
                         }
                     }
-                }
-            }
-        }));
+                }));
+
+        classNodes().stream().filter(classNode -> !decryptors.contains(classNode)).forEach(classNode ->
+                classNode.methods.stream().filter(methodNode -> !methodNode.desc.equals(bootstrapDesc)).forEach(methodNode -> {
+                    InsnList copy = Utils.copyInsnList(methodNode.instructions);
+                    for (int i = 0; i < copy.size(); i++) {
+                        AbstractInsnNode insn = copy.get(i);
+                        if (insn instanceof MethodInsnNode && decryptors.stream().map(decryptor -> decryptor.name).collect(Collectors.toList()).contains(((MethodInsnNode) insn).owner)) {
+                            String owner = ((MethodInsnNode) insn).owner;
+                            String name = ((MethodInsnNode) insn).name;
+                            String desc = ((MethodInsnNode) insn).desc;
+                            switch (desc) {
+                                case "(I[Ljava/lang/Object;)Ljava/lang/Object;": { // INVOKESTATIC and INVOKESPECIAL
+                                    MethodNode hideAccessMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals(desc) && m.name.equals(name)).findFirst().orElse(null);
+                                    if (hideAccessMethod != null && hideAccessMethod.instructions.size() > 2
+                                            && hideAccessMethod.instructions.get(2).getOpcode() == Opcodes.LDC) {
+                                        if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
+                                            Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                            AbstractInsnNode returnInsert = null;
+                                            //Invokespecial
+                                            //Patches the hide access method first to return a constructor
+                                            for (AbstractInsnNode ain : hideAccessMethod.instructions.toArray()) {
+                                                if (ain.getOpcode() == Opcodes.INVOKEVIRTUAL
+                                                        && ((MethodInsnNode) ain).name.equals("newInstance")
+                                                        && ((MethodInsnNode) ain).owner.equals("java/lang/reflect/Constructor")
+                                                        && ain.getPrevious() != null
+                                                        && ain.getPrevious().getOpcode() == Opcodes.ALOAD
+                                                        && ain.getPrevious().getPrevious() != null
+                                                        && ain.getPrevious().getPrevious().getOpcode() == Opcodes.ALOAD) {
+                                                    hideAccessMethod.instructions.insert(ain.getPrevious().getPrevious(),
+                                                            returnInsert = new InsnNode(Opcodes.ARETURN));
+                                                    break;
+                                                }
+                                            }
+                                            //Execute the method
+                                            List<JavaValue> args = new ArrayList<>();
+                                            args.add(new JavaInteger(value));
+                                            args.add(new JavaObject(null, "java/lang/Object"));
+                                            JavaConstructor result = MethodExecutor.execute(classes.get(owner), hideAccessMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                            hideAccessMethod.instructions.remove(returnInsert);
+                                            //Remove the array of objects
+                                            while (insn.getPrevious() != null) {
+                                                if (insn.getPrevious().getOpcode() == Opcodes.ANEWARRAY) {
+                                                    methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                                    methodNode.instructions.remove(insn.getPrevious());
+                                                    break;
+                                                } else if (insn.getPrevious().getOpcode() == Opcodes.ACONST_NULL) {
+                                                    methodNode.instructions.remove(insn.getPrevious());
+                                                    break;
+                                                }
+                                                methodNode.instructions.remove(insn.getPrevious());
+                                            }
+                                            //Reverse bytecode analysis to get the previous X arguments
+                                            ArgsAnalyzer analyzer = new ArgsAnalyzer(
+                                                    methodNode, methodNode.instructions.indexOf(insn) - 1,
+                                                    Type.getArgumentTypes(result.getDesc()).length);
+                                            List<AbstractInsnNode> numberArgs;
+                                            try {
+                                                numberArgs = analyzer.lookupArgs();
+                                            } catch (RuntimeException e) {
+                                                numberArgs = new ArrayList<>();
+                                            }
+                                            //Writes the "add" part before the first insn
+                                            AbstractInsnNode firstArgInsn;
+                                            if (numberArgs.size() > 0)
+                                                firstArgInsn = numberArgs.get(0);
+                                            else
+                                                firstArgInsn = insn;
+                                            methodNode.instructions.insertBefore(firstArgInsn, new TypeInsnNode(Opcodes.NEW, result.getClassName()));
+                                            methodNode.instructions.insertBefore(firstArgInsn, new InsnNode(Opcodes.DUP));
+                                            //The constructor is used to write a desc
+                                            methodNode.instructions.set(insn, new MethodInsnNode(
+                                                    Opcodes.INVOKESPECIAL, result.getClassName(),
+                                                    "<init>", result.getDesc(), false));
+                                            count.getAndIncrement();
+                                        }
+                                        break;
+                                    }
+                                    //Invokestatic goes below
+                                }
+                                case "(Ljava/lang/Object;I[Ljava/lang/Object;)Ljava/lang/Object;": { // INVOKEVIRTUAL
+                                    MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Method;")).findFirst().orElse(null);
+                                    if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
+                                        Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                        JavaMethod result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        //Remove the array of objects
+                                        while (insn.getPrevious() != null) {
+                                            if (insn.getPrevious().getOpcode() == Opcodes.ANEWARRAY) {
+                                                methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                                methodNode.instructions.remove(insn.getPrevious());
+                                                break;
+                                            } else if (insn.getPrevious().getOpcode() == Opcodes.ACONST_NULL) {
+                                                methodNode.instructions.remove(insn.getPrevious());
+                                                break;
+                                            }
+                                            methodNode.instructions.remove(insn.getPrevious());
+                                        }
+                                        //Remove extra pop
+                                        if (Type.getReturnType(result.getDesc()).getSort() == Type.VOID &&
+                                                insn.getNext() != null && insn.getNext().getOpcode() == Opcodes.POP)
+                                            methodNode.instructions.remove(insn.getNext());
+                                        //Removes the casts from a primitive to non primitive (doesn't solve the cast problem completely)
+                                        if (insn.getNext() != null && insn.getNext().getOpcode() == Opcodes.CHECKCAST
+                                                && insn.getNext().getNext() != null && insn.getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL) {
+                                            TypeInsnNode next = (TypeInsnNode) insn.getNext();
+                                            if (isUnboxingMethod(next)
+                                                    && Type.getReturnType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(next.desc))) {
+                                                methodNode.instructions.remove(next.getNext());
+                                                methodNode.instructions.remove(next);
+                                            }
+                                        }
+                                        //Uses invokeinterface if owner class is interface
+                                        boolean useInterface = false;
+                                        JavaClass clazz = new JavaClass(result.getOwner(), context);
+                                        if ((clazz.getClassNode().access & Opcodes.ACC_INTERFACE) != 0)
+                                            useInterface = true;
+                                        int opcode = desc.equals("(Ljava/lang/Object;I[Ljava/lang/Object;)Ljava/lang/Object;") ? Opcodes.INVOKEVIRTUAL :
+                                                Opcodes.INVOKESTATIC;
+                                        if (opcode == Opcodes.INVOKEVIRTUAL && useInterface)
+                                            opcode = Opcodes.INVOKEINTERFACE;
+                                        methodNode.instructions.set(insn, new MethodInsnNode(
+                                                opcode, result.getOwner(), result.getName(), result.getDesc(), opcode == Opcodes.INVOKEINTERFACE));
+                                        count.getAndIncrement();
+                                    }
+                                    break;
+                                }
+                                case "(I)Ljava/lang/Object;": {  // GETSTATIC
+                                    MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
+                                    Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
+                                    JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+
+                                    if (isValueOf(insn.getPrevious().getPrevious()))
+                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
+
+                                    methodNode.instructions.remove(insn.getPrevious());
+                                    methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETSTATIC, result.getClassName(), result.getName(), result.getDesc()));
+                                    count.getAndIncrement();
+                                    break;
+                                }
+                                case "(ILjava/lang/Object;)V": { // PUTSTATIC
+                                    MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
+                                    if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
+                                        Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                        JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+
+                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                        methodNode.instructions.remove(insn.getPrevious());
+
+                                        methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTSTATIC, result.getClassName(), result.getName(), result.getDesc()));
+                                        count.getAndIncrement();
+                                    }
+                                    break;
+                                }
+                                case "(Ljava/lang/Object;I)Ljava/lang/Object;": { // GETFIELD
+                                    MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
+                                    Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
+                                    JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+
+                                    if (isValueOf(insn.getPrevious().getPrevious())) {
+                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                    }
+
+                                    methodNode.instructions.remove(insn.getPrevious());
+                                    methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETFIELD, result.getClassName(), result.getName(), result.getDesc()));
+                                    count.getAndIncrement();
+                                    break;
+                                }
+                                case "(Ljava/lang/Object;ILjava/lang/Object;)V": { // PUTFIELD
+                                    MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
+
+                                    if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
+                                        Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                        JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+
+                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                        methodNode.instructions.remove(insn.getPrevious());
+
+                                        methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTFIELD, result.getClassName(), result.getName(), result.getDesc()));
+                                        count.getAndIncrement();
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }));
         castFix(context);
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + count.get() + " hide access");
         long cleanedup = cleanup(decryptors, decryptMethods);
@@ -361,10 +344,9 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         System.out.println("[Stringer] [HideAccessTransformer] Done");
         return true;
     }
-    
-    private void castFix(Context context)
-    {
-    	classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> classNode.methods.forEach(methodNode -> {
+
+    private void castFix(Context context) {
+        classNodes().forEach(classNode -> classNode.methods.forEach(methodNode -> {
             InsnList copy = Utils.copyInsnList(methodNode.instructions);
             for (int i = 0; i < copy.size(); i++) {
                 AbstractInsnNode insn = copy.get(i);
@@ -381,52 +363,45 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 
                         if (type1.getClassName().equals(type2.getClassName())) {
                             methodNode.instructions.remove(checkcast);
-                        }else
-                        {
-	                        String class2pre = type2.getClassName().replace(".", "/");
-	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
-	                        String class2 = type2.getSort() == Type.ARRAY ? 
-	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getClassName().replace(".", "/");
-	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
-	                        String class1 = type1.getSort() == Type.ARRAY ? 
-	                        	class1pre.substring(0, class1pre.length() - 2) : class1pre;
-	                        if(!class1.equals("void") && !class1.equals("java/lang/Object")) {
-	                        	JavaClass clazz = new JavaClass(class1, context);
-	                        	//Check if cast is a superclass/interface of the type
-	                        	while(clazz != null)
-	                        	{
-	                        		if(isInterfaceOf(class2, clazz))
-	                        		{
-	                        			methodNode.instructions.remove(checkcast);
-	                                	break;
-	                        		}
-	                        		clazz = clazz.getSuperclass();
-	                        	}
-	                        }
-	                        //Invokespecial
-	                        if(((MethodInsnNode)previous).getOpcode() == Opcodes.INVOKESPECIAL)
-	                        {
-	                        	if(((MethodInsnNode)previous).owner.equals(type2.getClassName().replace(".", "/")))
-	                        		methodNode.instructions.remove(checkcast);
-	                        	else
-	                        	{
-	                        		class1 = ((MethodInsnNode)previous).owner.replace(".", "/");
-	                        		if(!class1.equals("void") && !class1.equals("java/lang/Object")) {
-	                                	JavaClass clazz = new JavaClass(class1, context);
-	                                	//Check if cast is a superclass/interface of the type
-	                                	while(clazz != null)
-	                                	{
-	                                		if(isInterfaceOf(class2, clazz))
-	                                		{
-	                                			methodNode.instructions.remove(checkcast);
-	                                        	break;
-	                                		}
-	                                		clazz = clazz.getSuperclass();
-	                                	}
-	                        		}
-	                        	}
-	                        }
+                        } else {
+                            String class2pre = type2.getClassName().replace(".", "/");
+                            class2pre = convertPrimitiveToClassArray(class2pre, 1);
+                            String class2 = type2.getSort() == Type.ARRAY ?
+                                    class2pre.substring(1, class2pre.length() - 2) : class2pre;
+                            String class1pre = type1.getClassName().replace(".", "/");
+                            class1pre = convertPrimitiveToClassArray(class1pre, 0);
+                            String class1 = type1.getSort() == Type.ARRAY ?
+                                    class1pre.substring(0, class1pre.length() - 2) : class1pre;
+                            if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
+                                JavaClass clazz = new JavaClass(class1, context);
+                                //Check if cast is a superclass/interface of the type
+                                while (clazz != null) {
+                                    if (isInterfaceOf(class2, clazz)) {
+                                        methodNode.instructions.remove(checkcast);
+                                        break;
+                                    }
+                                    clazz = clazz.getSuperclass();
+                                }
+                            }
+                            //Invokespecial
+                            if (((MethodInsnNode) previous).getOpcode() == Opcodes.INVOKESPECIAL) {
+                                if (((MethodInsnNode) previous).owner.equals(type2.getClassName().replace(".", "/")))
+                                    methodNode.instructions.remove(checkcast);
+                                else {
+                                    class1 = ((MethodInsnNode) previous).owner.replace(".", "/");
+                                    if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
+                                        JavaClass clazz = new JavaClass(class1, context);
+                                        //Check if cast is a superclass/interface of the type
+                                        while (clazz != null) {
+                                            if (isInterfaceOf(class2, clazz)) {
+                                                methodNode.instructions.remove(checkcast);
+                                                break;
+                                            }
+                                            clazz = clazz.getSuperclass();
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } else if (previous instanceof FieldInsnNode) {
                         Type type1 = getType(((FieldInsnNode) previous).desc).getReturnType();
@@ -441,68 +416,62 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                 methodNode.instructions.remove(next);
 
                             methodNode.instructions.remove(checkcast);
-                        }else
-                        {
-	                        String class2pre = type2.getClassName().replace(".", "/");
-	                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
-	                        String class2 = type2.getSort() == Type.ARRAY ? 
-	                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
-	                        String class1pre = type1.getClassName().replace(".", "/");
-	                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
-	                        String class1 = type1.getSort() == Type.ARRAY ? 
-	                        	class1pre.substring(1, class1pre.length() - 2) : class1pre;
-	                        if(!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")) {
-	                        	JavaClass clazz = new JavaClass(class1, context);
-	                        	//Check if cast is a superclass/interface of the type
-	                        	while(clazz != null)
-	                        	{
-	                        		if(isInterfaceOf(class2, clazz))
-	                        		{
-	                        			methodNode.instructions.remove(checkcast);
-	                                	break;
-	                        		}
-	                        		clazz = clazz.getSuperclass();
-	                        	}
-	                        }
-	                    }
-                    }else if(previous.getOpcode() >= Opcodes.IALOAD && previous.getOpcode() <= Opcodes.SALOAD
-                    	&& previous.getPrevious() != null && Utils.willPushToStack(previous.getPrevious().getOpcode())
-                    	&& previous.getPrevious().getPrevious() != null
-                    	&& (previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETSTATIC
-                    	|| previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETFIELD))
-                    {
-                    	FieldInsnNode fieldNode = (FieldInsnNode)previous.getPrevious().getPrevious();
-                    	Type type1 = getType(fieldNode.desc).getReturnType();
+                        } else {
+                            String class2pre = type2.getClassName().replace(".", "/");
+                            class2pre = convertPrimitiveToClassArray(class2pre, 1);
+                            String class2 = type2.getSort() == Type.ARRAY ?
+                                    class2pre.substring(1, class2pre.length() - 2) : class2pre;
+                            String class1pre = type1.getClassName().replace(".", "/");
+                            class1pre = convertPrimitiveToClassArray(class1pre, 0);
+                            String class1 = type1.getSort() == Type.ARRAY ?
+                                    class1pre.substring(1, class1pre.length() - 2) : class1pre;
+                            if (!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")) {
+                                JavaClass clazz = new JavaClass(class1, context);
+                                //Check if cast is a superclass/interface of the type
+                                while (clazz != null) {
+                                    if (isInterfaceOf(class2, clazz)) {
+                                        methodNode.instructions.remove(checkcast);
+                                        break;
+                                    }
+                                    clazz = clazz.getSuperclass();
+                                }
+                            }
+                        }
+                    } else if (previous.getOpcode() >= Opcodes.IALOAD && previous.getOpcode() <= Opcodes.SALOAD
+                            && previous.getPrevious() != null && Utils.willPushToStack(previous.getPrevious().getOpcode())
+                            && previous.getPrevious().getPrevious() != null
+                            && (previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETSTATIC
+                            || previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETFIELD)) {
+                        FieldInsnNode fieldNode = (FieldInsnNode) previous.getPrevious().getPrevious();
+                        Type type1 = getType(fieldNode.desc).getReturnType();
                         Type type2 = getType(checkcast.desc).getReturnType();
-                        if(type1.getClassName().equals(type2.getClassName()))
-                        	methodNode.instructions.remove(checkcast);
+                        if (type1.getClassName().equals(type2.getClassName()))
+                            methodNode.instructions.remove(checkcast);
                         String class2pre = type2.getClassName().replace(".", "/");
                         class2pre = convertPrimitiveToClassArray(class2pre, 1);
-                        String class2 = type2.getSort() == Type.ARRAY ? 
-                        	class2pre.substring(1, class2pre.length() - 2) : class2pre;
+                        String class2 = type2.getSort() == Type.ARRAY ?
+                                class2pre.substring(1, class2pre.length() - 2) : class2pre;
                         String class1pre = type1.getClassName().replace(".", "/");
                         class1pre = convertPrimitiveToClassArray(class1pre, 0);
-                        String class1 = type1.getSort() == Type.ARRAY ? 
-                        	class1pre.substring(1, class1pre.length() - 2) : class1pre;
-                        if(!class1.equals("void") && !class1.equals("java/lang/Object")) {
-                        	JavaClass clazz = new JavaClass(class1, context);
-                        	//Check if cast is a superclass/interface of the type
-                        	while(clazz != null)
-                        	{
-                        		if(isInterfaceOf(class2, clazz))
-                        		{
-                        			methodNode.instructions.remove(checkcast);
-                        			break;
-                        		}
-                        		clazz = clazz.getSuperclass();
-                        	}
+                        String class1 = type1.getSort() == Type.ARRAY ?
+                                class1pre.substring(1, class1pre.length() - 2) : class1pre;
+                        if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
+                            JavaClass clazz = new JavaClass(class1, context);
+                            //Check if cast is a superclass/interface of the type
+                            while (clazz != null) {
+                                if (isInterfaceOf(class2, clazz)) {
+                                    methodNode.instructions.remove(checkcast);
+                                    break;
+                                }
+                                clazz = clazz.getSuperclass();
+                            }
                         }
                     }
                 }
             }
         }));
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> classNode.methods.forEach(methodNode -> {
+        classNodes().forEach(classNode -> classNode.methods.forEach(methodNode -> {
             InsnList copy = Utils.copyInsnList(methodNode.instructions);
             for (int i = 0; i < copy.size(); i++) {
                 AbstractInsnNode insn = copy.get(i);
@@ -521,11 +490,11 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
             }
         }));
     }
-    
+
     //XXX: Better detector
     private List<ClassNode> findDecryptClass() {
         List<ClassNode> decryptors = new ArrayList<>();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).filter(classNode -> classNode.version == 49 && Modifier.isFinal(classNode.access) && classNode.superName.equals("java/lang/Object")).forEach(possibleClass -> {
+        classNodes().stream().filter(classNode -> classNode.version == 49 && Modifier.isFinal(classNode.access) && classNode.superName.equals("java/lang/Object")).forEach(possibleClass -> {
             List<String> methodsDesc = possibleClass.methods.stream().map(m -> m.desc).collect(Collectors.toList());
             List<String> fieldsDesc = possibleClass.fields.stream().map(f -> f.desc).collect(Collectors.toList());
 
@@ -543,13 +512,13 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         int classCount;
         AtomicInteger methodCount = new AtomicInteger();
 
-        classNodes().forEach(wrappedClassNode -> {
-            if (wrappedClassNode.classNode.methods.removeIf(decryptMethods::contains)) {
+        classNodes().forEach(classNode -> {
+            if (classNode.methods.removeIf(decryptMethods::contains)) {
                 methodCount.getAndIncrement();
             }
         });
 
-        Set<WrappedClassNode> remove = classNodes().stream().filter(wrappedClassNode -> decryptClasses.contains(wrappedClassNode.classNode)).collect(Collectors.toSet());
+        Set<ClassNode> remove = classNodes().stream().filter(decryptClasses::contains).collect(Collectors.toSet());
         classCount = remove.size();
         classNodes().removeAll(remove);
 
@@ -569,7 +538,7 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         }};
         return objectType.contains(type.replace(".", "/"));
     }
-    
+
     private boolean isPrimitive(String type) {
         List<String> primitiveType = new ArrayList<String>() {{
             add("B");
@@ -695,71 +664,68 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         }
         return false;
     }
-    
+
     private String getPrimitiveFromClass(String clazz) {
         for (String[] type : CLASS_TO_PRIMITIVE) {
-        	if(clazz.equals(type[0]))
-        		return type[1];
+            if (clazz.equals(type[0]))
+                return type[1];
         }
         return null;
     }
-    
-    private String convertPrimitiveToClassArray(String array, int mode)
-    {
-    	if(mode == 0)
-    	{
-	    	String[][] types = {
-	    		{"byte[]", "java/lang/Byte[]"},
-	    		{"short[]", "java/lang/Short[]"},
-	    		{"int[]", "java/lang/Integer[]"},
-	    		{"long[]", "java/lang/Long[]"},
-	    		{"float[]", "java/lang/Float[]"},
-	    		{"double[]", "java/lang/Double[]"},
-	    		{"char[]", "java/lang/Character[]"},
-	    		{"boolean[]", "java/lang/Boolean[]"}
-	    	};
-	
-	    	for (String[] type : types) {
-	     	if(array.equals(type[0]))
-	     		return type[1];
-	    	}
-	    	return array;
-    	}else if(mode == 1)
-    	{
-    		String[][] types = {
-	    		{"[B", "Ljava/lang/Byte[]"},
-	    		{"[S", "Ljava/lang/Short[]"},
-	    		{"[I", "Ljava/lang/Integer[]"},
-	    		{"[L", "Ljava/lang/Long[]"},
-	    		{"[F", "Ljava/lang/Float[]"},
-	    		{"[D", "Ljava/lang/Double[]"},
-	    		{"[C", "Ljava/lang/Character[]"},
-	    		{"[Z", "Ljava/lang/Boolean[]"}
-	    	};
-	
-	    	for (String[] type : types) {
-	     	if(array.equals(type[0]))
-	     		return type[1];
-	    	}
-	    	return array;
-    	}
-    	return array;
+
+    private String convertPrimitiveToClassArray(String array, int mode) {
+        if (mode == 0) {
+            String[][] types = {
+                    {"byte[]", "java/lang/Byte[]"},
+                    {"short[]", "java/lang/Short[]"},
+                    {"int[]", "java/lang/Integer[]"},
+                    {"long[]", "java/lang/Long[]"},
+                    {"float[]", "java/lang/Float[]"},
+                    {"double[]", "java/lang/Double[]"},
+                    {"char[]", "java/lang/Character[]"},
+                    {"boolean[]", "java/lang/Boolean[]"}
+            };
+
+            for (String[] type : types) {
+                if (array.equals(type[0]))
+                    return type[1];
+            }
+            return array;
+        } else if (mode == 1) {
+            String[][] types = {
+                    {"[B", "Ljava/lang/Byte[]"},
+                    {"[S", "Ljava/lang/Short[]"},
+                    {"[I", "Ljava/lang/Integer[]"},
+                    {"[L", "Ljava/lang/Long[]"},
+                    {"[F", "Ljava/lang/Float[]"},
+                    {"[D", "Ljava/lang/Double[]"},
+                    {"[C", "Ljava/lang/Character[]"},
+                    {"[Z", "Ljava/lang/Boolean[]"}
+            };
+
+            for (String[] type : types) {
+                if (array.equals(type[0]))
+                    return type[1];
+            }
+            return array;
+        }
+        return array;
     }
-    
+
     /**
      * Determines if class1 is implemented at any point by class2.
      * This means that casting class2 to class1 would be casting from
      * more specific to less specific.
+     *
      * @param class1 Should have slashes instead of dots
      */
-    private boolean isInterfaceOf(String class1, JavaClass class2)
-    {
-    	if(class1.equals(class2.getName().replace(".", "/")))
-    		return true;
-    	if(class2.getInterfaces() != null && class2.getInterfaces().length > 0)
-    		for(JavaClass clazz : class2.getInterfaces())
-    			if(isInterfaceOf(class1, clazz))
-    				return true;
-    	return false;
+    private boolean isInterfaceOf(String class1, JavaClass class2) {
+        if (class1.equals(class2.getName().replace(".", "/")))
+            return true;
+        if (class2.getInterfaces() != null && class2.getInterfaces().length > 0)
+            for (JavaClass clazz : class2.getInterfaces())
+                if (isInterfaceOf(class1, clazz))
+                    return true;
+        return false;
     }
 }

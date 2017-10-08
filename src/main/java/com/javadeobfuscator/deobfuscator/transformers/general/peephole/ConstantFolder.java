@@ -23,7 +23,6 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,7 +35,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger folded = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
                 int start;
                 do {

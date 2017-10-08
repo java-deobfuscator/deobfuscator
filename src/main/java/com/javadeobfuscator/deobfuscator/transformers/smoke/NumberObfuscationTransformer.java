@@ -43,7 +43,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
 
         System.out.println("[Smoke] [NumberObfuscationTransformer] Starting");
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode ->
+        classNodes().forEach(classNode ->
                 classNode.methods.forEach(methodNode -> {
                     if (methodNode.instructions.size() > 0) {
                         AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode); //FIXME: still slow? (modify analyzerresult directly) 
@@ -128,7 +128,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
                     }
                 }));
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode ->
+        classNodes().forEach(classNode ->
                 classNode.methods.forEach(methodNode -> {
                     for (int i = 0; i < methodNode.instructions.size(); i++) {
                         AbstractInsnNode insn = methodNode.instructions.get(i);
@@ -143,7 +143,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
                     }
                 }));
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode ->
+        classNodes().forEach(classNode ->
                 classNode.methods = classNode.methods.stream().filter(methodNode -> !numberMethods.containsKey(classNode.name + methodNode.name + methodNode.desc)).collect(Collectors.toList()));
 
         System.out.println("[Smoke] [NumberObfuscationTransformer] Removed " + count.get() + " instructions");

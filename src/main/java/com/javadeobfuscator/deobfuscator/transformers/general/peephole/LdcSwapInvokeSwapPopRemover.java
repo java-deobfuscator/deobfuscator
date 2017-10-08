@@ -22,9 +22,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LdcSwapInvokeSwapPopRemover extends Transformer<TransformerConfig> {
@@ -32,7 +30,7 @@ public class LdcSwapInvokeSwapPopRemover extends Transformer<TransformerConfig> 
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
                 boolean modified = false;
                 do {

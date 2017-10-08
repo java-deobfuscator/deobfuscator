@@ -43,8 +43,6 @@ import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap;
@@ -220,11 +218,6 @@ import static org.objectweb.asm.Opcodes.TABLESWITCH;
 // for example, a -> b -> c -> d and a -> c -> d both do a jump from c -> d, but clearly the behaviour at c will be different
 public class MethodAnalyzer {
     private static final boolean DEBUG = false;
-
-    @Deprecated
-    public static AnalyzerResult analyze(WrappedClassNode classNode, MethodNode method) {
-        return analyze(classNode.classNode, method);
-    }
 
     public static AnalyzerResult analyze(ClassNode classNode, MethodNode method) {
         if (Modifier.isAbstract(method.access) || Modifier.isNative(method.access)) {

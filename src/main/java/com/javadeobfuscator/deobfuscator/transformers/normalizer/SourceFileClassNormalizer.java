@@ -17,19 +17,18 @@
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 // todo maybe make a "recover identifiers from source" transformer? the InnerClasses attribute has more useful info
 @TransformerConfig.ConfigOptions(configClass = SourceFileClassNormalizer.Config.class)
-public class SourceFileClassNormalizer extends AbstractClassNormalizer<SourceFileClassNormalizer.Config> {
+public class SourceFileClassNormalizer extends AbstractNormalizer<SourceFileClassNormalizer.Config> {
 
     @Override
     public void remap(CustomRemapper remapper) {
         AtomicInteger counter = new AtomicInteger();
 
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             if (classNode.sourceFile == null) {
                 return;
             }
@@ -62,7 +61,7 @@ public class SourceFileClassNormalizer extends AbstractClassNormalizer<SourceFil
         System.out.println("[SourceFileClassNormalizer] Recovered " + counter + " source filenames");
     }
 
-    public static class Config extends AbstractClassNormalizer.Config {
+    public static class Config extends AbstractNormalizer.Config {
         public Config() {
             super(SourceFileClassNormalizer.class);
         }

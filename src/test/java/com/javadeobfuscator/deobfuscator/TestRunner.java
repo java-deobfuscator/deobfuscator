@@ -13,7 +13,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +26,7 @@ import java.util.zip.ZipFile;
 import static org.junit.Assert.assertTrue;
 
 public class TestRunner {
-    private Map<String, WrappedClassNode> jre = new HashMap<>();
+    private Map<String, ClassNode> jre = new HashMap<>();
 
     @Before
     public void setup() {
@@ -44,8 +43,7 @@ public class TestRunner {
                         ClassReader reader = new ClassReader(in);
                         ClassNode node = new ClassNode();
                         reader.accept(node, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
-                        WrappedClassNode wr = new WrappedClassNode(node, reader.getItemCount());
-                        jre.put(node.name, wr);
+                        jre.put(node.name, node);
                     } catch (IllegalArgumentException x) {
                         System.out.println("Could not parse " + next.getName() + " (is it a class?)");
                     }
@@ -146,7 +144,7 @@ public class TestRunner {
                     Context context = new Context(provider);
                     context.dictionary = new HashMap<>();
                     context.dictionary.putAll(jre);
-                    context.dictionary.put(classNode.name, new WrappedClassNode(classNode, reader.getItemCount()));
+                    context.dictionary.put(classNode.name, classNode);
                     context.push(classNode.name, "main", 0);
                     provider.register(new MappedMethodProvider(context.dictionary));
 

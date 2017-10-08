@@ -16,19 +16,9 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.DictionaryMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
@@ -40,17 +30,20 @@ import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ReflectionObfuscationTransformer extends Transformer<TransformerConfig> {
     private Set<ClassNode> remove = new HashSet<>();
@@ -72,15 +65,14 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
 
     private int count() {
         AtomicInteger total = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode abstractInsnNode = methodNode.instructions.get(i);
                     if (abstractInsnNode instanceof MethodInsnNode) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) abstractInsnNode;
-                        WrappedClassNode wrappedTarget = classpath.get(methodInsnNode.owner);
-                        if (wrappedTarget != null) {
-                            ClassNode target = wrappedTarget.getClassNode();
+                        ClassNode target = classpath.get(methodInsnNode.owner);
+                        if (target != null) {
                             MethodNode method = target.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                             if (method != null) {
                                 if (isValidTarget(target, method)) {
@@ -112,15 +104,14 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
 
         Set<ClassNode> initted = new HashSet<>();
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode abstractInsnNode = methodNode.instructions.get(i);
                     if (abstractInsnNode instanceof MethodInsnNode) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) abstractInsnNode;
-                        WrappedClassNode wrappedTarget = classpath.get(methodInsnNode.owner);
-                        if (wrappedTarget != null) {
-                            ClassNode target = wrappedTarget.getClassNode();
+                        ClassNode target = classpath.get(methodInsnNode.owner);
+                        if (target != null) {
                             MethodNode method = target.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                             if (method != null) {
                                 if (isValidTarget(target, method)) {
@@ -179,9 +170,10 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                                     if (initted.add(target) || true) {
                                         Context context = new Context(provider);
                                         context.dictionary = this.classpath;
+                                        context.constantPools = getDeobfuscator().getConstantPools();
                                         context.file = getDeobfuscator().getConfig().getInput();
                                         MethodNode clinit = target.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                                        MethodExecutor.execute(wrappedTarget, clinit, new ArrayList<>(), null, context);
+                                        MethodExecutor.execute(target, clinit, new ArrayList<>(), null, context);
                                     }
                                     remove.add(target);
                                     List<JavaValue> args = new ArrayList<>();
@@ -197,7 +189,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                                     context.dictionary = this.classpath;
                                     context.file = getDeobfuscator().getConfig().getInput();
                                     try {
-                                        MethodExecutor.execute(wrappedTarget, method, args, null, context);
+                                        MethodExecutor.execute(target, method, args, null, context);
                                     } catch (StopExecution ex) {
                                     }
                                     JavaMethod result = myMethod.get();

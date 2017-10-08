@@ -16,26 +16,22 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.commons.RemappingClassAdapter;
+import com.javadeobfuscator.deobfuscator.utils.ClassTree;
+import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.ClassTree;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FieldNormalizer extends Transformer<FieldNormalizer.Config> {
+@TransformerConfig.ConfigOptions(configClass = FieldNormalizer.Config.class)
+public class FieldNormalizer extends AbstractNormalizer<FieldNormalizer.Config> {
 
     @Override
-    public boolean transform() throws Throwable {
-        CustomRemapper remapper = new CustomRemapper();
+    public void remap(CustomRemapper remapper) {
         AtomicInteger id = new AtomicInteger(0);
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> allClasses = new HashSet<>();
             Set<String> tried = new HashSet<>();
@@ -79,30 +75,11 @@ public class FieldNormalizer extends Transformer<FieldNormalizer.Config> {
                 }
             }
         });
-
-        classNodes().forEach(wr -> {
-            ClassNode newNode = new ClassNode();
-            RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
-            wr.classNode.accept(remap);
-            wr.classNode = newNode;
-        });
-        return true;
     }
 
-    public static class Config extends TransformerConfig {
-        @JsonProperty(value = "mapping-file")
-        private File mappingFile;
-
+    public static class Config extends AbstractNormalizer.Config {
         public Config() {
             super(FieldNormalizer.class);
-        }
-
-        public File getMappingFile() {
-            return mappingFile;
-        }
-
-        public void setMappingFile(File mappingFile) {
-            this.mappingFile = mappingFile;
         }
     }
 }

@@ -17,16 +17,15 @@
 package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 @TransformerConfig.ConfigOptions(configClass = ClassNormalizer.Config.class)
-public class ClassNormalizer extends AbstractClassNormalizer<ClassNormalizer.Config> {
+public class ClassNormalizer extends AbstractNormalizer<ClassNormalizer.Config> {
     @Override
     public void remap(CustomRemapper remapper) {
         AtomicInteger id = new AtomicInteger(0);
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             String packageName = classNode.name.substring(0, classNode.name.lastIndexOf('/'));
 
             String newName = packageName + "/" + "Class";
@@ -37,7 +36,7 @@ public class ClassNormalizer extends AbstractClassNormalizer<ClassNormalizer.Con
         });
     }
 
-    public static class Config extends AbstractClassNormalizer.Config {
+    public static class Config extends AbstractNormalizer.Config {
         public Config() {
             super(ClassNormalizer.class);
         }

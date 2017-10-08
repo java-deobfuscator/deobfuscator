@@ -34,7 +34,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -130,7 +129,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
         });
 
         Set<ClassNode> initted = new HashSet<>();
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 /*
                 NOTE: We can't remove reflection try/catch blocks until we remove the reflection, otherwise we may throw the wrong exceptions
@@ -167,7 +166,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                             if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;")) {
                                 long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
                                 String strCl = methodInsnNode.owner;
-                                ClassNode innerClassNode = classpath.get(strCl).classNode;
+                                ClassNode innerClassNode = classpath.get(strCl);
                                 if (initted.add(innerClassNode)) {
                                     try {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
@@ -220,7 +219,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                             } else if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Field;")) {
                                 long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
                                 String strCl = methodInsnNode.owner;
-                                ClassNode innerClassNode = classpath.get(strCl).classNode;
+                                ClassNode innerClassNode = classpath.get(strCl);
                                 if (initted.add(innerClassNode)) {
                                     MethodNode decrypterNode1 = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                     MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode1, Collections.singletonList(new JavaLong(ldc)), null, new Context(provider));
@@ -358,11 +357,11 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                                             methodNode.instructions.remove(toArray);
 
                                             MethodNode target = null;
-                                            WrappedClassNode startingNode = classpath.get(findClass);
+                                            ClassNode startingNode = classpath.get(findClass);
                                             if (startingNode == null) {
                                                 throw new IllegalArgumentException(findClass);
                                             }
-                                            ClassNode currentNode = startingNode.classNode;
+                                            ClassNode currentNode = startingNode;
                                             LinkedList<ClassNode> candidates = new LinkedList<>();
                                             candidates.add(currentNode);
                                             loop:
@@ -375,18 +374,18 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                                                     }
                                                 }
                                                 if (!currentNode.name.equals("java/lang/Object")) {
-                                                    WrappedClassNode newCurrent = classpath.get(currentNode.superName);
+                                                    ClassNode newCurrent = classpath.get(currentNode.superName);
                                                     if (newCurrent == null) {
                                                         throw new IllegalArgumentException(currentNode.name + " " + findMethod + findDesc);
                                                     }
-                                                    candidates.add(newCurrent.classNode);
+                                                    candidates.add(newCurrent);
                                                 }
                                                 for (String intf : currentNode.interfaces) {
-                                                    WrappedClassNode newCurrent = classpath.get(intf);
+                                                    ClassNode newCurrent = classpath.get(intf);
                                                     if (newCurrent == null) {
                                                         throw new IllegalArgumentException(intf + " " + findMethod + findDesc);
                                                     }
-                                                    candidates.add(newCurrent.classNode);
+                                                    candidates.add(newCurrent);
                                                 }
                                             }
 
@@ -542,8 +541,8 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                 }
             });
         });
-        classNodes().stream().filter(node -> initted.contains(node.classNode)).forEach(node -> {
-            node.classNode.fields.add(0, new FieldNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, "REFLECTION_OBFUSCATION_CLASS", "Z", null, true));
+        classNodes().stream().filter(initted::contains).forEach(node -> {
+            node.fields.add(0, new FieldNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, "REFLECTION_OBFUSCATION_CLASS", "Z", null, true));
         });
 
         return count.get();
@@ -609,7 +608,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
 
     public int findReflectionObfuscation() throws Throwable {
         AtomicInteger count = new AtomicInteger(0);
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode current = methodNode.instructions.get(i);

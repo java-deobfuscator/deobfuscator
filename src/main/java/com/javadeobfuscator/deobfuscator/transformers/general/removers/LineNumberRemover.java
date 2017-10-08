@@ -20,15 +20,13 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.Iterator;
-import java.util.Map;
 
 public class LineNumberRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 Iterator<AbstractInsnNode> it = methodNode.instructions.iterator();
                 while (it.hasNext()) {

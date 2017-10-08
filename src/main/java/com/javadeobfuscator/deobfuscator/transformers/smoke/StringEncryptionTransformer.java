@@ -20,13 +20,11 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger; 
  
@@ -45,8 +43,8 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
         System.out.println("[Smoke] [StringEncryptionTransformer] Starting");
 
-        classNodes().forEach(wrappedClassNode -> {
-            wrappedClassNode.classNode.methods.forEach(methodNode -> {
+        classNodes().forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
                     AbstractInsnNode current = methodNode.instructions.get(index);
                     if (current instanceof MethodInsnNode) {
@@ -61,12 +59,12 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         						String obfString = (String)((LdcInsnNode)m.getPrevious().getPrevious()).cst;
         						Context context = new Context(provider);
         						if (classes.containsKey(strCl)) {
-        							ClassNode innerClassNode = classes.get(strCl).classNode;
+        							ClassNode innerClassNode = classes.get(strCl);
         							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
         							if(isSmokeMethod(decrypterNode))
         							{
-        								context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
-	        							String value = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
+        								context.push(classNode.name, methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+	        							String value = MethodExecutor.execute(classNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
 	                                    methodNode.instructions.remove(m.getPrevious().getPrevious());
 	                                    methodNode.instructions.remove(m.getPrevious());
 	                                    methodNode.instructions.set(m, new LdcInsnNode(value));
@@ -94,11 +92,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
             						Context context = new Context(provider);
             						if(classes.containsKey(strCl)) 
             						{
-            							ClassNode innerClassNode = classes.get(strCl).classNode;
+            							ClassNode innerClassNode = classes.get(strCl);
             							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
             							if(isSmokeMethod(decrypterNode))
             							{
-    	        							String value = MethodExecutor.execute(wrappedClassNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
+    	        							String value = MethodExecutor.execute(classNode, decrypterNode, Arrays.asList(JavaValue.valueOf(obfString), new JavaInteger(number)), null, context);
     	                                    methodNode.instructions.remove(args.get(1));
     	                                    methodNode.instructions.remove(args.get(0));
     	                                    methodNode.instructions.set(m, new LdcInsnNode(value));
@@ -121,8 +119,8 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     private int cleanup(Set<MethodNode> methods)
 	{
     	AtomicInteger count = new AtomicInteger(0);
-        classNodes().forEach(wrappedClassNode -> {
-            if (wrappedClassNode.classNode.methods.removeIf(methods::contains)) {
+        classNodes().forEach(classNode -> {
+            if (classNode.methods.removeIf(methods::contains)) {
                 count.getAndIncrement();
             }
         });

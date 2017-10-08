@@ -16,14 +16,9 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer;
 
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
-
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
@@ -31,12 +26,15 @@ import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
 
@@ -58,7 +56,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     private int cleanup() {
         AtomicInteger total = new AtomicInteger();
         Set<String> remove = new HashSet<>();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             boolean method = false;
             boolean field = false;
             for (MethodNode node : classNode.methods) {
@@ -67,8 +65,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                 } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
                     method = false;
                     break;
-                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") 
-                	|| node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
+                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") || node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
                     method = true;
                 }
             }
@@ -93,38 +90,28 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
     private int count() {
         AtomicInteger count = new AtomicInteger(0);
-        for (WrappedClassNode classNode : classNodes()) {
-            for (MethodNode methodNode : classNode.classNode.methods) {
+        for (ClassNode classNode : classNodes()) {
+            for (MethodNode methodNode : classNode.methods) {
                 InsnList methodInsns = methodNode.instructions;
                 for (int insnIndex = 0; insnIndex < methodInsns.size(); insnIndex++) {
                     AbstractInsnNode currentInsn = methodInsns.get(insnIndex);
                     if (currentInsn != null) {
-                    	//Counts stringer 3.1.0+ encryption
-                    	if(currentInsn instanceof MethodInsnNode && currentInsn.getPrevious() != null
-                        	&& currentInsn.getPrevious().getOpcode() == Opcodes.IOR
-                        	&& currentInsn.getPrevious().getPrevious() != null
-                        	&& Utils.isNumber(currentInsn.getPrevious().getPrevious())
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious() != null
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious().getOpcode() == Opcodes.ISHL
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious().getPrevious() != null
-                        	&& Utils.isNumber(currentInsn.getPrevious().getPrevious().getPrevious().getPrevious())
-                        	&& (methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.LDC
-                        	|| methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.GETSTATIC))
-                    	{
-                    		MethodInsnNode m = (MethodInsnNode)currentInsn;
-                    		 String strCl = m.owner;
-                             Type type = Type.getType(m.desc);
-                             if (type.getArgumentTypes().length == 2 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
-                                 ClassNode innerClassNode = classes.get(strCl).classNode;
-                                 FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
-                                 if (signature != null) {
-                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
-                                     if (decrypterNode != null) {
-                                         count.getAndIncrement();
-                                     }
-                                 }
-                             }
-                    	}
+                        //Counts stringer 3.1.0+ encryption
+                        if (currentInsn instanceof MethodInsnNode && currentInsn.getPrevious() != null && currentInsn.getPrevious().getOpcode() == Opcodes.IOR && currentInsn.getPrevious().getPrevious() != null && Utils.isNumber(currentInsn.getPrevious().getPrevious()) && currentInsn.getPrevious().getPrevious().getPrevious() != null && currentInsn.getPrevious().getPrevious().getPrevious().getOpcode() == Opcodes.ISHL && currentInsn.getPrevious().getPrevious().getPrevious().getPrevious() != null && Utils.isNumber(currentInsn.getPrevious().getPrevious().getPrevious().getPrevious()) && (methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.LDC || methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.GETSTATIC)) {
+                            MethodInsnNode m = (MethodInsnNode) currentInsn;
+                            String strCl = m.owner;
+                            Type type = Type.getType(m.desc);
+                            if (type.getArgumentTypes().length == 2 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                ClassNode innerClassNode = classes.get(strCl);
+                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+                                if (signature != null) {
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+                                    if (decrypterNode != null) {
+                                        count.getAndIncrement();
+                                    }
+                                }
+                            }
+                        }
                         if (currentInsn instanceof LdcInsnNode && currentInsn.getNext() instanceof MethodInsnNode) {
                             LdcInsnNode ldc = (LdcInsnNode) currentInsn;
                             MethodInsnNode m = (MethodInsnNode) ldc.getNext();
@@ -132,7 +119,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
                                 if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
-                                    ClassNode innerClassNode = classes.get(strCl).classNode;
+                                    ClassNode innerClassNode = classes.get(strCl);
                                     FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
                                     if (signature != null) {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
@@ -192,203 +179,134 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         });
 
         Map<AbstractInsnNode, String> enhanced = new HashMap<>();
-        
-        for (WrappedClassNode classNode : classNodes()) {
-            for (MethodNode methodNode : classNode.classNode.methods) {
-            	//Prevents static finals from being deobfuscated again
-            	Map<AbstractInsnNode, Object> decryptedStaticFinals = new HashMap<>();
+
+        for (ClassNode classNode : classNodes()) {
+            for (MethodNode methodNode : classNode.methods) {
+                //Prevents static finals from being deobfuscated again
+                Map<AbstractInsnNode, Object> decryptedStaticFinals = new HashMap<>();
                 InsnList methodInsns = methodNode.instructions;
                 for (int insnIndex = 0; insnIndex < methodInsns.size(); insnIndex++) {
                     AbstractInsnNode currentInsn = methodInsns.get(insnIndex);
                     if (currentInsn != null) {
                         //Latest Stringer (3.1.0+)
-                    	if(currentInsn instanceof MethodInsnNode && currentInsn.getPrevious() != null
-                        	&& currentInsn.getPrevious().getOpcode() == Opcodes.IOR
-                        	&& currentInsn.getPrevious().getPrevious() != null
-                        	&& Utils.isNumber(currentInsn.getPrevious().getPrevious())
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious() != null
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious().getOpcode() == Opcodes.ISHL
-                        	&& currentInsn.getPrevious().getPrevious().getPrevious().getPrevious() != null
-                        	&& Utils.isNumber(currentInsn.getPrevious().getPrevious().getPrevious().getPrevious())
-                        	&& (methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.LDC
-                        	|| methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.GETSTATIC))
-                        {
-                    		//If true, we deob the string at clinit 
-                    		boolean isStaticFinal = false;
-                    		FieldInsnNode fieldNode = null;
-                    		MethodNode clinit = null;
-                    		LdcInsnNode clinitLdc = null;
-                			boolean alreadyDecrypted = false;
-                    		if(methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() != Opcodes.LDC)
-                    		{
-                    			fieldNode = (FieldInsnNode)methodInsns.get(methodInsns.indexOf(currentInsn) - 16);
-                    			String field = fieldNode.name;
-                    			clinit =
-                    				classNode.classNode.methods
-											.stream()
-											.filter(
-												mn -> mn.name
-													.equals(
-														"<clinit>"))
-											.findFirst()
-											.orElse(null);
-                    			if(clinit != null)
-                    				for(AbstractInsnNode ain : clinit.instructions.toArray())
-                    					if(ain.getOpcode() == Opcodes.PUTSTATIC
-                    						&& ((FieldInsnNode)ain).name.equals(field)
-                    						&& ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC)
-                    					{
-                    						if(decryptedStaticFinals.containsKey(ain))
-                    						{
-                    							alreadyDecrypted = true;
-                    							break;
-                    						}
-                    						clinitLdc = (LdcInsnNode)ain.getPrevious();
-                    						methodInsns.set(fieldNode, new LdcInsnNode(((LdcInsnNode)ain.getPrevious()).cst));
-                    						decryptedStaticFinals.put(ain, ((LdcInsnNode)ain.getPrevious()).cst);
-                    						isStaticFinal = true;
-                    						break;
-                    					}
-                    		}
-                    		if(alreadyDecrypted)
-                    		{
-                    			//String decryption things removed, getstatic stays
-	                        	for(int i = insnIndex; i > insnIndex - 16; i--)
-	                        		methodInsns.remove(methodInsns.get(i));
-                    			continue;
-                    		}
-                    		AbstractInsnNode ldcNode = methodInsns.get(methodInsns.indexOf(currentInsn) - 16);
-							MethodInsnNode m = (MethodInsnNode)currentInsn;
-							//There are 17 instructions to keep before we get the result
-							//Remove everything before and after
-							List<AbstractInsnNode> before = new ArrayList<>();
-							List<AbstractInsnNode> after = new ArrayList<>();
-							//Added in reverse (both)
-							//Remove before
-                        	for(int i = insnIndex - 17; i >= 0; i--)
-	                        	before.add(methodInsns.get(i));
-                        	//Remove after
-                        	for(int i = insnIndex + 1; i < methodInsns.size(); i++)
-                        		after.add(methodInsns.get(i));
-                        	for(AbstractInsnNode ain : before)
-                        		methodInsns.remove(ain);
-                        	for(AbstractInsnNode ain : after)
-                        		methodInsns.remove(ain);
-                        	Collections.reverse(before);
-                        	Collections.reverse(after);
-                        	//We execute the method and get the result
-							String strCl = m.owner;
-							Type type = Type.getType(m.desc);
-							if(type.getArgumentTypes().length == 2
-								&& type.getReturnType().getDescriptor()
-									.equals("Ljava/lang/String;")
-								&& classes.containsKey(strCl))
-							{
-								ClassNode innerClassNode =
-									classes.get(strCl).classNode;
-								FieldNode signature =
-									innerClassNode.fields.stream()
-										.filter(fn -> fn.desc
-											.equals("[Ljava/lang/Object;"))
-										.findFirst().orElse(null);
+                        if (currentInsn instanceof MethodInsnNode && currentInsn.getPrevious() != null && currentInsn.getPrevious().getOpcode() == Opcodes.IOR && currentInsn.getPrevious().getPrevious() != null && Utils.isNumber(currentInsn.getPrevious().getPrevious()) && currentInsn.getPrevious().getPrevious().getPrevious() != null && currentInsn.getPrevious().getPrevious().getPrevious().getOpcode() == Opcodes.ISHL && currentInsn.getPrevious().getPrevious().getPrevious().getPrevious() != null && Utils.isNumber(currentInsn.getPrevious().getPrevious().getPrevious().getPrevious()) && (methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.LDC || methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() == Opcodes.GETSTATIC)) {
+                            //If true, we deob the string at clinit
+                            boolean isStaticFinal = false;
+                            FieldInsnNode fieldNode = null;
+                            MethodNode clinit = null;
+                            LdcInsnNode clinitLdc = null;
+                            boolean alreadyDecrypted = false;
+                            if (methodInsns.get(methodInsns.indexOf(currentInsn) - 16).getOpcode() != Opcodes.LDC) {
+                                fieldNode = (FieldInsnNode) methodInsns.get(methodInsns.indexOf(currentInsn) - 16);
+                                String field = fieldNode.name;
+                                clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                if (clinit != null) for (AbstractInsnNode ain : clinit.instructions.toArray())
+                                    if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(field) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
+                                        if (decryptedStaticFinals.containsKey(ain)) {
+                                            alreadyDecrypted = true;
+                                            break;
+                                        }
+                                        clinitLdc = (LdcInsnNode) ain.getPrevious();
+                                        methodInsns.set(fieldNode, new LdcInsnNode(((LdcInsnNode) ain.getPrevious()).cst));
+                                        decryptedStaticFinals.put(ain, ((LdcInsnNode) ain.getPrevious()).cst);
+                                        isStaticFinal = true;
+                                        break;
+                                    }
+                            }
+                            if (alreadyDecrypted) {
+                                //String decryption things removed, getstatic stays
+                                for (int i = insnIndex; i > insnIndex - 16; i--)
+                                    methodInsns.remove(methodInsns.get(i));
+                                continue;
+                            }
+                            AbstractInsnNode ldcNode = methodInsns.get(methodInsns.indexOf(currentInsn) - 16);
+                            MethodInsnNode m = (MethodInsnNode) currentInsn;
+                            //There are 17 instructions to keep before we get the result
+                            //Remove everything before and after
+                            List<AbstractInsnNode> before = new ArrayList<>();
+                            List<AbstractInsnNode> after = new ArrayList<>();
+                            //Added in reverse (both)
+                            //Remove before
+                            for (int i = insnIndex - 17; i >= 0; i--)
+                                before.add(methodInsns.get(i));
+                            //Remove after
+                            for (int i = insnIndex + 1; i < methodInsns.size(); i++)
+                                after.add(methodInsns.get(i));
+                            for (AbstractInsnNode ain : before)
+                                methodInsns.remove(ain);
+                            for (AbstractInsnNode ain : after)
+                                methodInsns.remove(ain);
+                            Collections.reverse(before);
+                            Collections.reverse(after);
+                            //We execute the method and get the result
+                            String strCl = m.owner;
+                            Type type = Type.getType(m.desc);
+                            if (type.getArgumentTypes().length == 2 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                ClassNode innerClassNode = classes.get(strCl);
+                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
 
-								if(signature != null)
-								{
-									MethodNode decrypterNode =
-										innerClassNode.methods.stream()
-											.filter(mn -> mn.name
-												.equals(m.name)
-												&& mn.desc.equals(m.desc)
-												&& Modifier
-													.isStatic(mn.access))
-											.findFirst().orElse(null);
-									if(decrypterNode != null)
-									{
-			                        	Context context = new Context(provider);
-										context.dictionary = classpath;
-										context.push(
-											classNode.classNode.name
-												.replace('/', '.'),
-											methodNode.name,
-											classNode.constantPoolSize);
-										context.file =
-											getDeobfuscator().getConfig().getInput();
-										// Stringer3
-										if(innerClassNode.superName
-											.equals("java/lang/Thread"))
-										{
-											MethodNode clinitMethod =
-												classes.get(strCl)
-													.getClassNode().methods
-														.stream()
-														.filter(
-															mn -> mn.name
-																.equals(
-																	"<clinit>"))
-														.findFirst()
-														.orElse(null);
-											if(clinitMethod != null)
-											{
-												//We don't want to run anything else (removes everything above it)
-                                            	AbstractInsnNode firstVaildCode = null;
-                                            	for(int i = 0; i < clinitMethod.instructions.size(); i++)
-                                            	{
-                                            		AbstractInsnNode ain = clinitMethod.instructions.get(i);
-                                            		if(ain.getOpcode() == Opcodes.PUTSTATIC
-                                            			&& ((FieldInsnNode)ain).desc.equals("[Ljava/math/BigInteger;")
-                            							&& ain.getPrevious() != null
-                            							&& ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY
-                            							&& ain.getPrevious().getPrevious() != null
-                            							&& Utils.isNumber(ain.getPrevious().getPrevious()))
-                                            		{
-                            							firstVaildCode = ain.getPrevious().getPrevious();
-                            							break;
-                                            		}
-                                            	}
-                                            	List<AbstractInsnNode> removed = new ArrayList<>();
-                                            	while(firstVaildCode != null && firstVaildCode.getPrevious() != null)
-                                            	{
-                                            		//Added in reverse order
-                                            		removed.add(firstVaildCode.getPrevious());
-                                            		clinitMethod.instructions.remove(firstVaildCode.getPrevious());
-                                            	}
+                                if (signature != null) {
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+                                    if (decrypterNode != null) {
+                                        Context context = new Context(provider);
+                                        context.dictionary = classpath;
+                                        context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+                                        context.file = getDeobfuscator().getConfig().getInput();
+                                        // Stringer3
+                                        if (innerClassNode.superName.equals("java/lang/Thread")) {
+                                            MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                            if (clinitMethod != null) {
+                                                //We don't want to run anything else (removes everything above it)
+                                                AbstractInsnNode firstVaildCode = null;
+                                                for (int i = 0; i < clinitMethod.instructions.size(); i++) {
+                                                    AbstractInsnNode ain = clinitMethod.instructions.get(i);
+                                                    if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).desc.equals("[Ljava/math/BigInteger;") && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY && ain.getPrevious().getPrevious() != null && Utils.isNumber(ain.getPrevious().getPrevious())) {
+                                                        firstVaildCode = ain.getPrevious().getPrevious();
+                                                        break;
+                                                    }
+                                                }
+                                                List<AbstractInsnNode> removed = new ArrayList<>();
+                                                while (firstVaildCode != null && firstVaildCode.getPrevious() != null) {
+                                                    //Added in reverse order
+                                                    removed.add(firstVaildCode.getPrevious());
+                                                    clinitMethod.instructions.remove(firstVaildCode.getPrevious());
+                                                }
                                                 MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
                                                 //Placed in reverse order, so no need to reverse the list
-                                                for(AbstractInsnNode ain : removed)
-                                                	clinitMethod.instructions.insert(ain);
-											}
-										}
-			                        	//Works for all methods, even those who aren't supposed to return value
-			                        	AbstractInsnNode returnNode;
-			                        	methodInsns.add(returnNode = new InsnNode(Opcodes.ARETURN));
-										String result = MethodExecutor.execute(classNode, methodNode, Arrays.asList(), null, context);
-			                        	//Add all the instructions back
-			                        	for(AbstractInsnNode ain : before)
-			                        		methodInsns.insertBefore(ldcNode, ain);
-			                        	for(AbstractInsnNode ain : after)
-			                        		methodInsns.insert(methodInsns.get(insnIndex), ain);
-			                        	methodInsns.remove(returnNode);
-			                        	//The result is added to the method (node with insnIndex is not removed, it is replaced)
-			                        	for(int i = insnIndex; i > insnIndex - 16; i--)
-			                        		methodInsns.remove(methodInsns.get(i));
-			                        	LdcInsnNode resultNode;
-			                        	methodInsns.set(ldcNode, resultNode = new LdcInsnNode(result));
-			                        	if(isStaticFinal)
-			                        	{
-			                        		methodInsns.set(resultNode, fieldNode);
-			                        		clinit.instructions.set(clinitLdc, resultNode);
-			                        	}
-			                        	//Sets it back
-			                        	insnIndex -= 16;
-			                        	total.incrementAndGet();
-			                        	int x = (int) ((total.get() * 1.0d / expected) * 100);
+                                                for (AbstractInsnNode ain : removed)
+                                                    clinitMethod.instructions.insert(ain);
+                                            }
+                                        }
+                                        //Works for all methods, even those who aren't supposed to return value
+                                        AbstractInsnNode returnNode;
+                                        methodInsns.add(returnNode = new InsnNode(Opcodes.ARETURN));
+                                        String result = MethodExecutor.execute(classNode, methodNode, Arrays.asList(), null, context);
+                                        //Add all the instructions back
+                                        for (AbstractInsnNode ain : before)
+                                            methodInsns.insertBefore(ldcNode, ain);
+                                        for (AbstractInsnNode ain : after)
+                                            methodInsns.insert(methodInsns.get(insnIndex), ain);
+                                        methodInsns.remove(returnNode);
+                                        //The result is added to the method (node with insnIndex is not removed, it is replaced)
+                                        for (int i = insnIndex; i > insnIndex - 16; i--)
+                                            methodInsns.remove(methodInsns.get(i));
+                                        LdcInsnNode resultNode;
+                                        methodInsns.set(ldcNode, resultNode = new LdcInsnNode(result));
+                                        if (isStaticFinal) {
+                                            methodInsns.set(resultNode, fieldNode);
+                                            clinit.instructions.set(clinitLdc, resultNode);
+                                        }
+                                        //Sets it back
+                                        insnIndex -= 16;
+                                        total.incrementAndGet();
+                                        int x = (int) ((total.get() * 1.0d / expected) * 100);
                                         if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
                                             System.out.println("[Stringer] [StringEncryptionTransformer] Done " + x + "%");
                                             alerted[x - 1] = true;
                                         }
-									}
-								}
-							}
+                                    }
+                                }
+                            }
                         }
                         if (currentInsn instanceof LdcInsnNode && currentInsn.getNext() instanceof MethodInsnNode) {
                             LdcInsnNode ldc = (LdcInsnNode) currentInsn;
@@ -397,7 +315,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
                                 if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
-                                    ClassNode innerClassNode = classes.get(strCl).classNode;
+                                    ClassNode innerClassNode = classes.get(strCl);
                                     FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
 
                                     if (signature != null) {
@@ -405,40 +323,32 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                         if (decrypterNode != null) {
                                             Context context = new Context(provider);
                                             context.dictionary = classpath;
-                                            context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
+                                            context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                             context.file = getDeobfuscator().getConfig().getInput();
 
                                             // Stringer3
                                             if (innerClassNode.superName.equals("java/lang/Thread")) {
-                                                MethodNode clinitMethod = classes.get(strCl).getClassNode().methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                                MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                                 if (clinitMethod != null) {
-                                                	//We don't want to run anything else (removes everything above it)
-                                                	AbstractInsnNode firstVaildCode = null;
-                                                	for(int i = 0; i < clinitMethod.instructions.size(); i++)
-                                                	{
-                                                		AbstractInsnNode ain = clinitMethod.instructions.get(i);
-                                                		if(ain.getOpcode() == Opcodes.PUTSTATIC
-                                                			&& ((FieldInsnNode)ain).desc.equals("[Ljava/math/BigInteger;")
-                                							&& ain.getPrevious() != null
-                                							&& ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY
-                                							&& ain.getPrevious().getPrevious() != null
-                                							&& Utils.isNumber(ain.getPrevious().getPrevious()))
-                                                		{
-                                							firstVaildCode = ain.getPrevious().getPrevious();
-                                							break;
-                                                		}
-                                                	}
-                                                	List<AbstractInsnNode> removed = new ArrayList<>();
-                                                	while(firstVaildCode != null && firstVaildCode.getPrevious() != null)
-                                                	{
-                                                		//Added in reverse order
-                                                		removed.add(firstVaildCode.getPrevious());
-                                                		clinitMethod.instructions.remove(firstVaildCode.getPrevious());
-                                                	}
+                                                    //We don't want to run anything else (removes everything above it)
+                                                    AbstractInsnNode firstVaildCode = null;
+                                                    for (int i = 0; i < clinitMethod.instructions.size(); i++) {
+                                                        AbstractInsnNode ain = clinitMethod.instructions.get(i);
+                                                        if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).desc.equals("[Ljava/math/BigInteger;") && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY && ain.getPrevious().getPrevious() != null && Utils.isNumber(ain.getPrevious().getPrevious())) {
+                                                            firstVaildCode = ain.getPrevious().getPrevious();
+                                                            break;
+                                                        }
+                                                    }
+                                                    List<AbstractInsnNode> removed = new ArrayList<>();
+                                                    while (firstVaildCode != null && firstVaildCode.getPrevious() != null) {
+                                                        //Added in reverse order
+                                                        removed.add(firstVaildCode.getPrevious());
+                                                        clinitMethod.instructions.remove(firstVaildCode.getPrevious());
+                                                    }
                                                     MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
                                                     //Placed in reverse order, so no need to reverse the list
-                                                    for(AbstractInsnNode ain : removed)
-                                                    	clinitMethod.instructions.insert(ain);
+                                                    for (AbstractInsnNode ain : removed)
+                                                        clinitMethod.instructions.insert(ain);
                                                 }
                                             }
 
@@ -446,7 +356,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                             try {
                                                 o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Collections.singletonList(new JavaObject(ldc.cst, "java/lang/String")), null, context);
                                             } catch (ArrayIndexOutOfBoundsException e) {
-                                                enhanced.put(ldc, classNode.classNode.name + " " + methodNode.name);
+                                                enhanced.put(ldc, classNode.name + " " + methodNode.name);
                                             }
                                             if (o != null) {
                                                 ldc.cst = (String) o;
@@ -467,17 +377,17 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                 }
             }
         }
-        for (WrappedClassNode classNode : classNodes()) {
-            for (MethodNode methodNode : classNode.classNode.methods) {
+        for (ClassNode classNode : classNodes()) {
+            for (MethodNode methodNode : classNode.methods) {
                 InsnList methodInsns = methodNode.instructions;
                 for (int insnIndex = 0; insnIndex < methodInsns.size(); insnIndex++) {
                     AbstractInsnNode currentInsn = methodInsns.get(insnIndex);
                     if (currentInsn instanceof MethodInsnNode) {
                         MethodInsnNode m = (MethodInsnNode) currentInsn;
-                        WrappedClassNode targetClassNode = classes.get(m.owner);
+                        ClassNode targetClassNode = classes.get(m.owner);
                         if (targetClassNode != null) {
                             MethodNode targetMethodNode = null;
-                            for (MethodNode tempMethodNode : targetClassNode.classNode.methods) {
+                            for (MethodNode tempMethodNode : targetClassNode.methods) {
                                 if (tempMethodNode.name.equals(m.name) && tempMethodNode.desc.equals(m.desc)) {
                                     targetMethodNode = tempMethodNode;
                                     break;
@@ -494,11 +404,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                             String strCl = innerMethod.owner;
                                             if (innerMethod.desc.endsWith(")Ljava/lang/String;")) {
                                                 if (enhanced.remove(innerLdc) != null) {
-                                                    ClassNode innerClassNode = classes.get(strCl).classNode;
+                                                    ClassNode innerClassNode = classes.get(strCl);
                                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerMethod.name) && mn.desc.equals(innerMethod.desc)).findFirst().orElse(null);
                                                     Context context = new Context(provider);
-                                                    context.push(classNode.classNode.name.replace('/', '.'), methodNode.name, classNode.constantPoolSize);
-                                                    context.push(targetClassNode.classNode.name.replace('/', '.'), targetMethodNode.name, targetClassNode.constantPoolSize);
+                                                    context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+                                                    context.push(targetClassNode.name.replace('/', '.'), targetMethodNode.name, getDeobfuscator().getConstantPool(targetClassNode).getSize());
                                                     context.dictionary = classpath;
                                                     Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new JavaObject(innerLdc.cst, "java/lang/String")), null, context);
                                                     innerLdc.cst = o;

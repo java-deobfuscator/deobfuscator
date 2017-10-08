@@ -33,7 +33,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,9 +51,9 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
         System.out.println("[Allatori] [StringEncryptionTransformer] Starting");
 
-        classNodes().forEach(wrappedClassNode -> {
-            wrappedClassNode.classNode.methods.forEach(methodNode -> {
-                AnalyzerResult result = MethodAnalyzer.analyze(wrappedClassNode.classNode, methodNode);
+        classNodes().forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
+                AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
                     AbstractInsnNode current = methodNode.instructions.get(index);
                     if (current instanceof MethodInsnNode) {
@@ -70,9 +69,9 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                 }
                                 LdcInsnNode insn = (LdcInsnNode) result.getMapping().get(ldcFrame);
                                 Context context = new Context(provider);
-                                context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
+                                context.push(classNode.name, methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                 if (classes.containsKey(strCl)) {
-                                    ClassNode innerClassNode = classes.get(strCl).classNode;
+                                    ClassNode innerClassNode = classes.get(strCl);
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
 
                                     Map<Integer, AtomicInteger> insnCount = new HashMap<>();
@@ -93,13 +92,13 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                         decryptor.add(decrypterNode);
 
                                         try {
-                                            insn.cst = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(insn.cst)), null, context);
+                                            insn.cst = MethodExecutor.execute(classNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(insn.cst)), null, context);
                                             methodNode.instructions.remove(current);
                                             count.getAndIncrement();
                                         } catch (Throwable t) {
                                             System.out.println("Error while decrypting Allatori string.");
                                             System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
-                                            System.out.println(wrappedClassNode.classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
+                                            System.out.println(classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
                                             t.printStackTrace(System.out);
                                         }
                                     }
@@ -116,18 +115,18 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     if (t instanceof LdcInsnNode) {
                                         LdcInsnNode a = (LdcInsnNode) t;
                                         Context context = new Context(provider);
-                                        context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
+                                        context.push(classNode.name, methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                         if (classes.containsKey(strCl)) {
-                                            ClassNode innerClassNode = classes.get(strCl).classNode;
+                                            ClassNode innerClassNode = classes.get(strCl);
                                             MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc)).findFirst().orElse(null);
                                             try {
-                                                Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(a.cst)), null, context);
+                                                Object o = MethodExecutor.execute(classNode, decrypterNode, Collections.singletonList(JavaValue.valueOf(a.cst)), null, context);
                                                 a.cst = o;
                                                 methodNode.instructions.remove(current);
                                             } catch (Throwable throwable) {
                                                 System.out.println("Error while decrypting Allatori string.");
                                                 System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
-                                                System.out.println(wrappedClassNode.classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
+                                                System.out.println(classNode.name + " " + methodNode.name + methodNode.desc + " " + m.owner + " " + m.name + m.desc);
                                                 throwable.printStackTrace(System.out);
                                             }
                                         }
@@ -173,8 +172,8 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
     private int cleanup(Set<MethodNode> methods) {
         AtomicInteger count = new AtomicInteger(0);
-        classNodes().forEach(wrappedClassNode -> {
-            if (wrappedClassNode.classNode.methods.removeIf(methods::contains)) {
+        classNodes().forEach(classNode -> {
+            if (classNode.methods.removeIf(methods::contains)) {
                 count.getAndIncrement();
             }
         });

@@ -22,7 +22,7 @@ import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import org.objectweb.asm.tree.ClassNode;
 import sun.invoke.util.BytecodeDescriptor;
 
 import java.lang.reflect.Constructor;
@@ -37,12 +37,12 @@ import java.util.Map;
  * Not recommended for production usage
  */
 public class ReflectiveProvider implements Provider {
-    private Map<String, WrappedClassNode> dictionary;
+    private Map<String, ClassNode> dictionary;
     private Map<String, Method> methodCache = new HashMap<>();
     private Map<String, Constructor<?>> ctorCache = new HashMap<>();
     private Map<String, Field> fieldCache = new HashMap<>();
 
-    public ReflectiveProvider(Map<String, WrappedClassNode> dictionary) {
+    public ReflectiveProvider(Map<String, ClassNode> dictionary) {
         this.dictionary = dictionary;
     }
 

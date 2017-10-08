@@ -23,19 +23,18 @@ import java.util.Map.Entry;
 
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public abstract class Transformer<T extends TransformerConfig> {
 
-    protected Map<String, WrappedClassNode> classes;
-    protected Map<String, WrappedClassNode> classpath;
-    protected Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers;
+    protected Map<String, ClassNode> classes;
+    protected Map<String, ClassNode> classpath;
 
     private Deobfuscator deobfuscator;
     private T config;
 
-    public void init(Deobfuscator deobfuscator, TransformerConfig config, Map<String, WrappedClassNode> classes, Map<String, WrappedClassNode> classpath) {
+    public void init(Deobfuscator deobfuscator, TransformerConfig config, Map<String, ClassNode> classes, Map<String, ClassNode> classpath) {
         this.deobfuscator = deobfuscator;
         this.classes = classes;
         this.classpath = classpath;
@@ -46,7 +45,7 @@ public abstract class Transformer<T extends TransformerConfig> {
         return this.config;
     }
 
-    public Collection<WrappedClassNode> classNodes() {
+    public Collection<ClassNode> classNodes() {
         return this.classes.values();
     }
 
