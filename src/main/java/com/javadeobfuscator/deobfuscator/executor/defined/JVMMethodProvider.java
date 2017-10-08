@@ -422,7 +422,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("parseInt(Ljava/lang/String;)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/String;)Ljava/lang/Integer;", (targetObject, args, context) -> new JavaInteger(Integer.valueOf(args.get(0).as(String.class))));
             put("valueOf(Ljava/lang/String;I)Ljava/lang/Integer;", (targetObject, args, context) -> new JavaInteger(Integer.valueOf(args.get(0).as(String.class), args.get(1).intValue())));
-            put("valueOf(I)Ljava/lang/Integer;", (targetObject, args, context) -> args.get(0));
+            put("valueOf(I)Ljava/lang/Integer;", (targetObject, args, context) -> new JavaInteger(args.get(0).intValue()));
             put("intValue()I", (targetObject, args, context) -> ((JavaInteger) targetObject.value()).value());
         }});
         put("java/util/regex/Pattern", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
