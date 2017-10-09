@@ -196,6 +196,8 @@ public class MethodExecutor {
                     return cast.byteValue();
                 case "J":
                     return cast.longValue();
+                case "Z":
+                	return cast.intValue() != 0;
             }
         }
 
@@ -1011,12 +1013,24 @@ public class MethodExecutor {
                     }
                     case PUTSTATIC: {
                         JavaValue obj = stack.remove(0);
+                        if (obj instanceof JavaTop) {
+                        	obj = stack.remove(0);
+                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
+                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
+                        	}
+                        }
                         FieldInsnNode cast = (FieldInsnNode) now;
                         context.provider.setField(cast.owner, cast.name, cast.desc, null, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case GETFIELD: {
                         JavaValue obj = stack.remove(0);
+                        if (obj instanceof JavaTop) {
+                        	obj = stack.remove(0);
+                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
+                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
+                        	}
+                        }
                         FieldInsnNode cast = (FieldInsnNode) now;
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
