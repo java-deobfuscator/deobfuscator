@@ -30,13 +30,11 @@ import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class JavaClass {
 
     private final String name;
     private final Type type;
-    private final WrappedClassNode wrappedClassNode;
     private final ClassNode classNode;
     private final Context context;
     private final boolean isPrimitive;
@@ -57,21 +55,18 @@ public class JavaClass {
             }
             primitive = PrimitiveUtils.getPrimitiveByName(elementType.getClassName());
             if (primitive == null) {
-                this.wrappedClassNode = context.dictionary.get(elementType.getInternalName());
-                if (this.wrappedClassNode == null) {
+                this.classNode = context.dictionary.get(elementType.getInternalName());
+                if (this.classNode == null) {
                     System.out.println("Could not find classnode " + this.name);
                     throw new NoClassInPathException(this.name);
                 }
-                this.classNode = this.wrappedClassNode.classNode;
                 this.isPrimitive = false;
             } else {
-                this.wrappedClassNode = context.dictionary.get("java/lang/Object");
-                this.classNode = this.wrappedClassNode.classNode;
+                this.classNode = context.dictionary.get("java/lang/Object");
                 this.isPrimitive = false;
             }
         } else {
             this.type = Type.getType(primitive);
-            this.wrappedClassNode = null;
             this.classNode = null;
             this.isPrimitive = true;
         }
@@ -88,11 +83,11 @@ public class JavaClass {
     private Map<String, ClassTree> hierachy = new HashMap<>();
 
     public ClassNode assureLoaded(String ref) {
-        WrappedClassNode clazz = context.dictionary.get(ref);
+        ClassNode clazz = context.dictionary.get(ref);
         if (clazz == null) {
             throw new IllegalArgumentException("No class in path " + ref);
         }
-        return clazz.classNode;
+        return clazz;
     }
 
     public ClassTree getClassTree(String classNode) {
@@ -100,7 +95,7 @@ public class JavaClass {
         if (tree == null) {
             tree = new ClassTree(classNode);
             hierachy.put(classNode, tree);
-            loadHierachy(context.dictionary.get(classNode).classNode);
+            loadHierachy(context.dictionary.get(classNode));
         }
         return tree;
     }
@@ -466,10 +461,6 @@ public class JavaClass {
 
     public ClassNode getClassNode() {
         return this.classNode;
-    }
-
-    public WrappedClassNode getWrappedClassNode() {
-        return this.wrappedClassNode;
     }
 
     public boolean isInterface() {

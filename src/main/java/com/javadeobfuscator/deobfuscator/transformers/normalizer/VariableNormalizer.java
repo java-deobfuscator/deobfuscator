@@ -18,15 +18,13 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class VariableNormalizer extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 if (methodNode.localVariables != null) {
                     AtomicInteger id = new AtomicInteger(0);

@@ -16,13 +16,13 @@
 
 package com.javadeobfuscator.deobfuscator;
 
+import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.config.Configuration;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -52,13 +52,16 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class Deobfuscator {
-    private Map<String, WrappedClassNode> classpath = new HashMap<>();
-    private Map<String, WrappedClassNode> classes = new HashMap<>();
+    private Map<String, ClassNode> classpath = new HashMap<>();
+    private Map<String, ClassNode> classes = new HashMap<>();
     private Map<String, ClassTree> hierachy = new HashMap<>();
     private Set<ClassNode> libraryClassnodes = new HashSet<>();
 
     // Entries from the input jar that will be passed through to the output
     private Map<String, byte[]> inputPassthrough = new HashMap<>();
+
+    // Constant pool data since ClassNodes don't support custom data
+    private Map<ClassNode, ConstantPool> constantPools = new HashMap<>();
 
     private final Configuration configuration;
     private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
@@ -74,8 +77,20 @@ public class Deobfuscator {
      */
     private static final boolean DELETE_USELESS_CLASSES = false;
 
-    private Map<String, WrappedClassNode> loadClasspathFile(File file) throws IOException {
-        Map<String, WrappedClassNode> map = new HashMap<>();
+    public ConstantPool getConstantPool(ClassNode classNode) {
+        return this.constantPools.get(classNode);
+    }
+
+    public void setConstantPool(ClassNode owner, ConstantPool pool) {
+        this.constantPools.put(owner, pool);
+    }
+
+    public Map<ClassNode, ConstantPool> getConstantPools() {
+        return this.constantPools;
+    }
+
+    private Map<String, ClassNode> loadClasspathFile(File file) throws IOException {
+        Map<String, ClassNode> map = new HashMap<>();
 
         ZipFile zipIn = new ZipFile(file);
         Enumeration<? extends ZipEntry> entries = zipIn.entries();
@@ -85,8 +100,9 @@ public class Deobfuscator {
                 ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                 ClassNode node = new ClassNode();
                 reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                WrappedClassNode wrappedClassNode = new WrappedClassNode(node, reader.getItemCount());
-                map.put(node.name, wrappedClassNode);
+                map.put(node.name, node);
+
+                setConstantPool(node, new ConstantPool(reader));
             }
         }
         zipIn.close();
@@ -108,7 +124,7 @@ public class Deobfuscator {
                     }
                 }
             }
-            libraryClassnodes.addAll(classpath.values().stream().map(WrappedClassNode::getClassNode).collect(Collectors.toList()));
+            libraryClassnodes.addAll(classpath.values());
         }
     }
 
@@ -152,6 +168,8 @@ public class Deobfuscator {
                         ClassNode node = new ClassNode();
                         reader.accept(node, ClassReader.SKIP_FRAMES);
 
+                        setConstantPool(node, new ConstantPool(reader));
+
                         if (!isClassIgnored(node)) {
                             for (int i = 0; i < node.methods.size(); i++) {
                                 MethodNode methodNode = node.methods.get(i);
@@ -160,11 +178,10 @@ public class Deobfuscator {
                                 node.methods.set(i, adapter);
                             }
 
-                            WrappedClassNode wr = new WrappedClassNode(node, reader.getItemCount());
-                            classes.put(node.name, wr);
+                            classes.put(node.name, node);
                             passthrough = false;
                         } else {
-                            classpath.put(node.name, new WrappedClassNode(node, reader.getItemCount()));
+                            classpath.put(node.name, node);
                         }
                     } catch (IllegalArgumentException x) {
                         logger.error("Could not parse {} (is it a class file?)", next.getName(), x);
@@ -185,18 +202,18 @@ public class Deobfuscator {
      */
     @Deprecated
     private void computeCallers() {
-        Map<MethodNode, List<Entry<WrappedClassNode, MethodNode>>> callers = new HashMap<>();
-        classes.values().forEach(wrappedClassNode -> {
-            wrappedClassNode.classNode.methods.forEach(methodNode -> {
+        Map<MethodNode, List<Entry<ClassNode, MethodNode>>> callers = new HashMap<>();
+        classes.values().forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode node = methodNode.instructions.get(i);
                     if (node instanceof MethodInsnNode) {
                         MethodInsnNode mn = (MethodInsnNode) node;
-                        WrappedClassNode targetNode = classes.get(mn.owner);
+                        ClassNode targetNode = classes.get(mn.owner);
                         if (targetNode != null) {
-                            MethodNode targetMethod = targetNode.classNode.methods.stream().filter(m -> m.name.equals(mn.name) && m.desc.equals(mn.desc)).findFirst().orElse(null);
+                            MethodNode targetMethod = targetNode.methods.stream().filter(m -> m.name.equals(mn.name) && m.desc.equals(mn.desc)).findFirst().orElse(null);
                             if (targetMethod != null) {
-                                callers.computeIfAbsent(targetMethod, k -> new ArrayList<>()).add(new SimpleEntry<>(wrappedClassNode, methodNode));
+                                callers.computeIfAbsent(targetMethod, k -> new ArrayList<>()).add(new SimpleEntry<>(classNode, methodNode));
                             }
                         }
                     }
@@ -229,7 +246,7 @@ public class Deobfuscator {
 
         logger.info("Writing");
         if (DEBUG) {
-            classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(Utils::printClass);
+            classes.values().forEach(Utils::printClass);
         }
 
         ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
@@ -244,7 +261,7 @@ public class Deobfuscator {
             }
         });
 
-        classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classes.values().forEach(classNode -> {
             try {
                 byte[] b = toByteArray(classNode);
                 if (b != null) {
@@ -267,27 +284,27 @@ public class Deobfuscator {
     }
 
     public ClassNode assureLoaded(String ref) {
-        WrappedClassNode clazz = classpath.get(ref);
+        ClassNode clazz = classpath.get(ref);
         if (clazz == null) {
             throw new NoClassInPathException(ref);
         }
-        return clazz.classNode;
+        return clazz;
     }
 
     public ClassNode assureLoadedElseRemove(String referencer, String ref) {
-        WrappedClassNode clazz = classpath.get(ref);
+        ClassNode clazz = classpath.get(ref);
         if (clazz == null) {
             classes.remove(referencer);
             classpath.remove(referencer);
             return null;
         }
-        return clazz.classNode;
+        return clazz;
     }
 
     public void loadHierachy() {
         Set<String> processed = new HashSet<>();
         LinkedList<ClassNode> toLoad = new LinkedList<>();
-        toLoad.addAll(this.classes.values().stream().map(wrappedClassNode -> wrappedClassNode.classNode).collect(Collectors.toList()));
+        toLoad.addAll(this.classes.values());
         while (!toLoad.isEmpty()) {
             for (ClassNode toProcess : loadHierachy(toLoad.poll())) {
                 if (processed.add(toProcess.name)) {

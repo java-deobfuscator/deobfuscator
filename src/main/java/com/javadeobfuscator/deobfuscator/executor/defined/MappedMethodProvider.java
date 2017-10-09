@@ -23,37 +23,35 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 
 public class MappedMethodProvider extends MethodProvider {
-    private Map<String, WrappedClassNode> classpath = new HashMap<>();
+    private Map<String, ClassNode> classpath = new HashMap<>();
 
-    public MappedMethodProvider(Map<String, WrappedClassNode> classpath) {
+    public MappedMethodProvider(Map<String, ClassNode> classpath) {
         this.classpath = classpath;
     }
 
     public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-        WrappedClassNode wrappedClassNode = classpath.get(className);
-        if(wrappedClassNode == null)
+        ClassNode classNode = classpath.get(className);
+        if(classNode == null)
         	return false;
-        MethodNode methodNode = wrappedClassNode.classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
+        MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
         return methodNode != null;
     }
 
     @Override
     public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
-        WrappedClassNode wrappedClassNode = classpath.get(className);
-        if (wrappedClassNode != null) {
-            ClassNode classNode = wrappedClassNode.classNode;
+        ClassNode classNode = classpath.get(className);
+        if (classNode != null) {
             MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
             if (methodNode != null) {
                 List<JavaValue> argsClone = new ArrayList<>();
                 for (JavaValue arg : args) {
                     argsClone.add(arg.copy());
                 }
-                return MethodExecutor.execute(wrappedClassNode, methodNode, argsClone, targetObject == null ? new JavaObject(null, "java/lang/Object") : targetObject, context);
+                return MethodExecutor.execute(classNode, methodNode, argsClone, targetObject == null ? new JavaObject(null, "java/lang/Object") : targetObject, context);
             }
             throw new IllegalArgumentException("Could not find method " + methodName + methodDesc);
         }

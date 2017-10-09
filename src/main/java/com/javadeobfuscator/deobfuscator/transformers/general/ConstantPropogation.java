@@ -36,8 +36,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.lang.reflect.Modifier;
 import java.util.Collections;
@@ -52,7 +50,7 @@ import java.util.Map;
 public class ConstantPropogation extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        classNodes().stream().map(WrappedClassNode::getClassNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 if (Modifier.isAbstract(methodNode.access) || Modifier.isNative(methodNode.access)) {
                     return;

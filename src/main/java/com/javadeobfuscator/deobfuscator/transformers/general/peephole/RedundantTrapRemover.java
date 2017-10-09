@@ -22,7 +22,6 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,7 +47,7 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
         AtomicInteger redudantTraps = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
                 if (methodNode.tryCatchBlocks != null && !methodNode.tryCatchBlocks.isEmpty()) {
                     {

@@ -18,10 +18,9 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.commons.RemappingClassAdapter;
+import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.tree.ClassNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.io.File;
 import java.util.HashMap;
@@ -29,24 +28,26 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-@TransformerConfig.ConfigOptions(configClass = AbstractClassNormalizer.Config.class)
-public abstract class AbstractClassNormalizer<T extends AbstractClassNormalizer.Config> extends Transformer<T> {
+@TransformerConfig.ConfigOptions(configClass = AbstractNormalizer.Config.class)
+public abstract class AbstractNormalizer<T extends AbstractNormalizer.Config> extends Transformer<T> {
     @Override
     public final boolean transform() throws Throwable {
         CustomRemapper remapper = new CustomRemapper();
 
         remap(remapper);
 
-        Map<String, WrappedClassNode> updated = new HashMap<>();
+        Map<String, ClassNode> updated = new HashMap<>();
         Set<String> removed = new HashSet<>();
 
         classNodes().forEach(wr -> {
+            removed.add(wr.name);
+
             ClassNode newNode = new ClassNode();
-            RemappingClassAdapter remap = new RemappingClassAdapter(newNode, remapper);
-            removed.add(wr.classNode.name);
-            wr.classNode.accept(remap);
-            wr.classNode = newNode;
-            updated.put(newNode.name, wr);
+            ClassRemapper classRemapper = new ClassRemapper(newNode, remapper);
+            wr.accept(classRemapper);
+            updated.put(newNode.name, newNode);
+
+            getDeobfuscator().setConstantPool(newNode, getDeobfuscator().getConstantPool(wr));
         });
 
         removed.forEach(classes::remove);
@@ -54,7 +55,6 @@ public abstract class AbstractClassNormalizer<T extends AbstractClassNormalizer.
         classes.putAll(updated);
         classpath.putAll(updated);
         getDeobfuscator().resetHierachy();
-        getDeobfuscator().loadHierachy();
         return true;
     }
 

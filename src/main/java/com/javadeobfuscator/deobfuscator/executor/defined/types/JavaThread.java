@@ -6,7 +6,6 @@ import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 import java.util.Collections;
 
@@ -42,16 +41,15 @@ public class JavaThread {
     public void start() {
         if (!started) {
             started = true;
-            WrappedClassNode wrappedClass = context.dictionary.get(instance.type());
-            if (wrappedClass != null) {
-                ClassNode classNode = wrappedClass.classNode;
+            ClassNode classNode = context.dictionary.get(instance.type());
+            if (classNode != null) {
                 MethodNode method = classNode.methods.stream().filter(mn -> mn.name.equals("run") && mn.desc.equals("()V")).findFirst().orElse(null);
                 if (method != null) {
                     Context threadContext = new Context(context.provider);
                     threadContext.dictionary = context.dictionary;
                     threadContext.file = context.file;
 
-                    thread = new Thread(() -> MethodExecutor.execute(wrappedClass, method, Collections.emptyList(), instance, threadContext));
+                    thread = new Thread(() -> MethodExecutor.execute(classNode, method, Collections.emptyList(), instance, threadContext));
                     ThreadStore.addThread(thread.getId(), this);
                     this.context = threadContext;
 

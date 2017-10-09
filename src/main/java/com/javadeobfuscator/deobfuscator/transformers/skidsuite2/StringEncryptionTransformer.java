@@ -49,9 +49,9 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
 
-        classNodes().forEach(wrappedClassNode -> {
-            wrappedClassNode.classNode.methods.forEach(methodNode -> {
-                AnalyzerResult result = MethodAnalyzer.analyze(wrappedClassNode.classNode, methodNode);
+        classNodes().forEach(classNode -> {
+            classNode.methods.forEach(methodNode -> {
+                AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
 
                 Map<AbstractInsnNode, InsnList> replacements = new HashMap<>();
 
@@ -122,11 +122,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
                     if (classes.containsKey(methodInsnNode.owner)) {
                         Context context = new Context(provider);
-                        context.push(wrappedClassNode.classNode.name, methodNode.name, wrappedClassNode.constantPoolSize);
-                        ClassNode innerClassNode = classes.get(methodInsnNode.owner).classNode;
+                        context.push(classNode.name, methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+                        ClassNode innerClassNode = classes.get(methodInsnNode.owner);
                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                         try {
-                            Object o = MethodExecutor.execute(wrappedClassNode, decrypterNode, args, null, context);
+                            Object o = MethodExecutor.execute(classNode, decrypterNode, args, null, context);
                             InsnList list = new InsnList();
                             for (int i = 0; i < args.size(); i++) {
                                 list.add(new InsnNode(Opcodes.POP));

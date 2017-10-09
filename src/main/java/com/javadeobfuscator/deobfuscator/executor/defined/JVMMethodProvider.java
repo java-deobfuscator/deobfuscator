@@ -43,7 +43,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode; 
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -525,7 +524,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("getJavaLangAccess()Lsun/misc/JavaLangAccess;", (targetObject, args, context) -> null);
         }});
         put("sun/misc/JavaLangAccess", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("getConstantPool(Ljava/lang/Class;)Lsun/reflect/ConstantPool;", (targetObject, args, context) -> new JavaConstantPool(args.get(0).as(JavaClass.class)));
+            put("getConstantPool(Ljava/lang/Class;)Lsun/reflect/ConstantPool;", (targetObject, args, context) -> new JavaConstantPool(context.constantPools.get(args.get(0).as(JavaClass.class).getClassNode())));
         }});
         put("sun/reflect/ConstantPool", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getSize()I", (targetObject, args, context) -> targetObject.as(JavaConstantPool.class).getSize());
@@ -557,35 +556,33 @@ public class JVMMethodProvider extends MethodProvider {
     }
 
     private static void initObject(Context context, String className, JavaValue object) { 
-        WrappedClassNode wrappedClassNode = context.dictionary.get(className); 
-        if (wrappedClassNode != null) { 
-            ClassNode classNode = wrappedClassNode.classNode; 
- 
-            for (FieldNode field : classNode.fields) { 
+        ClassNode classNode = context.dictionary.get(className);
+        if (classNode != null) {
+            for (FieldNode field : classNode.fields) {
                 switch (field.desc) { 
                     case "B": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, (byte) 0, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (byte) 0, context);
                         break; 
                     case "S": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, (short) 0, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (short) 0, context);
                         break; 
                     case "I": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, 0, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0, context);
                         break; 
                     case "J": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, 0L, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0L, context);
                         break; 
                     case "F": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0, context);
                         break; 
                     case "D": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0D, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, 0.0D, context);
                         break; 
                     case "C": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, (char) 0, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, (char) 0, context);
                         break; 
                     case "Z": 
-                        context.provider.setField(classNode.name, field.name, field.desc, object, false, context); 
+                        context.provider.setField(classNode.name, field.name, field.desc, object, false, context);
                         break; 
                 } 
             } 

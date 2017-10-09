@@ -20,14 +20,11 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
-
-import java.util.Map;
 
 public class IllegalVarargsRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 Type[] args = Type.getArgumentTypes(methodNode.desc);
                 if (args.length > 0 && args[args.length - 1].getSort() != Type.ARRAY) {

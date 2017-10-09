@@ -104,8 +104,8 @@ public class JavaMethod {
                 }
             }
 
-            if (this.clazz.getContext().provider.canInvokeMethod(this.clazz.getWrappedClassNode().classNode.name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext())) {
-                return this.clazz.getContext().provider.invokeMethod(this.clazz.getWrappedClassNode().classNode.name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext());
+            if (this.clazz.getContext().provider.canInvokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext())) {
+                return this.clazz.getContext().provider.invokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext());
             }
         } catch (ExecutionException ex) {
             throw ex;

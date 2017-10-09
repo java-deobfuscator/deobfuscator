@@ -16,14 +16,16 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-public class JavaConstantPool {
-    private final JavaClass clazz;
+import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 
-    public JavaConstantPool(JavaClass javaClass) {
-        this.clazz = javaClass;
+public class JavaConstantPool {
+    private final ConstantPool constantPool;
+
+    public JavaConstantPool(ConstantPool constantPool) {
+        this.constantPool = constantPool;
     }
     
     public int getSize() {
-        return clazz.getWrappedClassNode().constantPoolSize;
+        return this.constantPool.getSize();
     }
 }

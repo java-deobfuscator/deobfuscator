@@ -19,7 +19,6 @@ package com.javadeobfuscator.deobfuscator.transformers.stringer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,14 +36,12 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
 
 public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
     @Override
@@ -69,7 +66,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
 
     private int findInvokeDynamic() {
         AtomicInteger total = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode abstractInsnNode = methodNode.instructions.get(i);
@@ -129,7 +126,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
             }
         });
 
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode abstractInsnNode = methodNode.instructions.get(i);
@@ -137,8 +134,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                         InvokeDynamicInsnNode dyn = (InvokeDynamicInsnNode) abstractInsnNode;
                         if (dyn.bsmArgs.length == 1 && dyn.bsmArgs[0] instanceof String) {
                             Handle bootstrap = dyn.bsm;
-                            WrappedClassNode wrappedClassNode = classes.get(bootstrap.getOwner());
-                            ClassNode bootstrapClassNode = wrappedClassNode.classNode;
+                            ClassNode bootstrapClassNode = classes.get(bootstrap.getOwner());
                             MethodNode bootstrapMethodNode = bootstrapClassNode.methods.stream().filter(mn -> mn.name.equals(bootstrap.getName()) && mn.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
                             List<JavaValue> args = new ArrayList<>();
                             args.add(JavaValue.valueOf(null)); //Lookup
@@ -151,7 +147,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                                 Context context = new Context(provider);
                                 context.dictionary = this.classpath;
 
-                                JavaMethodHandle result = MethodExecutor.execute(wrappedClassNode, bootstrapMethodNode, args, null, context);
+                                JavaMethodHandle result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
                                 String clazz = result.clazz.replace('.', '/');
                                 MethodInsnNode replacement = null;
                                 switch (result.type) {
@@ -189,7 +185,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
 
     private int cleanup() {
         AtomicInteger total = new AtomicInteger();
-        classNodes().stream().map(wrappedClassNode -> wrappedClassNode.classNode).forEach(classNode -> {
+        classNodes().forEach(classNode -> {
             Iterator<MethodNode> it = classNode.methods.iterator();
             while (it.hasNext()) {
                 MethodNode node = it.next();

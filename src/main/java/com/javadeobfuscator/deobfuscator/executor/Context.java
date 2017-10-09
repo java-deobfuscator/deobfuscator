@@ -1,9 +1,10 @@
 package com.javadeobfuscator.deobfuscator.executor;
 
+import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.utils.WrappedClassNode;
+import org.objectweb.asm.tree.ClassNode;
 
 import java.io.File;
 import java.util.*;
@@ -13,7 +14,8 @@ public class Context { //FIXME clinit classes
     private List<StackTraceElement> context = new ArrayList<>();
 
     public Provider provider;
-    public Map<String, WrappedClassNode> dictionary;
+    public Map<String, ClassNode> dictionary;
+    public Map<ClassNode, ConstantPool> constantPools;
 
     public Set<String> clinit = new HashSet<>();
 
