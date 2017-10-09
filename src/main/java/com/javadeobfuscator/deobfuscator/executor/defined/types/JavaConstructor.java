@@ -60,10 +60,6 @@ public class JavaConstructor {
                 javaArgs.add(0, new JavaDouble((Double)arg));
             else if(arg instanceof Long)
                 javaArgs.add(0, new JavaLong((Long)arg));
-            else if(arg instanceof String)
-                javaArgs.add(0, new JavaObject(arg, "java/lang/String"));
-            else if(arg instanceof JavaClass)
-                javaArgs.add(0, new JavaObject(arg, "java/lang/Class"));
             else
             	javaArgs.add(JavaValue.valueOf(arg));
     	}
