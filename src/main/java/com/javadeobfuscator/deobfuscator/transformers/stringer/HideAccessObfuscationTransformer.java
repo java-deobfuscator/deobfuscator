@@ -655,14 +655,14 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
     }
 
     private Type getReturnType(String desc) {
-    	if (desc.startsWith("(")) {
-    		return Type.getReturnType(desc);
-    	} else if (desc.startsWith("L")) {
-    		return Type.getReturnType("()" + desc);
-    	} else if (desc.startsWith("[")) {
-    		return Type.getReturnType("()[" + desc.substring(1, desc.length()));
-    	} else {
-            return Type.getReturnType("L" + desc + ";");
+        if (desc.startsWith("(")) {
+            return Type.getReturnType(desc);
+        } else if (desc.startsWith("L")) {
+        	return Type.getReturnType("()" + desc);
+        } else if (desc.startsWith("[")) {
+            return Type.getReturnType("()[" + desc.substring(1, desc.length()));
+        } else {
+            return Type.getReturnType("()L" + desc + ";");
         }
     }
 
