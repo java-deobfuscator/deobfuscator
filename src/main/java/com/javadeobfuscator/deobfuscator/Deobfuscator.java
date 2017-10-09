@@ -426,7 +426,7 @@ public class Deobfuscator {
                 }
             });
         }
-        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
         try {
             try {
                 node.accept(writer);
