@@ -20,9 +20,9 @@ import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.*;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,7 +55,8 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                             case IREM:
                             case ISHL:
                             case ISHR:
-                            case IUSHR: {
+                            case IUSHR:
+                            case IXOR: {
                                 List<Frame> frames = result.getFrames().get(ain);
                                 if (frames == null) {
                                     break;
@@ -85,6 +86,8 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                             results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() >> ((Number) ((LdcFrame) top).getConstant()).intValue());
                                         } else if (ain.getOpcode() == IUSHR) {
                                             results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() >>> ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                        } else if (ain.getOpcode() == IXOR) {
+                                        	results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() ^ ((Number) ((LdcFrame) top).getConstant()).intValue());
                                         }
                                     } else {
                                         break opcodes;
@@ -92,7 +95,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 }
                                 if (results.size() == 1) {
                                     InsnList replacement = new InsnList();
-                                    replacement.add(new InsnNode(Opcodes.POP2)); // remove existing args from stack
+                                    replacement.add(new InsnNode(POP2)); // remove existing args from stack
                                     replacement.add(new LdcInsnNode(results.iterator().next()));
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
@@ -106,21 +109,39 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                     break;
                                 }
                                 Set<Integer> results = new HashSet<>();
+                                Set<LdcFrame> resultFrames = new HashSet<>();
                                 for (Frame frame0 : frames) {
                                     SwitchFrame frame = (SwitchFrame) frame0;
                                     if (frame.getSwitchTarget() instanceof LdcFrame) {
+                                    	resultFrames.add((LdcFrame)frame.getSwitchTarget());
                                         results.add(((Number) ((LdcFrame) frame.getSwitchTarget()).getConstant()).intValue());
                                     } else {
                                         break opcodes;
                                     }
+                                }
+                                if(results.size() > 1)
+                                {
+                                	//Impossible "infinite switch"
+                                	Iterator<LdcFrame> itr = resultFrames.iterator();
+                            	 	while(itr.hasNext())
+                            	 	{
+                            	 		LdcFrame ldcFrame = itr.next();
+                            	 		AbstractInsnNode ldcNode = result.getMapping().get(ldcFrame);
+                            	 		for(LabelNode label : ((TableSwitchInsnNode)ain).labels)
+                            	 			if(label.getNext() != null && label.getNext().equals(ldcNode))
+                            	 			{
+                            	 				results.remove(Utils.getIntValue(ldcNode));
+                            	 				itr.remove();
+                            	 			}
+                            	 	}
                                 }
                                 if (results.size() == 1) {
                                     TableSwitchInsnNode tsin = ((TableSwitchInsnNode) ain);
                                     int cst = results.iterator().next();
                                     LabelNode target = (cst < tsin.min || cst > tsin.max) ? tsin.dflt : tsin.labels.get(cst - tsin.min);
                                     InsnList replacement = new InsnList();
-                                    replacement.add(new InsnNode(Opcodes.POP)); // remove existing args from stack
-                                    replacement.add(new JumpInsnNode(Opcodes.GOTO, target));
+                                    replacement.add(new InsnNode(POP)); // remove existing args from stack
+                                    replacement.add(new JumpInsnNode(GOTO, target));
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
                                 }
@@ -156,15 +177,39 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                         } else {
                                             throw new RuntimeException();
                                         }
+                                    } else if(frame.getComparators().get(0) instanceof LocalFrame
+                                    	&& frame.getComparators().size() == 1
+	                                	&& frame.getComparators().get(0).getChildren().size() == 2
+	                                	&& frame.getComparators().get(0).getChildren().get(0).getOpcode() == 
+	                                	frame.getComparators().get(0).getOpcode() - 33
+	                                	&& ((LocalFrame)frame.getComparators().get(0)).getValue() instanceof LdcFrame) {
+	                                	//ldc - store - load - if
+	                                	LdcFrame cst = (LdcFrame)((LocalFrame)frame.getComparators().get(0)).getValue();
+	                                	int value = ((Number)cst.getConstant()).intValue();
+	                                	if (ain.getOpcode() == IFGE) {
+	                                        results.add(value >= 0);
+	                                    } else if (ain.getOpcode() == IFGT) {
+	                                        results.add(value > 0);
+	                                    } else if (ain.getOpcode() == IFLE) {
+	                                        results.add(value <= 0);
+	                                    } else if (ain.getOpcode() == IFLT) {
+	                                        results.add(value < 0);
+	                                    } else if (ain.getOpcode() == IFNE) {
+	                                        results.add(value != 0);
+	                                    } else if (ain.getOpcode() == IFEQ) {
+	                                        results.add(value == 0);
+	                                    } else {
+	                                        throw new RuntimeException();
+	                                    }
                                     } else {
-                                        break opcodes;
-                                    }
+                                    	break opcodes;
+	                                }
                                 }
                                 if (results.size() == 1) {
                                     InsnList replacement = new InsnList();
-                                    replacement.add(new InsnNode(Opcodes.POP)); // remove existing args from stack
+                                    replacement.add(new InsnNode(POP)); // remove existing args from stack
                                     if (results.iterator().next()) {
-                                        replacement.add(new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode) ain).label));
+                                        replacement.add(new JumpInsnNode(GOTO, ((JumpInsnNode) ain).label));
                                     }
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
@@ -195,9 +240,9 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 }
                                 if (results.size() == 1) {
                                     InsnList replacement = new InsnList();
-                                    replacement.add(new InsnNode(Opcodes.POP2)); // remove existing args from stack
+                                    replacement.add(new InsnNode(POP2)); // remove existing args from stack
                                     if (results.iterator().next()) {
-                                        replacement.add(new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode) ain).label));
+                                        replacement.add(new JumpInsnNode(GOTO, ((JumpInsnNode) ain).label));
                                     }
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
@@ -223,7 +268,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                     Object val = results.iterator().next();
                                     InsnList replacement = new InsnList();
                                     if (val == null) {
-                                        replacement.add(new InsnNode(Opcodes.ACONST_NULL));
+                                        replacement.add(new InsnNode(ACONST_NULL));
                                     } else {
                                         replacement.add(new LdcInsnNode(val));
                                     }
@@ -255,7 +300,44 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                             remove.add(result.getMapping().get(deletedFrame));
                                         }
                                     } else {
-                                        break opcodes;
+                                    	if(frame.getRemoved().size() == 1)
+                                    	{
+                                    		//Load + pop
+                                    		Frame removed = frame.getRemoved().get(0);
+                                    		if(removed.getChildren().size() > 1 && removed.getChildren().indexOf(frame) - 1 >= 0
+                                    			&& removed.getChildren().get(removed.getChildren().indexOf(frame) - 1) instanceof LocalFrame
+                                    			&& removed.getChildren().get(removed.getChildren().indexOf(frame) - 1).getOpcode() >= ILOAD
+                                    			&& removed.getChildren().get(removed.getChildren().indexOf(frame) - 1).getOpcode() <= ALOAD)
+                                    			remove.add(result.getMapping().get(removed.getChildren().get(removed.getChildren().indexOf(frame) - 1)));
+                                    		else
+                                    			break opcodes;
+                                    	}else if(frame.getRemoved().size() == 2)
+                                    	{
+                                    		//Load + load + pop2
+                                    		Frame removed1 = frame.getRemoved().get(0);
+                                    		Frame removed2 = frame.getRemoved().get(1);
+                                    		if(removed1.equals(removed2) && removed1.getChildren().size() > 2 && removed1.getChildren().indexOf(frame) - 2 >= 0
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1) instanceof LocalFrame
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1).getOpcode() >= ILOAD
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1).getOpcode() <= ALOAD
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 2) instanceof LocalFrame
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 2).getOpcode() >= ILOAD
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 2).getOpcode() <= ALOAD)
+                                    		{
+                                    			//Previous instruction loads the same thing (expected children: load, load, pop2)
+                                    			remove.add(result.getMapping().get(removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1)));
+                                    			remove.add(result.getMapping().get(removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 2)));
+                                    		}else if(removed1.getChildren().size() > 1 && removed2.getChildren().size() > 1 
+                                    			&& removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1) instanceof LocalFrame
+                                    			&& removed2.getChildren().get(removed2.getChildren().indexOf(frame) - 1) instanceof LocalFrame)
+                                    		{
+                                    			//Previous instruction is "load" and it loads different things
+                                    			remove.add(result.getMapping().get(removed1.getChildren().get(removed1.getChildren().indexOf(frame) - 1)));
+                                    			remove.add(result.getMapping().get(removed2.getChildren().get(removed2.getChildren().indexOf(frame) - 1)));
+                                    		}else
+                                    			break opcodes;
+                                    	}else
+                                    		break opcodes;
                                     }
                                 }
                                 for (AbstractInsnNode insn : remove) {
