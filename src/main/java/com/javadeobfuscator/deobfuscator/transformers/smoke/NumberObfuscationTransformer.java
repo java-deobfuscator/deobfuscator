@@ -9,8 +9,6 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.transformers.general.peephole.PeepholeOptimizer;
-import com.javadeobfuscator.deobfuscator.transformers.general.removers.SyntheticBridgeRemover;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import java.lang.reflect.Modifier;
@@ -27,10 +25,6 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
 
     @Override
     public boolean transform() throws Throwable {
-        getDeobfuscator().runFromConfig(TransformerConfig.configFor(SyntheticBridgeRemover.class));
-        getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
-        getDeobfuscator().runFromConfig(TransformerConfig.configFor(IllegalVariableTransformer.class));
-
         for (int i = 0; i < 2; i++) {
             transform0();
         }
