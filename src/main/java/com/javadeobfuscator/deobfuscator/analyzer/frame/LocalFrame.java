@@ -11,4 +11,8 @@ public class LocalFrame extends Frame {
         if (this.value != null)
         this.value.children.add(this);
     }
+    
+    public Frame getValue() {
+    	return value;
+    }
 }
