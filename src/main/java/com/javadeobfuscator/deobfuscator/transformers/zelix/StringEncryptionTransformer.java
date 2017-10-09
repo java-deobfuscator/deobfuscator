@@ -135,12 +135,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                 }
             });
         }
-        for (int i = 0; i < 3; i++) {
-            try {
-                getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
-            } catch (Throwable t) {
-                t.printStackTrace();
-            }
+        try
+        {
+        	getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
+        } catch (Throwable t) {
+        	t.printStackTrace();
         }
 
         DelegatingProvider provider = new DelegatingProvider();
@@ -284,12 +283,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
             });
         });
 
-        for (int i = 0; i < 3; i++) {
-            try {
-                getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
-            } catch (Throwable t) {
-                t.printStackTrace();
-            }
+        try
+        {
+        	getDeobfuscator().runFromConfig(TransformerConfig.configFor(PeepholeOptimizer.class));
+        } catch (Throwable t) {
+        	t.printStackTrace();
         }
 
         /**
