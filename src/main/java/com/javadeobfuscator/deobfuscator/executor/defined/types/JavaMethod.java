@@ -99,7 +99,6 @@ public class JavaMethod {
             			else
             				value = ((JavaValue)o).value();
             			if(Primitives.unwrap(value.getClass()).getName().equals(argClass.getName()))
-            			{
 	            			switch(argClass.getName())
 	            			{
 	            				case "boolean":
@@ -127,8 +126,6 @@ public class JavaMethod {
 	            					args[i] = new JavaShort((Short)o);
 	            					break;
 	            			}
-	            			System.out.println("CASTED " + getName() + " " + getDesc());
-            			}
             		}
             	}
             List<JavaValue> argsobjects = new ArrayList<>();
