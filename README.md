@@ -100,7 +100,7 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [DashO](https://www.preemptive.com/products/dasho/overview)  
 [DexGuard](https://www.guardsquare.com/dexguard)  
 [Smoke](https://newtownia.net/smoke)  
-SkidSuite2 (dead)  
+SkidSuite2 (dead, some forks are listed [here](https://github.com/tetratec/SkidSuite2/network/members))  
 Generic obfuscation
 
 ## FAQs
