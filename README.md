@@ -69,6 +69,7 @@ Official transformers are linked via the `Transformers` class.
 | --- | --- | --- |
 | Allatori.STRING_ENCRYPTION | allatori.StringEncryptionTransformer | Decrypts strings encrypted by Allatori |
 | DashO.STRING_ENCRYPTION | dasho.StringEncryptionTransformer | Decrypts strings encrypted by DashO |
+| SkidSuite.STRING_ENCRYPTION | skidsuite2.StringEncryptionTransformer | Decrypts strings encrypted by SkidSuite2 |
 | Stringer.STRING_ENCRYPTION | stringer.StringEncryptionTransformer | Decrypts strings encrypted by Stringer |
 | Stringer.INVOKEDYNAMIC | stringer.InvokedynamicTransformer | Decrypts invokedynamic obfuscated calls by Stringer (Below version 3.0.0) |
 | Stringer.REFLECTION_OBFUSCATION | stringer.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Stringer (Below version 3.0.0) |
@@ -99,6 +100,7 @@ The latest build can be downloaded from my [CI Server](https://ci.samczsun.com/j
 [DashO](https://www.preemptive.com/products/dasho/overview)  
 [DexGuard](https://www.guardsquare.com/dexguard)  
 [Smoke](https://newtownia.net/smoke)  
+SkidSuite2 (dead)  
 Generic obfuscation
 
 ## FAQs
