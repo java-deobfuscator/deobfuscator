@@ -66,6 +66,7 @@ public class JVMMethodProvider extends MethodProvider {
                 }
                 return null;
             });
+            put("equals(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.equals(args.get(0).value()));
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, targetObject.type()); 
                 targetObject.initialize(new JavaObject(null, targetObject.type())); 
@@ -173,6 +174,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("indexOf(II)I", (targetObject, args, context) -> targetObject.as(String.class).indexOf(args.get(0).intValue(), args.get(1).intValue()));
             put("lastIndexOf(I)I", (targetObject, args, context) -> targetObject.as(String.class).lastIndexOf(args.get(0).intValue()));
             put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(String.class).isEmpty());
+            put("format(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.format(args.get(0).as(String.class), args.get(1).as(Object[].class)));
             put("split(Ljava/lang/String;)[Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).split(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).value()));
             put("replaceAll(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replaceAll(args.get(0).as(String.class), args.get(1).as(String.class)));
