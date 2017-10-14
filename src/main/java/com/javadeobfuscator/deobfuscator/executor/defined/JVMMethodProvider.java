@@ -207,6 +207,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("append(C)Ljava/lang/StringBuilder;", (targetObject, args, context) -> targetObject.as(StringBuilder.class).append(args.get(0).as(char.class)));
             put("append(Ljava/lang/String;)Ljava/lang/StringBuilder;", (targetObject, args, context) -> targetObject.as(StringBuilder.class).append(args.get(0).as(String.class)));
             put("append(Ljava/lang/Object;)Ljava/lang/StringBuilder;", (targetObject, args, context) -> targetObject.as(StringBuilder.class).append(args.get(0).as(Object.class)));
+            put("reverse()Ljava/lang/StringBuilder;", (targetObject, args, context) -> targetObject.as(StringBuilder.class).reverse());
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StringBuilder.class).toString());
             put("length()I", (targetObject, args, context) -> targetObject.as(StringBuilder.class).length());
             put("charAt(I)C", (targetObject, args, context) -> targetObject.as(StringBuilder.class).charAt(args.get(0).intValue()));
@@ -470,6 +471,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/lang/StackTraceElement", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getClassName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getClassName());
             put("getMethodName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getMethodName());
+            put("getFileName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getFileName());
         }});
         put("java/lang/Long", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("parseLong(Ljava/lang/String;)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class)));
