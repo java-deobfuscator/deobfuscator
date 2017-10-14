@@ -85,7 +85,7 @@ public class JavaMethod {
     public Object invoke(JavaValue instance, Object[] args) {
         try {
         	//Fix for unboxing/boxing
-            if(args.length == getParameterTypes().length)
+            if(args != null && args.length == getParameterTypes().length)
             	for(int i = 0; i < args.length; i++)
             	{
             		Object o = args[i];
