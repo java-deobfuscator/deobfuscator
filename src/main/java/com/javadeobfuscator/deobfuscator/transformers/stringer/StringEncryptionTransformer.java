@@ -249,7 +249,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                     if (decrypterNode != null) {
                                         Context context = new Context(provider);
-                                        context.dictionary = classpath;context.constantPools = getDeobfuscator().getConstantPools();
+                                        context.dictionary = classpath;
                                         context.constantPools = getDeobfuscator().getConstantPools();
                                         context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                         context.file = getDeobfuscator().getConfig().getInput();
