@@ -216,6 +216,10 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 }
                                 break;
                             }
+                            case IF_ICMPLE:
+                            case IF_ICMPGT:
+                            case IF_ICMPGE:
+                            case IF_ICMPLT:
                             case IF_ICMPNE:
                             case IF_ICMPEQ: {
                                 List<Frame> frames = result.getFrames().get(ain);
@@ -231,6 +235,14 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                             results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() != ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
                                         } else if (ain.getOpcode() == IF_ICMPEQ) {
                                             results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() == ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                        } else if (ain.getOpcode() == IF_ICMPLT) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() > ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                        } else if (ain.getOpcode() == IF_ICMPGE) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() <= ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                        } else if (ain.getOpcode() == IF_ICMPGT) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() < ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                        } else if (ain.getOpcode() == IF_ICMPLE) {
+                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() >= ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
                                         } else {
                                             throw new RuntimeException();
                                         }
