@@ -329,7 +329,7 @@ public class MethodExecutor {
      * Main executor. This will go through each instruction and execute the instruction using a switch statement
      */
     private static <T> T execute(ClassNode classNode, MethodNode method, AbstractInsnNode now, List<JavaValue> stack, List<JavaValue> locals, Context context) {
-        context.push(classNode.name, method.name, 0); // constantPoolSize isn't even used, is it?
+        context.push(classNode.name, method.name, classNode.sourceFile, 0); // constantPoolSize isn't even used, is it?
         if (DEBUG) {
             System.out.println("Executing " + classNode.name + " " + method.name + method.desc);
         }
