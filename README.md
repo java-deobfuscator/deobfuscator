@@ -8,7 +8,7 @@ The deobfuscator supports deobfuscation of transformations such as string litera
 
 ## What can't the deobfuscator do?
 
-Things like method names, class names, etc cannot be deobfuscated because there renaming is irreversible. The information needed to deobfuscate is removed.
+Things like method names, class names, etc cannot be deobfuscated because their renaming is irreversible. The information needed to deobfuscate is removed.
 
 ## Examples
 
