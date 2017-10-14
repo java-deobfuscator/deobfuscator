@@ -193,6 +193,11 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(new StringBuilder());
                 return null;
             });
+            put("<init>(I)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/StringBuilder");
+                targetObject.initialize(new StringBuilder(args.get(0).intValue()));
+                return null;
+            });
             put("<init>(Ljava/lang/String;)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/StringBuilder");
                 targetObject.initialize(new StringBuilder(args.get(0).as(String.class)));
