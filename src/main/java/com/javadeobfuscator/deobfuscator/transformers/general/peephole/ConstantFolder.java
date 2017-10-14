@@ -70,24 +70,26 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                     Frame top = frame.getTargets().get(0);
                                     Frame bottom = frame.getTargets().get(1);
                                     if (top instanceof LdcFrame && bottom instanceof LdcFrame) {
+                                    	int bottomValue = ((Number) ((LdcFrame) bottom).getConstant()).intValue();
+                                    	int topValue = ((Number) ((LdcFrame) top).getConstant()).intValue();
                                         if (ain.getOpcode() == IADD) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() + ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue + topValue);
                                         } else if (ain.getOpcode() == IMUL) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() * ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue * topValue);
                                         } else if (ain.getOpcode() == IREM) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() % ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue % topValue);
                                         } else if (ain.getOpcode() == ISUB) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() - ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue - topValue);
                                         } else if (ain.getOpcode() == IDIV) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() / ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue / topValue);
                                         } else if (ain.getOpcode() == ISHL) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() << ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue << topValue);
                                         } else if (ain.getOpcode() == ISHR) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() >> ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue >> topValue);
                                         } else if (ain.getOpcode() == IUSHR) {
-                                            results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() >>> ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                            results.add(bottomValue >>> topValue);
                                         } else if (ain.getOpcode() == IXOR) {
-                                        	results.add(((Number) ((LdcFrame) bottom).getConstant()).intValue() ^ ((Number) ((LdcFrame) top).getConstant()).intValue());
+                                        	results.add(bottomValue ^ topValue);
                                         }
                                     } else {
                                         break opcodes;
@@ -162,18 +164,19 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 for (Frame frame0 : frames) {
                                     JumpFrame frame = (JumpFrame) frame0;
                                     if (frame.getComparators().get(0) instanceof LdcFrame) {
+                                    	int value = ((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue();
                                         if (ain.getOpcode() == IFGE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() >= 0);
+                                            results.add(value >= 0);
                                         } else if (ain.getOpcode() == IFGT) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() > 0);
+                                            results.add(value > 0);
                                         } else if (ain.getOpcode() == IFLE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() <= 0);
+                                            results.add(value <= 0);
                                         } else if (ain.getOpcode() == IFLT) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() < 0);
+                                            results.add(value < 0);
                                         } else if (ain.getOpcode() == IFNE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() != 0);
+                                            results.add(value != 0);
                                         } else if (ain.getOpcode() == IFEQ) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() == 0);
+                                            results.add(value == 0);
                                         } else {
                                             throw new RuntimeException();
                                         }
@@ -231,18 +234,20 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 for (Frame frame0 : frames) {
                                     JumpFrame frame = (JumpFrame) frame0;
                                     if (frame.getComparators().get(0) instanceof LdcFrame && frame.getComparators().get(1) instanceof LdcFrame) {
+                                    	int topValue = ((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue();
+                                    	int bottomValue = ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue();
                                         if (ain.getOpcode() == IF_ICMPNE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() != ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue != topValue);
                                         } else if (ain.getOpcode() == IF_ICMPEQ) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() == ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue == topValue);
                                         } else if (ain.getOpcode() == IF_ICMPLT) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() > ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue < topValue);
                                         } else if (ain.getOpcode() == IF_ICMPGE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() <= ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue >= topValue);
                                         } else if (ain.getOpcode() == IF_ICMPGT) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() < ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue > topValue);
                                         } else if (ain.getOpcode() == IF_ICMPLE) {
-                                            results.add(((Number) ((LdcFrame) frame.getComparators().get(0)).getConstant()).intValue() >= ((Number) ((LdcFrame) frame.getComparators().get(1)).getConstant()).intValue());
+                                            results.add(bottomValue <= topValue);
                                         } else {
                                             throw new RuntimeException();
                                         }
