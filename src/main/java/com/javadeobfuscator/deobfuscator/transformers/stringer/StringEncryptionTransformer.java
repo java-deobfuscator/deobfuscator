@@ -250,6 +250,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     if (decrypterNode != null) {
                                         Context context = new Context(provider);
                                         context.dictionary = classpath;
+                                        context.constantPools = getDeobfuscator().getConstantPools();
                                         context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                         context.file = getDeobfuscator().getConfig().getInput();
                                         // Stringer3
@@ -323,6 +324,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                         if (decrypterNode != null) {
                                             Context context = new Context(provider);
                                             context.dictionary = classpath;
+                                            context.constantPools = getDeobfuscator().getConstantPools();
                                             context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                             context.file = getDeobfuscator().getConfig().getInput();
 
@@ -410,6 +412,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                                     context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                                     context.push(targetClassNode.name.replace('/', '.'), targetMethodNode.name, getDeobfuscator().getConstantPool(targetClassNode).getSize());
                                                     context.dictionary = classpath;
+                                                    context.constantPools = getDeobfuscator().getConstantPools();
                                                     Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new JavaObject(innerLdc.cst, "java/lang/String")), null, context);
                                                     innerLdc.cst = o;
                                                     targetMethodNode.instructions.remove(innerLdc.getNext());

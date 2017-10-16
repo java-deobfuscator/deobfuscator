@@ -46,6 +46,18 @@ public class MethodFrame extends Frame {
         return Collections.unmodifiableList(args);
     }
 
+    public String getDesc() {
+        return desc;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
     public Frame getInstance() {
         return instance;
     }

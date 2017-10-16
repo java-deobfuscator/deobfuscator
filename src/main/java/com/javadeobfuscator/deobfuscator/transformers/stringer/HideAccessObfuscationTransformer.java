@@ -31,10 +31,6 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import org.objectweb.asm.Handle;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -43,6 +39,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 
 //TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
@@ -358,22 +359,29 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                     if (previous.getOpcode() == Opcodes.CHECKCAST) {
                         methodNode.instructions.remove(checkcast);
                     } else if (previous instanceof MethodInsnNode) {
-                        Type type1 = getType(((MethodInsnNode) previous).desc).getReturnType();
-                        Type type2 = getType(checkcast.desc).getReturnType();
+                        Type type1 = getReturnType(((MethodInsnNode) previous).desc);
+                        Type type2 = getReturnType(checkcast.desc);
 
                         if (type1.getClassName().equals(type2.getClassName())) {
                             methodNode.instructions.remove(checkcast);
                         } else {
-                            String class2pre = type2.getClassName().replace(".", "/");
-                            class2pre = convertPrimitiveToClassArray(class2pre, 1);
-                            String class2 = type2.getSort() == Type.ARRAY ?
-                                    class2pre.substring(1, class2pre.length() - 2) : class2pre;
-                            String class1pre = type1.getClassName().replace(".", "/");
-                            class1pre = convertPrimitiveToClassArray(class1pre, 0);
-                            String class1 = type1.getSort() == Type.ARRAY ?
-                                    class1pre.substring(0, class1pre.length() - 2) : class1pre;
-                            if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
-                                JavaClass clazz = new JavaClass(class1, context);
+                        	String class2 = type2.getClassName().replace(".", "/");
+	                        class2 = convertPrimitiveToClassArray(class2, 1);
+	                        String class1 = type1.getClassName().replace(".", "/");
+	                        class1 = convertPrimitiveToClassArray(class1, 0);
+	                        if(type1.getSort() == Type.ARRAY)
+	                        	class1 = class1.substring(0, class1.length() - 2);
+	                        if(type2.getSort() == Type.ARRAY)
+	                        	class2 = class2.substring(0, class2.length() - 2);
+	                        //Object[] to Object
+	                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
+	                        	&& type2.getSort() == Type.ARRAY
+	                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
+	                        	methodNode.instructions.remove(checkcast);
+	                        else if(!class1.equals("void") && !class1.equals("java/lang/Object")
+	                        	&& (type1.getSort() != Type.ARRAY ||
+	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
+	                        	JavaClass clazz = new JavaClass(class1, context);
                                 //Check if cast is a superclass/interface of the type
                                 while (clazz != null) {
                                     if (isInterfaceOf(class2, clazz)) {
@@ -389,7 +397,9 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     methodNode.instructions.remove(checkcast);
                                 else {
                                     class1 = ((MethodInsnNode) previous).owner.replace(".", "/");
-                                    if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
+                                    if(!class1.equals("void") && !class1.equals("java/lang/Object")
+	                        			&& (type1.getSort() != Type.ARRAY ||
+	    	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
                                         JavaClass clazz = new JavaClass(class1, context);
                                         //Check if cast is a superclass/interface of the type
                                         while (clazz != null) {
@@ -404,8 +414,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                             }
                         }
                     } else if (previous instanceof FieldInsnNode) {
-                        Type type1 = getType(((FieldInsnNode) previous).desc).getReturnType();
-                        Type type2 = getType(checkcast.desc).getReturnType();
+                        Type type1 = getReturnType(((FieldInsnNode) previous).desc);
+                        Type type2 = getReturnType(checkcast.desc);
 
                         if (type1.getClassName().equals(type2.getClassName())) {
                             methodNode.instructions.remove(checkcast);
@@ -417,15 +427,22 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 
                             methodNode.instructions.remove(checkcast);
                         } else {
-                            String class2pre = type2.getClassName().replace(".", "/");
-                            class2pre = convertPrimitiveToClassArray(class2pre, 1);
-                            String class2 = type2.getSort() == Type.ARRAY ?
-                                    class2pre.substring(1, class2pre.length() - 2) : class2pre;
-                            String class1pre = type1.getClassName().replace(".", "/");
-                            class1pre = convertPrimitiveToClassArray(class1pre, 0);
-                            String class1 = type1.getSort() == Type.ARRAY ?
-                                    class1pre.substring(1, class1pre.length() - 2) : class1pre;
-                            if (!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")) {
+                        	String class2 = type2.getClassName().replace(".", "/");
+	                        class2 = convertPrimitiveToClassArray(class2, 1);
+	                        String class1 = type1.getClassName().replace(".", "/");
+	                        class1 = convertPrimitiveToClassArray(class1, 0);
+	                        if(type1.getSort() == Type.ARRAY)
+	                        	class1 = class1.substring(0, class1.length() - 2);
+	                        if(type2.getSort() == Type.ARRAY)
+	                        	class2 = class2.substring(0, class2.length() - 2);
+	                        //Object[] to Object
+	                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
+	                        	&& type2.getSort() == Type.ARRAY
+	                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
+	                        	methodNode.instructions.remove(checkcast);
+	                        else if(!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")
+	                        	&& (type1.getSort() != Type.ARRAY ||
+	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
                                 JavaClass clazz = new JavaClass(class1, context);
                                 //Check if cast is a superclass/interface of the type
                                 while (clazz != null) {
@@ -443,19 +460,26 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                             && (previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETSTATIC
                             || previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETFIELD)) {
                         FieldInsnNode fieldNode = (FieldInsnNode) previous.getPrevious().getPrevious();
-                        Type type1 = getType(fieldNode.desc).getReturnType();
-                        Type type2 = getType(checkcast.desc).getReturnType();
+                        Type type1 = getReturnType(fieldNode.desc);
+                        Type type2 = getReturnType(checkcast.desc);
                         if (type1.getClassName().equals(type2.getClassName()))
                             methodNode.instructions.remove(checkcast);
-                        String class2pre = type2.getClassName().replace(".", "/");
-                        class2pre = convertPrimitiveToClassArray(class2pre, 1);
-                        String class2 = type2.getSort() == Type.ARRAY ?
-                                class2pre.substring(1, class2pre.length() - 2) : class2pre;
-                        String class1pre = type1.getClassName().replace(".", "/");
-                        class1pre = convertPrimitiveToClassArray(class1pre, 0);
-                        String class1 = type1.getSort() == Type.ARRAY ?
-                                class1pre.substring(1, class1pre.length() - 2) : class1pre;
-                        if (!class1.equals("void") && !class1.equals("java/lang/Object")) {
+                        String class2 = type2.getClassName().replace(".", "/");
+                        class2 = convertPrimitiveToClassArray(class2, 1);
+                        String class1 = type1.getClassName().replace(".", "/");
+                        class1 = convertPrimitiveToClassArray(class1, 0);
+                        if(type1.getSort() == Type.ARRAY)
+                        	class1 = class1.substring(0, class1.length() - 2);
+                        if(type2.getSort() == Type.ARRAY)
+                        	class2 = class2.substring(0, class2.length() - 2);
+                        //Object[] to Object
+                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
+                        	&& type2.getSort() == Type.ARRAY
+                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
+                        	methodNode.instructions.remove(checkcast);
+                        else if(!class1.equals("void") && !class1.equals("java/lang/Object")
+                        	&& (type1.getSort() != Type.ARRAY ||
+	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
                             JavaClass clazz = new JavaClass(class1, context);
                             //Check if cast is a superclass/interface of the type
                             while (clazz != null) {
@@ -477,8 +501,8 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                 AbstractInsnNode insn = copy.get(i);
                 AbstractInsnNode previous = insn.getPrevious();
                 if (insn instanceof FieldInsnNode && isValueOf(previous)) {
-                    Type type1 = getType(((MethodInsnNode) previous).desc).getReturnType();
-                    Type type2 = getType(((FieldInsnNode) insn).desc).getReturnType();
+                    Type type1 = getReturnType(((MethodInsnNode) previous).desc);
+                    Type type2 = getReturnType(((FieldInsnNode) insn).desc);
 
                     if (isObjectType(type1.getClassName()) && isPrimitive(type2.getClassName())) {
                         methodNode.instructions.remove(previous);
@@ -630,13 +654,15 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         return false;
     }
 
-    private Type getType(String desc) {
-        if (desc.startsWith("(") || desc.startsWith("L")) {
-            return Type.getType(desc);
-        } else if (desc.startsWith("[") && !isPrimitive(desc.substring(1, desc.length()))) {
-            return Type.getType("()[L" + desc.substring(1, desc.length()));
+    private Type getReturnType(String desc) {
+        if (desc.startsWith("(")) {
+            return Type.getReturnType(desc);
+        } else if (desc.startsWith("L")) {
+        	return Type.getReturnType("()" + desc);
+        } else if (desc.startsWith("[")) {
+            return Type.getReturnType("()[" + desc.substring(1, desc.length()));
         } else {
-            return Type.getType("L" + desc + ";");
+            return Type.getReturnType("()L" + desc + ";");
         }
     }
 
@@ -693,14 +719,14 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
             return array;
         } else if (mode == 1) {
             String[][] types = {
-                    {"[B", "Ljava/lang/Byte[]"},
-                    {"[S", "Ljava/lang/Short[]"},
-                    {"[I", "Ljava/lang/Integer[]"},
-                    {"[L", "Ljava/lang/Long[]"},
-                    {"[F", "Ljava/lang/Float[]"},
-                    {"[D", "Ljava/lang/Double[]"},
-                    {"[C", "Ljava/lang/Character[]"},
-                    {"[Z", "Ljava/lang/Boolean[]"}
+                    {"[B", "java/lang/Byte[]"},
+                    {"[S", "java/lang/Short[]"},
+                    {"[I", "java/lang/Integer[]"},
+                    {"[L", "java/lang/Long[]"},
+                    {"[F", "java/lang/Float[]"},
+                    {"[D", "java/lang/Double[]"},
+                    {"[C", "java/lang/Character[]"},
+                    {"[Z", "java/lang/Boolean[]"}
             };
 
             for (String[] type : types) {

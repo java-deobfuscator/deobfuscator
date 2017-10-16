@@ -37,6 +37,11 @@ public class Context { //FIXME clinit classes
         clazz = clazz.replace('/', '.');
         context.add(0, new StackTraceElement(clazz, method, "", constantPoolSize));
     }
+    
+    public void push(String clazz, String method, String sourceFile, int constantPoolSize) {
+        clazz = clazz.replace('/', '.');
+        context.add(0, new StackTraceElement(clazz, method, sourceFile, constantPoolSize));
+    }
 
     public int size() {
         return context.size();
@@ -46,7 +51,7 @@ public class Context { //FIXME clinit classes
         StackTraceElement[] orig = new StackTraceElement[size()];
         for (int i = 0; i < size(); i++) {
             StackTraceElement e = at(i);
-            orig[i] = new StackTraceElement(e.getClassName(), e.getMethodName(), null, -1);
+            orig[i] = new StackTraceElement(e.getClassName(), e.getMethodName(), e.getFileName(), -1);
         }
         return orig;
     }

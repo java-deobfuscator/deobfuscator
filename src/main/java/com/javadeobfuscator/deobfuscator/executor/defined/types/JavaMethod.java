@@ -16,21 +16,12 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.security.CodeSource;
-import java.security.ProtectionDomain;
-import java.security.cert.Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
+import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
@@ -93,6 +84,50 @@ public class JavaMethod {
 
     public Object invoke(JavaValue instance, Object[] args) {
         try {
+        	//Fix for unboxing/boxing
+            if(args != null && args.length == getParameterTypes().length)
+            	for(int i = 0; i < args.length; i++)
+            	{
+            		Object o = args[i];
+            		JavaClass[] params = getParameterTypes();
+            		JavaClass argClass = params[i];
+            		if(argClass.isPrimitive())
+            		{
+            			Object value;
+            			if(!(o instanceof JavaValue))
+            				value = o;
+            			else
+            				value = ((JavaValue)o).value();
+            			if(Primitives.unwrap(value.getClass()).getName().equals(argClass.getName()))
+	            			switch(argClass.getName())
+	            			{
+	            				case "boolean":
+	            					args[i] = new JavaBoolean((Boolean)o);
+	            					break;
+	            				case "byte":
+	            					args[i] = new JavaByte((Byte)o);
+	            					break;
+	            				case "char":
+	            					args[i] = new JavaCharacter((Character)o);
+	            					break;
+	            				case "double":
+	            					args[i] = new JavaDouble((Double)o);
+	            					break;
+	            				case "float":
+	            					args[i] = new JavaFloat((Float)o);
+	            					break;
+	            				case "int":
+	            					args[i] = new JavaInteger((Integer)o);
+	            					break;
+	            				case "long":
+	            					args[i] = new JavaLong((Long)o);
+	            					break;
+	            				case "short":
+	            					args[i] = new JavaShort((Short)o);
+	            					break;
+	            			}
+            		}
+            	}
             List<JavaValue> argsobjects = new ArrayList<>();
             if (args != null) {
                 for (Object o : args) {
