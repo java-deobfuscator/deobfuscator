@@ -12,6 +12,10 @@ public class LocalFrame extends Frame {
         this.value.children.add(this);
     }
     
+    public int getLocal() {
+    	return local;
+    }
+    
     public Frame getValue() {
     	return value;
     }
