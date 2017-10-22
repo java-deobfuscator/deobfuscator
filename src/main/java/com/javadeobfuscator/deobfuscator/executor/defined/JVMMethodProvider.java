@@ -160,6 +160,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("intern()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).intern());
+            put("valueOf(I)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).intValue()));
             put("equals(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(String.class).equals(args.get(0).value()));
             put("trim()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).trim());
             put("toCharArray()[C", (targetObject, args, context) -> targetObject.as(String.class).toCharArray());
