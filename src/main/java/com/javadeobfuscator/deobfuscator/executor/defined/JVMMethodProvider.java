@@ -178,6 +178,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("format(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.format(args.get(0).as(String.class), args.get(1).as(Object[].class)));
             put("split(Ljava/lang/String;)[Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).split(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).value()));
+            put("valueOf([C)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class)));
             put("replaceAll(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replaceAll(args.get(0).as(String.class), args.get(1).as(String.class)));
             put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> {
                 try {
@@ -237,6 +238,11 @@ public class JVMMethodProvider extends MethodProvider {
             put("append(Ljava/lang/String;)Ljava/lang/StringBuffer;", (targetObject, args, context) -> targetObject.as(StringBuffer.class).append(args.get(0).as(String.class)));
             put("append(C)Ljava/lang/StringBuffer;", (targetObject, args, context) -> targetObject.as(StringBuffer.class).append(args.get(0).as(char.class)));
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StringBuffer.class).toString());
+        }});
+        put("java/lang/CharSequence", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(CharSequence.class).toString());
+        	put("length()I", (targetObject, args, context) -> targetObject.as(CharSequence.class).length());
+        	put("charAt(I)C", (targetObject, args, context) -> targetObject.as(CharSequence.class).charAt(args.get(0).intValue()));
         }});
         put("java/lang/Exception", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
