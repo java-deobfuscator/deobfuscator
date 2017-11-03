@@ -27,6 +27,7 @@ import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.zelix.FlowObfuscationTransformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -36,8 +37,11 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
+@TransformerConfig.ConfigOptions(configClass = StringEncryptionTransformer.Config.class)
+public class StringEncryptionTransformer extends Transformer<StringEncryptionTransformer.Config> {
 
+	private List<ClassNode> decryptors = new ArrayList<>();
+	
     @Override
     public boolean transform() {
         System.out.println("[Stringer] [StringEncryptionTransformer] Starting");
@@ -56,29 +60,42 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     private int cleanup() {
         AtomicInteger total = new AtomicInteger();
         Set<String> remove = new HashSet<>();
-        classNodes().forEach(classNode -> {
-            boolean method = false;
-            boolean field = false;
-            for (MethodNode node : classNode.methods) {
-                if (node.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
-                    method = true;
-                } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
-                    method = false;
-                    break;
-                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") || node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
-                    method = true;
-                }
-            }
-            for (FieldNode node : classNode.fields) {
-                if (node.desc.equals("[Ljava/lang/Object;")) {
-                    field = true;
-                } else if (node.desc.equals("[Ljava/math/BigInteger")) {
-                    field = true;
-                }
-            }
-            if (method && field) {
-                remove.add(classNode.name);
-            }
+        if(getConfig().shouldRemoveAllStringerClasses())
+	        classNodes().forEach(classNode -> {
+	            boolean method = false;
+	            boolean field = false;
+	            for (MethodNode node : classNode.methods) {
+	                if (node.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
+	                    method = true;
+	                } else if (node.desc.equals("(Ljava/io/InputStream;)V")) { //Don't delete resource decryptors yet
+	                    method = false;
+	                    break;
+	                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") || node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
+	                    method = true;
+	                }
+	            }
+	            for (FieldNode node : classNode.fields) {
+	                if (node.desc.equals("[Ljava/lang/Object;")) {
+	                    field = true;
+	                } else if (node.desc.equals("[Ljava/math/BigInteger")) {
+	                    field = true;
+	                }
+	            }
+	            if (method && field) {
+	                remove.add(classNode.name);
+	            }
+	        });
+        decryptors.forEach(classNode ->
+        {
+        	boolean resource = false;
+        	for(MethodNode node : classNode.methods)
+        		if(node.desc.equals("(Ljava/io/InputStream;)V")) //Don't delete resource decryptors yet
+        		{
+        			resource = true;
+        			break;
+        		}
+        	if(!resource)
+        		remove.add(classNode.name);
         });
         remove.forEach(str -> {
             total.incrementAndGet();
@@ -129,6 +146,31 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     }
                                 }
                             }
+                        }else if (currentInsn.getOpcode() == Opcodes.GETSTATIC && currentInsn.getNext() instanceof MethodInsnNode) {
+                        	FieldInsnNode fieldNode = (FieldInsnNode) currentInsn;
+                        	boolean containsput = false;
+                        	MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                        	if (clinit != null) 
+                        		for (AbstractInsnNode ain : clinit.instructions.toArray())
+                        			if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(fieldNode.name) && ((FieldInsnNode) ain).desc.equals(fieldNode.desc) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
+                        				containsput = true;
+                        				break;
+                        			}
+                        	if(containsput) {
+	                        	MethodInsnNode m = (MethodInsnNode) currentInsn.getNext();
+	                        	String strCl = m.owner;
+	                            Type type = Type.getType(m.desc);
+	                            if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+	                                ClassNode innerClassNode = classes.get(strCl);
+	                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+	                                if (signature != null) {
+	                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+	                                    if (decrypterNode != null) {
+	                                        count.getAndIncrement();
+	                                    }
+	                                }
+	                            }
+                        	}
                         }
                     }
                 }
@@ -209,11 +251,10 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     LdcInsnNode replace = null;
                                     if (stringerInsns.get(16).getOpcode() != Opcodes.LDC) {
                                         fieldNode = (FieldInsnNode) stringerInsns.get(16);
-                                        String field = fieldNode.name;
                                         clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         if (clinit != null) 
                                         	for (AbstractInsnNode ain : clinit.instructions.toArray())
-                                        		if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(field) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
+                                        		if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(fieldNode.name) && ((FieldInsnNode) ain).desc.equals(fieldNode.desc) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
                                         			if (decryptedStaticFinals.containsKey(ain)) {
                                         				alreadyDecrypted = true;
                                         				break;
@@ -250,6 +291,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     Collections.reverse(before);
                                     Collections.reverse(after);
                                     if (decrypterNode != null) {
+                                    	decryptors.add(innerClassNode);
                                         Context context = new Context(provider);
                                         context.dictionary = classpath;
                                         context.constantPools = getDeobfuscator().getConstantPools();
@@ -324,6 +366,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     if (signature != null) {
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                         if (decrypterNode != null) {
+                                        	decryptors.add(innerClassNode);
                                             Context context = new Context(provider);
                                             context.dictionary = classpath;
                                             context.constantPools = getDeobfuscator().getConstantPools();
@@ -376,6 +419,82 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     }
                                 }
                             }
+                        }else if (currentInsn.getOpcode() == Opcodes.GETSTATIC && currentInsn.getNext() instanceof MethodInsnNode) {
+                        	MethodInsnNode m = (MethodInsnNode) currentInsn.getNext();
+                        	String strCl = m.owner;
+                            Type type = Type.getType(m.desc);
+                            if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                ClassNode innerClassNode = classes.get(strCl);
+                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+
+                                if (signature != null) {
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+                                    if (decrypterNode != null) {
+                                    	decryptors.add(innerClassNode);
+                                    	LdcInsnNode clinitLdc = null;
+                                    	FieldInsnNode fieldNode = (FieldInsnNode) currentInsn;
+                                    	MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                    	if (clinit != null) 
+                                    		for (AbstractInsnNode ain : clinit.instructions.toArray())
+                                    			if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(fieldNode.name) && ((FieldInsnNode) ain).desc.equals(fieldNode.desc) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
+                                    				if (decryptedStaticFinals.containsKey(ain)) {
+                                    					methodNode.instructions.remove(currentInsn.getNext());
+                                    					break;
+                                    				}
+                                    				clinitLdc = (LdcInsnNode) ain.getPrevious();
+                                    				break;
+                                    			}
+                                        Context context = new Context(provider);
+                                        context.dictionary = classpath;
+                                        context.constantPools = getDeobfuscator().getConstantPools();
+                                        context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+                                        context.file = getDeobfuscator().getConfig().getInput();
+
+                                        // Stringer3
+                                        if (innerClassNode.superName.equals("java/lang/Thread")) {
+                                            MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                            if (clinitMethod != null) {
+                                                //We don't want to run anything else (removes everything above it)
+                                                AbstractInsnNode firstVaildCode = null;
+                                                for (int i = 0; i < clinitMethod.instructions.size(); i++) {
+                                                    AbstractInsnNode ain = clinitMethod.instructions.get(i);
+                                                    if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).desc.equals("[Ljava/math/BigInteger;") && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ANEWARRAY && ain.getPrevious().getPrevious() != null && Utils.isNumber(ain.getPrevious().getPrevious())) {
+                                                        firstVaildCode = ain.getPrevious().getPrevious();
+                                                        break;
+                                                    }
+                                                }
+                                                List<AbstractInsnNode> removed = new ArrayList<>();
+                                                while (firstVaildCode != null && firstVaildCode.getPrevious() != null) {
+                                                    //Added in reverse order
+                                                    removed.add(firstVaildCode.getPrevious());
+                                                    clinitMethod.instructions.remove(firstVaildCode.getPrevious());
+                                                }
+                                                MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
+                                                //Placed in reverse order, so no need to reverse the list
+                                                for (AbstractInsnNode ain : removed)
+                                                    clinitMethod.instructions.insert(ain);
+                                            }
+                                        }
+
+                                        Object o = null;
+                                        try {
+                                            o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Collections.singletonList(new JavaObject(clinitLdc.cst, "java/lang/String")), null, context);
+                                        } catch (ArrayIndexOutOfBoundsException e) {
+                                            enhanced.put(currentInsn, classNode.name + " " + methodNode.name);
+                                        }
+                                        if (o != null) {
+                                        	clinitLdc.cst = (String) o;
+                                            methodNode.instructions.remove(currentInsn.getNext());
+                                            total.incrementAndGet();
+                                            int x = (int) ((total.get() * 1.0d / expected) * 100);
+                                            if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                                System.out.println("[Stringer] [StringEncryptionTransformer] Done " + x + "%");
+                                                alerted[x - 1] = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -409,6 +528,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                             if (innerMethod.desc.endsWith(")Ljava/lang/String;")) {
                                                 if (enhanced.remove(innerLdc) != null) {
                                                     ClassNode innerClassNode = classes.get(strCl);
+                                                    decryptors.add(innerClassNode);
                                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerMethod.name) && mn.desc.equals(innerMethod.desc)).findFirst().orElse(null);
                                                     Context context = new Context(provider);
                                                     context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
@@ -482,5 +602,30 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     		&& (insns.get(16).getOpcode() == Opcodes.LDC || insns.get(16).getOpcode() == Opcodes.GETSTATIC))
     		return insns;
     	return null;
+    }
+    
+    public static class Config extends TransformerConfig 
+	{
+		/**
+		 * Should we remove all Stringer classes, regardless if they
+		 * are called or not?
+		 * If you are dealing with multiple layers of stringer, it is best to keep this off.
+		 */
+        private boolean removeAllStringerClasses = true;
+
+        public Config() 
+        {
+            super(StringEncryptionTransformer.class);
+        }
+
+        public boolean shouldRemoveAllStringerClasses() 
+        {
+            return removeAllStringerClasses;
+        }
+
+        public void setRemoveAllStringerClasses(boolean removeAllStringerClasses) 
+        {
+            this.removeAllStringerClasses = removeAllStringerClasses;
+        }
     }
 }
