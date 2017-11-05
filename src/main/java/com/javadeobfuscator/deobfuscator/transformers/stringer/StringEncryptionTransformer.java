@@ -27,7 +27,6 @@ import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.transformers.zelix.FlowObfuscationTransformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
