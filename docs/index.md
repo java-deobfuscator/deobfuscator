@@ -74,6 +74,7 @@ Official transformers are linked via the `Transformers` class.
 | Stringer.INVOKEDYNAMIC | stringer.InvokedynamicTransformer | Decrypts invokedynamic obfuscated calls by Stringer (Below version 3.0.0) |
 | Stringer.REFLECTION_OBFUSCATION | stringer.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Stringer (Below version 3.0.0) |
 | Stringer.HIDEACCESS_OBFUSCATION | stringer.HideAccessObfuscationTransformer | Decrypts hide access by Stringer (Included invokedynamic and reflection) |
+| Stringer.RESOURCE_ENCRYPTION | stringer.ResourceEncryptionTransformer | Decrypts encrypted resources by Stringer |
 | Zelix.STRING_ENCRYPTION | zelix.StringEncryptionTransformer | Decrypts strings encrypted by Zelix |
 | Zelix.REFLECTION_OBFUSCATION | zelix.ReflectionObfuscationTransformer | Decrypts reflection obfuscated calls by Zelix |
 | Zelix.FLOW_OBFUSCATION | zelix.FlowObfuscationTransformer | Removes flow obfuscation by Zelix |
