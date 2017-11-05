@@ -17,27 +17,26 @@
 package com.javadeobfuscator.deobfuscator.transformers;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
-
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
 
 public abstract class Transformer<T extends TransformerConfig> {
 
     protected Map<String, ClassNode> classes;
     protected Map<String, ClassNode> classpath;
+    protected Map<String, byte[]> inputPassthrough = new HashMap<>();
 
     private Deobfuscator deobfuscator;
     private T config;
 
-    public void init(Deobfuscator deobfuscator, TransformerConfig config, Map<String, ClassNode> classes, Map<String, ClassNode> classpath) {
+    public void init(Deobfuscator deobfuscator, TransformerConfig config, Map<String, ClassNode> classes, Map<String, ClassNode> classpath, Map<String, byte[]> inputPassThrough) {
         this.deobfuscator = deobfuscator;
         this.classes = classes;
         this.classpath = classpath;
+        this.inputPassthrough = inputPassThrough;
         this.config = (T) config;
     }
 
