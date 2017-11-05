@@ -17,6 +17,7 @@
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URI;
@@ -27,6 +28,8 @@ import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -116,6 +119,33 @@ public class JVMMethodProvider extends MethodProvider {
                 }
                 return null;
             });
+        }});
+        put("java/io/PushbackInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("<init>(Ljava/io/InputStream;I)V", (targetObject, args, context) -> {
+                targetObject.initialize(new PushbackInputStream(args.get(0).as(InputStream.class), args.get(1).intValue()));
+                return null;
+            });
+            put("unread([BII)V", (targetObject, args, context) -> {
+            	targetObject.as(PushbackInputStream.class).unread(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue());
+            	return null;
+            });
+        }});
+        put("java/io/FilterInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("<init>(Ljava/io/InputStream;)V", (targetObject, args, context) -> {
+            	Constructor<FilterInputStream> init = FilterInputStream.class.getDeclaredConstructor(InputStream.class);
+            	init.setAccessible(true);
+            	targetObject.initialize(init.newInstance(args.get(0).as(InputStream.class)));
+                return null;
+            });
+        }});
+        put("java/util/zip/InflaterInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	 put("<init>(Ljava/io/InputStream;Ljava/util/zip/Inflater;)V", (targetObject, args, context) -> {
+                 targetObject.initialize(new InflaterInputStream(args.get(0).as(InputStream.class), args.get(1).as(Inflater.class)));
+                 return null;
+             });
+        }});
+        put("java/io/InputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("read([BII)I", (targetObject, args, context) -> targetObject.as(InputStream.class).read(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue()));
         }});
         put("java/util/List", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("add(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(List.class).add(args.get(0).as(Object.class)));
