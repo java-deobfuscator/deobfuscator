@@ -37,6 +37,7 @@ public class Transformers {
         public static final Class<? extends Transformer> INVOKEDYNAMIC = com.javadeobfuscator.deobfuscator.transformers.stringer.InvokedynamicTransformer.class;
         public static final Class<? extends Transformer> REFLECTION_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.stringer.ReflectionObfuscationTransformer.class;
         public static final Class<? extends Transformer> HIDEACCESS_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.stringer.HideAccessObfuscationTransformer.class;
+        public static final Class<? extends Transformer> RESOURCE_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.stringer.ResourceEncryptionTransformer.class;
     }
     
     public static class General {
