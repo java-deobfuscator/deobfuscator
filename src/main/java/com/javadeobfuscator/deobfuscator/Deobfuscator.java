@@ -279,7 +279,7 @@ public class Deobfuscator {
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
         Transformer transformer = config.getImplementation().newInstance();
-        transformer.init(this, config, classes, classpath);
+        transformer.init(this, config, classes, classpath, inputPassthrough);
         return transformer.transform();
     }
 
