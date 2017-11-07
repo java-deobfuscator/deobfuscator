@@ -298,9 +298,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                 }
                             }
                         }
-                        if (currentInsn instanceof LdcInsnNode && currentInsn.getNext() instanceof MethodInsnNode) {
+                    	if (getLegacyStringerInsns(currentInsn) != null) {
                             LdcInsnNode ldc = (LdcInsnNode) currentInsn;
-                            MethodInsnNode m = (MethodInsnNode) ldc.getNext();
+                            MethodInsnNode m = (MethodInsnNode) getLegacyStringerInsns(currentInsn).get(1);
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
@@ -334,7 +334,7 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                             }
                                             if (o != null) {
                                                 ldc.cst = (String) o;
-                                                methodNode.instructions.remove(ldc.getNext());
+                                                methodNode.instructions.remove(m);
                                                 total.incrementAndGet();
                                                 int x = (int) ((total.get() * 1.0d / expected) * 100);
                                                 if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
@@ -371,9 +371,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                 InsnList innerMethodInsns = targetMethodNode.instructions;
                                 for (int innerInsnIndex = 0; innerInsnIndex < innerMethodInsns.size(); innerInsnIndex++) {
                                     AbstractInsnNode innerCurrentInsn = innerMethodInsns.get(innerInsnIndex);
-                                    if (innerCurrentInsn instanceof LdcInsnNode && innerCurrentInsn.getNext() instanceof MethodInsnNode) {
+                                    if (getLegacyStringerInsns(innerCurrentInsn) != null) {
                                         LdcInsnNode innerLdc = (LdcInsnNode) innerCurrentInsn;
-                                        MethodInsnNode innerMethod = (MethodInsnNode) innerLdc.getNext();
+                                        MethodInsnNode innerMethod = (MethodInsnNode) getLegacyStringerInsns(innerCurrentInsn).get(1);
                                         if (innerLdc.cst instanceof String) {
                                             String strCl = innerMethod.owner;
                                             if (innerMethod.desc.endsWith(")Ljava/lang/String;")) {
@@ -388,7 +388,7 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                                     context.constantPools = getDeobfuscator().getConstantPools();
                                                     Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new JavaObject(innerLdc.cst, "java/lang/String")), null, context);
                                                     innerLdc.cst = o;
-                                                    targetMethodNode.instructions.remove(innerLdc.getNext());
+                                                    targetMethodNode.instructions.remove(innerMethod);
                                                     total.incrementAndGet();
                                                     int x = (int) ((total.get() * 1.0d / expected) * 100);
                                                     if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
@@ -451,6 +451,35 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
     		&& ((MethodInsnNode)insns.get(15)).name.equals("toCharArray")
     		&& ((MethodInsnNode)insns.get(15)).owner.equals("java/lang/String")
     		&& insns.get(16).getOpcode() == Opcodes.LDC)
+    		return insns;
+    	return null;
+    }
+    
+    private List<AbstractInsnNode> getLegacyStringerInsns(AbstractInsnNode now)
+    {
+    	List<AbstractInsnNode> insns = new ArrayList<>();
+    	if(now.getOpcode() != Opcodes.LDC)
+    		return null;
+    	AbstractInsnNode next = now;
+    	while(next != null)
+    	{
+    		if(Utils.isInstruction(next))
+    		{
+    			if(next.getOpcode() == Opcodes.GOTO
+    				&& ((JumpInsnNode)next).label == next.getNext())
+    			{
+    				next = next.getNext();
+    				continue;
+    			}
+    			insns.add(next);
+    			if(insns.size() >= 2)
+    				break;
+    		}
+    		next = next.getNext();
+    	}
+    	if(insns.size() < 2)
+    		return null;
+    	if(insns.get(1).getOpcode() == Opcodes.INVOKESTATIC)
     		return insns;
     	return null;
     }
