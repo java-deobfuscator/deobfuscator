@@ -33,9 +33,9 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // I can't believe this has to exist
@@ -50,10 +50,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         provider.register(new JVMComparisonProvider());
 
         classNodes().forEach(classNode -> {
+        	Set<MethodNode> stringDecrypt = new HashSet<>();
             classNode.methods.forEach(methodNode -> {
                 AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
 
-                Map<AbstractInsnNode, InsnList> replacements = new HashMap<>();
+                List<AbstractInsnNode> remove = new ArrayList<>();
 
                 insns:
                 for (int index = 0; index < methodNode.instructions.size(); index++) {
@@ -71,7 +72,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                     MethodFrame frame = (MethodFrame) result.getFrames().get(methodInsnNode).get(0);
 
                     List<JavaValue> args = new ArrayList<>();
-                    Map<AbstractInsnNode, InsnList> localReplacements = new HashMap<>();
+                    List<AbstractInsnNode> localRemove = new ArrayList<>();
 
                     for (Frame arg : frame.getArgs()) {
                         if (arg instanceof LdcFrame) {
@@ -79,6 +80,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                             if (cst == null) {
                                 continue insns;
                             }
+                            localRemove.add(result.getMapping().get(arg));
                             if (cst instanceof String) {
                                 args.add(new JavaObject(cst, "java/lang/String"));
                             } else {
@@ -86,32 +88,30 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                             }
                         } else if (arg instanceof NewArrayFrame) {
                             NewArrayFrame newArrayFrame = (NewArrayFrame) arg;
-
-                            {
-                                InsnList list = new InsnList();
-                                list.add(new InsnNode(Opcodes.POP));
-                                list.add(new InsnNode(Opcodes.ACONST_NULL));
-                                localReplacements.put(result.getMapping().get(newArrayFrame), list);
-                            }
-
+                            localRemove.add(result.getMapping().get(newArrayFrame));
                             if (newArrayFrame.getLength() instanceof LdcFrame) {
+                            	localRemove.add(result.getMapping().get(newArrayFrame.getLength()));
                                 char[] arr = new char[((Number) ((LdcFrame) newArrayFrame.getLength()).getConstant()).intValue()];
                                 JavaObject obj = new JavaObject(arr, "[C");
                                 for (Frame child0 : arg.getChildren()) {
                                     if (child0 instanceof ArrayStoreFrame) {
                                         ArrayStoreFrame arrayStoreFrame = (ArrayStoreFrame) child0;
                                         if (arrayStoreFrame.getIndex() instanceof LdcFrame && arrayStoreFrame.getObject() instanceof LdcFrame) {
-                                            {
-                                                InsnList list = new InsnList();
-                                                list.add(new InsnNode(Opcodes.POP2));
-                                                list.add(new InsnNode(Opcodes.POP));
-                                                localReplacements.put(result.getMapping().get(arrayStoreFrame), list);
-                                            }
+                                        	if(arrayStoreFrame.getIndex().getChildren().get(0) instanceof DupFrame
+                                        		&& ((DupFrame)arrayStoreFrame.getIndex().getChildren().get(0)).getOpcode() == Opcodes.DUP_X2)
+                                        	{
+                                        		localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex().getChildren().get(0)));
+                                        		methodNode.instructions.insertBefore(methodInsnNode, new LdcInsnNode(((LdcFrame) arrayStoreFrame.getIndex()).getConstant()));
+                                        	}
+                                        	localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex()));
+                                        	localRemove.add(result.getMapping().get(arrayStoreFrame.getObject()));
+                                        	localRemove.add(result.getMapping().get(arrayStoreFrame));
                                             arr[((Number) ((LdcFrame) arrayStoreFrame.getIndex()).getConstant()).intValue()] = (char) ((Number) ((LdcFrame) arrayStoreFrame.getObject()).getConstant()).intValue();
                                         } else {
                                             continue insns;
                                         }
-                                    }
+                                    }else if(child0 instanceof DupFrame)
+                                		localRemove.add(result.getMapping().get(child0));
                                 }
                                 args.add(obj);
                             } else {
@@ -127,15 +127,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                         try {
                             Object o = MethodExecutor.execute(classNode, decrypterNode, args, null, context);
-                            InsnList list = new InsnList();
-                            for (int i = 0; i < args.size(); i++) {
-                                list.add(new InsnNode(Opcodes.POP));
-                            }
-                            list.add(new LdcInsnNode(o));
-                            methodNode.instructions.insertBefore(methodInsnNode, list);
+                            methodNode.instructions.insertBefore(methodInsnNode, new LdcInsnNode(o));
                             methodNode.instructions.remove(methodInsnNode);
-                            replacements.putAll(localReplacements);
+                            remove.addAll(localRemove);
                             counter.getAndIncrement();
+                            stringDecrypt.add(decrypterNode);
                         } catch (Throwable t) {
                             System.out.println("Error while decrypting string. " + methodInsnNode.owner + " " + methodInsnNode.name + methodInsnNode.desc);
                             t.printStackTrace(System.out);
@@ -143,10 +139,12 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                     }
                 }
 
-                replacements.forEach((k, v) -> {
-                    methodNode.instructions.insertBefore(k, v);
+                remove.forEach(k -> {
                     methodNode.instructions.remove(k);
                 });
+            });
+            stringDecrypt.forEach(m -> {
+            	classNode.methods.remove(m);
             });
         });
 
