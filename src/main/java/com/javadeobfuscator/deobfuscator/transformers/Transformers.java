@@ -65,6 +65,7 @@ public class Transformers {
 
     public static class SkidSuite {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.skidsuite2.StringEncryptionTransformer.class;
+        public static final Class<? extends Transformer> FAKE_EXCEPTION = com.javadeobfuscator.deobfuscator.transformers.skidsuite2.FakeExceptionTransformer.class;
     }
 
     public static class Normalizer {
