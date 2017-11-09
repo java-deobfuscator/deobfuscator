@@ -424,10 +424,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
     			{
     				previous = previous.getPrevious();
     				continue;
-    			}else if(previous instanceof LabelNode)
-    			{
-    				previous = previous.getPrevious();
-    				continue;
     			}
     			insns.add(previous);
     			if(insns.size() >= 17)
@@ -471,10 +467,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
     		{
     			if(next.getOpcode() == Opcodes.GOTO
     				&& ((JumpInsnNode)next).label == next.getNext())
-    			{
-    				next = next.getNext();
-    				continue;
-    			}else if(next instanceof LabelNode)
     			{
     				next = next.getNext();
     				continue;
