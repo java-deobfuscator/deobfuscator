@@ -1,12 +1,8 @@
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaDouble;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaFloat;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
@@ -52,7 +48,15 @@ public class JavaConstructor {
                 Type type = (Type)arg;
                 arg = new JavaClass(type.getInternalName().replace('/', '.'), context);
             }
-            if(arg instanceof Integer)
+    		if(arg instanceof Boolean)
+    			javaArgs.add(0, new JavaBoolean((Boolean)arg));
+    		else if(arg instanceof Character)
+                javaArgs.add(0, new JavaCharacter((Character)arg));
+    		else if(arg instanceof Byte)
+                javaArgs.add(0, new JavaByte((Byte)arg));
+    		else if(arg instanceof Short)
+                javaArgs.add(0, new JavaShort((Short)arg));
+    		else if(arg instanceof Integer)
                 javaArgs.add(0, new JavaInteger((Integer)arg));
             else if(arg instanceof Float)
                 javaArgs.add(0, new JavaFloat((Float)arg));
