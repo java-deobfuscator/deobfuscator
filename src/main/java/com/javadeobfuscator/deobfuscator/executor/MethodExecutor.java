@@ -24,7 +24,6 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 import com.google.common.base.Optional;
-import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.*;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaAddress;
@@ -185,7 +184,7 @@ public class MethodExecutor {
     }
 
     public static Object convert(Object value, String type) {
-        if (value instanceof Number && Utils.isDigit(type)) {
+        if (value instanceof Number && Utils.canReturnDigit(type)) {
             Number cast = (Number) value;
             switch (type) {
                 case "I":
@@ -198,10 +197,20 @@ public class MethodExecutor {
                     return cast.longValue();
                 case "Z":
                 	return cast.intValue() != 0;
+                case "C":
+                	return (char)cast.intValue();
             }
         }
 
         return value;
+    }
+    
+    public static void convertArgs(List<JavaValue> args, Type[] methodParams) {
+        for(int i = 0; i < args.size(); i++) {
+        	JavaValue arg = args.get(i);
+        	if(arg instanceof JavaInteger && methodParams[i].getDescriptor().equals("I"))
+        		args.set(i, new JavaInteger(arg.intValue()));
+        }
     }
 
     public static Object value(JavaValue value) {
@@ -947,7 +956,7 @@ public class MethodExecutor {
                     }
                     case IRETURN: {
                         context.pop();
-                        return (T) (Integer) stack.remove(0).intValue();
+                        return (T) convert(value(stack.remove(0)), Type.getReturnType(method.desc).getDescriptor());
                     }
                     case LRETURN: {
                         context.pop();
@@ -1025,12 +1034,6 @@ public class MethodExecutor {
                     }
                     case GETFIELD: {
                         JavaValue obj = stack.remove(0);
-                        if (obj instanceof JavaTop) {
-                        	obj = stack.remove(0);
-                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
-                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
-                        	}
-                        }
                         FieldInsnNode cast = (FieldInsnNode) now;
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
@@ -1071,6 +1074,12 @@ public class MethodExecutor {
                     }
                     case PUTFIELD: {
                         JavaValue obj = stack.remove(0);
+                        if (obj instanceof JavaTop) {
+                        	obj = stack.remove(0);
+                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
+                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
+                        	}
+                        }
                         JavaValue instance = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
                         context.provider.setField(cast.owner, cast.name, cast.desc, instance, convert(value(obj), cast.desc), context);
@@ -1089,6 +1098,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
                         String owner = cast.owner;
                         while(true) {
@@ -1157,6 +1167,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
                         String owner = cast.owner;
                         while(true) {
@@ -1227,6 +1238,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, null, args, context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, null, args, context);
                             switch (type.getSort()) {
@@ -1279,6 +1291,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
