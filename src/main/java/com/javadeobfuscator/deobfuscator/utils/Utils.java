@@ -266,12 +266,14 @@ public class Utils {
         }
     }
 
-    public static boolean isDigit(String type) {
+    public static boolean canReturnDigit(String type) {
         switch (type) {
             case "I":
             case "S":
             case "B":
             case "J":
+            case "Z":
+            case "C":
                 return true;
             default:
                 return false;
