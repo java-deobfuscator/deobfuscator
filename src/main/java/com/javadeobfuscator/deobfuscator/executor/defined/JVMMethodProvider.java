@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URI;
@@ -69,7 +70,12 @@ public class JVMMethodProvider extends MethodProvider {
                 }
                 return null;
             });
-            put("equals(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.equals(args.get(0).value()));
+            put("equals(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.value().equals(args.get(0).value()));
+            put("clone()Ljava/lang/Object;", (targetObject, args, context) -> {
+            	Method clone = Object.class.getDeclaredMethod("clone");
+            	clone.setAccessible(true);
+            	return clone.invoke(targetObject.value());
+            });
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, targetObject.type()); 
                 targetObject.initialize(new JavaObject(null, targetObject.type())); 
@@ -149,6 +155,9 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/util/List", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("add(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(List.class).add(args.get(0).as(Object.class)));
+            put("size()I", (targetObject, args, context) -> targetObject.as(List.class).size());
+            put("get(I)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(List.class).get(args.get(0).intValue()));
+            put("set(ILjava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(List.class).set(args.get(0).intValue(), args.get(1).as(Object.class)));
             put("toArray()[Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(List.class).toArray());
             put("iterator()Ljava/util/Iterator;", (targetObject, args, context) -> targetObject.as(List.class).iterator());
         }});
@@ -162,6 +171,17 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(new ArrayList<>());
                 return null;
             });
+            put("<init>(Ljava/util/Collection;)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/util/ArrayList");
+                targetObject.initialize(new ArrayList<>(args.get(0).as(Collection.class)));
+                return null;
+            });
+            put("add(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(ArrayList.class).add(args.get(0).as(Object.class)));
+            put("size()I", (targetObject, args, context) -> targetObject.as(ArrayList.class).size());
+            put("get(I)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(ArrayList.class).get(args.get(0).intValue()));
+            put("set(ILjava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(ArrayList.class).set(args.get(0).intValue(), args.get(1).as(Object.class)));
+            put("toArray()[Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(ArrayList.class).toArray());
+            put("iterator()Ljava/util/Iterator;", (targetObject, args, context) -> targetObject.as(ArrayList.class).iterator());
         }});
         put("java/lang/String", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>([CII)V", (targetObject, args, context) -> {
@@ -560,6 +580,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).put(args.get(0), args.get(1)));
+            put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).get(args.get(0).value()));
             put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(HashMap.class).isEmpty()); 
         }});
         put("java/util/HashSet", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
