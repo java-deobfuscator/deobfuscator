@@ -152,7 +152,9 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                                 MethodInsnNode replacement = null;
                                 switch (result.type) {
                                     case "virtual":
-                                        replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
+                                        replacement = new MethodInsnNode((classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0 ? 
+                                        	 Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc,
+                                        	 (classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0);
                                         break;
                                     case "static":
                                         replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);
