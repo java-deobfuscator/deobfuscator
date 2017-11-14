@@ -631,13 +631,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/math/BigInteger", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/String;I)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/math/BigInteger");
-                if (args.get(1).value() instanceof Byte) { // FIXME
-                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (byte) args.get(1).value()));
-                } else if (args.get(1).value() instanceof Short) {
-                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (short) args.get(1).value()));
-                } else {
-                    targetObject.initialize(new BigInteger(args.get(0).as(String.class), (int) args.get(1).value()));
-                }
+                targetObject.initialize(new BigInteger(args.get(0).as(String.class), args.get(1).intValue()));
                 return null;
             });
             put("add(Ljava/math/BigInteger;)Ljava/math/BigInteger;", (targetObject, args, context) -> targetObject.as(BigInteger.class).add(args.get(0).as(BigInteger.class)));
