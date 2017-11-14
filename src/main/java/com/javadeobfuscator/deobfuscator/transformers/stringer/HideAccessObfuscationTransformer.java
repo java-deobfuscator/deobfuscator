@@ -131,9 +131,9 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                 decryptMethods.add(bootstrapMethod);
 
                                 List<JavaValue> args = new ArrayList<>();
-                                args.add(JavaValue.valueOf(null));
+                                args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup"));
                                 args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) insn).name));
-                                args.add(JavaValue.valueOf(null));
+                                args.add(new JavaObject(null, "java/lang/invoke/MethodType"));
 
                                 JavaMethodHandle result = MethodExecutor.execute(classNode, bootstrapMethod, args, null, context);
                                 switch (result.type) {
