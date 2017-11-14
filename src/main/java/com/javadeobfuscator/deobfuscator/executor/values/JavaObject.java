@@ -41,10 +41,6 @@ public class JavaObject extends JavaValue {
     public void initialize(Object value) {
         this.value = value;
     }
-    
-    public void cast(String type) {
-        this.type = type;
-    }
 
     public String type() {
         return this.type;
