@@ -64,11 +64,11 @@ public class MethodExecutor {
         List<JavaValue> stack = new LinkedList<>();
         List<JavaValue> locals = new LinkedList<>();
         if (!Modifier.isStatic(method.access)) {
-            if (instance != null && instance instanceof JavaObject) {
-                locals.add((JavaObject) instance);
-            } else {
-                locals.add(new JavaObject(instance, "java/lang/Object"));
-            }
+        	if (instance == null) {
+            	locals.add(new JavaObject(null, "java/lang/Object"));
+        	} else {
+        		locals.add((JavaValue)instance);
+        	}
         }
         if (args != null) {
             for (JavaValue arg : args) {
@@ -132,7 +132,7 @@ public class MethodExecutor {
                 result = new JavaShort((Short) value);
                 break;
             default:
-                result = new JavaObject(value, "java/lang/Object");
+            	result = JavaValue.valueOf(value);
                 break;
         }
         stack.add(0, result);
@@ -1015,7 +1015,7 @@ public class MethodExecutor {
                                 break;
                             case Type.ARRAY:
                             case Type.OBJECT:
-                                stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                            	stack.add(0, JavaValue.valueOf(provided));
                                 break;
                         }
                         break;
@@ -1067,7 +1067,7 @@ public class MethodExecutor {
                                 break;
                             case Type.ARRAY:
                             case Type.OBJECT:
-                                stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                            	stack.add(0, JavaValue.valueOf(provided));
                                 break;
                         }
                         break;
@@ -1100,7 +1100,7 @@ public class MethodExecutor {
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
-                        String owner = cast.owner;
+                        String owner = args.get(args.size() - 1).type();
                         while(true) {
                             try {
                                 if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
@@ -1134,11 +1134,11 @@ public class MethodExecutor {
                                             break;
                                         case Type.ARRAY:
                                         case Type.OBJECT:
-                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                        	stack.add(0, JavaValue.valueOf(provided));
                                             break;
                                     }
                                 } else {
-                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
@@ -1203,7 +1203,7 @@ public class MethodExecutor {
                                             break;
                                         case Type.ARRAY:
                                         case Type.OBJECT:
-                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                        	stack.add(0, JavaValue.valueOf(provided));
                                             break;
                                     }
                                 } else {
@@ -1270,7 +1270,7 @@ public class MethodExecutor {
                                     break;
                                 case Type.ARRAY:
                                 case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                	stack.add(0, JavaValue.valueOf(provided));
                                     break;
                             }
                         } else {
@@ -1293,7 +1293,41 @@ public class MethodExecutor {
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
-                        if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                        if (context.provider.canInvokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                            Object provided = context.provider.invokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
+                            switch (type.getSort()) {
+                                case Type.BOOLEAN:
+                                    stack.add(0, new JavaBoolean((Boolean) provided));
+                                    break;
+                                case Type.CHAR:
+                                    stack.add(0, new JavaCharacter((Character) provided));
+                                    break;
+                                case Type.BYTE:
+                                    stack.add(0, new JavaByte((Byte) provided));
+                                    break;
+                                case Type.SHORT:
+                                    stack.add(0, new JavaShort((Short) provided));
+                                    break;
+                                case Type.INT:
+                                    stack.add(0, new JavaInteger((Integer) provided));
+                                    break;
+                                case Type.FLOAT:
+                                    stack.add(0, new JavaFloat((Float) provided));
+                                    break;
+                                case Type.LONG:
+                                    stack.add(0, new JavaLong((Long) provided));
+                                    stack.add(0, new JavaTop());
+                                    break;
+                                case Type.DOUBLE:
+                                    stack.add(0, new JavaDouble((Double) provided));
+                                    stack.add(0, new JavaTop());
+                                    break;
+                                case Type.ARRAY:
+                                case Type.OBJECT:
+                                	stack.add(0, JavaValue.valueOf(provided));
+                                    break;
+                            }
+                        } else if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
                             switch (type.getSort()) {
                                 case Type.BOOLEAN:
@@ -1324,11 +1358,11 @@ public class MethodExecutor {
                                     break;
                                 case Type.ARRAY:
                                 case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                	stack.add(0, JavaValue.valueOf(provided));
                                     break;
                             }
-                        } else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                        }else {
+                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
                         }
                         break;
                     }
@@ -1372,12 +1406,12 @@ public class MethodExecutor {
                             default:
                                 throw new ExecutionException("Unknown newarray type " + cast.operand);
                         }
-                        stack.add(0, new JavaObject(add, "java/lang/Object"));
+                        stack.add(0, JavaValue.valueOf(add));
                         break;
                     }
                     case ANEWARRAY: {
                         int len = stack.remove(0).intValue();
-                        stack.add(0, new JavaObject(new Object[len], "java/lang/Object"));
+                        stack.add(0, JavaValue.valueOf(new Object[len]));
                         break;
                     }
                     case ARRAYLENGTH: {
@@ -1415,6 +1449,10 @@ public class MethodExecutor {
                                 throw new NoSuchComparisonHandlerException("No comparator found for " + cast.desc);
                             }
                         }
+                        if(Type.getType(cast.desc).getSort() == Type.ARRAY)
+                        	((JavaObject)obj).cast("java/lang/Object");
+                        else
+                        	((JavaObject)obj).cast(cast.desc);
                         break;
                     }
                     case INSTANCEOF: {
@@ -1499,7 +1537,7 @@ public class MethodExecutor {
                             if (method.instructions.indexOf(tcbn.start) <= method.instructions.indexOf(now) && method.instructions.indexOf(now) < method.instructions.indexOf(tcbn.end)) {
                                 if (tcbn.type == null || tcbn.type.equals("java/lang/Throwable")) {
                                     stack.clear();
-                                    stack.add(new JavaObject(toThrow, "java/lang/Object"));
+                                    stack.add(JavaValue.valueOf(toThrow));
                                     now = tcbn.handler;
                                     continue forever;
                                 } else {
@@ -1518,7 +1556,7 @@ public class MethodExecutor {
                                         }
                                         if (ok) {
                                             stack.clear();
-                                            stack.add(new JavaObject(toThrow, "java/lang/Object"));
+                                            stack.add(JavaValue.valueOf(toThrow));
                                             now = tcbn.handler;
                                             continue forever;
                                         }
@@ -1545,7 +1583,7 @@ public class MethodExecutor {
                         if (method.instructions.indexOf(tcbn.start) <= method.instructions.indexOf(now) && method.instructions.indexOf(now) < method.instructions.indexOf(tcbn.end)) {
                             if (tcbn.type == null || tcbn.type.equals("java/lang/Throwable")) {
                                 stack.clear();
-                                stack.add(new JavaObject(t, "java/lang/Object"));
+                                stack.add(JavaValue.valueOf(t));
                                 now = tcbn.handler;
                                 continue forever;
                             } else {
@@ -1564,7 +1602,7 @@ public class MethodExecutor {
                                     }
                                     if (ok) {
                                         stack.clear();
-                                        stack.add(new JavaObject(t, "java/lang/Object"));
+                                        stack.add(JavaValue.valueOf(t));
                                         now = tcbn.handler;
                                         continue forever;
                                     }
