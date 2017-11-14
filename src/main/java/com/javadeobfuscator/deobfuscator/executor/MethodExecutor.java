@@ -1294,7 +1294,7 @@ public class MethodExecutor {
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
                         if (context.provider.canInvokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
-                            Object provided = context.provider.invokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
+                        	Object provided = context.provider.invokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
                             switch (type.getSort()) {
                                 case Type.BOOLEAN:
                                     stack.add(0, new JavaBoolean((Boolean) provided));
@@ -1449,10 +1449,6 @@ public class MethodExecutor {
                                 throw new NoSuchComparisonHandlerException("No comparator found for " + cast.desc);
                             }
                         }
-                        if(Type.getType(cast.desc).getSort() == Type.ARRAY)
-                        	((JavaObject)obj).cast("java/lang/Object");
-                        else
-                        	((JavaObject)obj).cast(cast.desc);
                         break;
                     }
                     case INSTANCEOF: {
