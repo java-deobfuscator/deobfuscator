@@ -92,7 +92,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                             if (newArrayFrame.getLength() instanceof LdcFrame) {
                             	localRemove.add(result.getMapping().get(newArrayFrame.getLength()));
                                 char[] arr = new char[((Number) ((LdcFrame) newArrayFrame.getLength()).getConstant()).intValue()];
-                                JavaObject obj = new JavaObject(arr, "[C");
+                                JavaObject obj = new JavaObject(arr, "java/lang/Object");
                                 for (Frame child0 : arg.getChildren()) {
                                     if (child0 instanceof ArrayStoreFrame) {
                                         ArrayStoreFrame arrayStoreFrame = (ArrayStoreFrame) child0;
