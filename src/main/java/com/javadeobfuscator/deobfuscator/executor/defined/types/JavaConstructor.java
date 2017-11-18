@@ -36,13 +36,16 @@ public class JavaConstructor {
         return params.toArray(new JavaClass[params.size()]);
     }
 
-    public Object newInstance(Context context, Object[] args)
+    public Object newInstance(Context context, Object argsObject)
     {
+    	Object[] args = (Object[])((JavaArray)argsObject).value();
+    	String[] argTypes = ((JavaArray)argsObject).getTypeArray();
     	MethodNode method = clazz.getClassNode().methods.stream().filter(m -> m.name.equals("<init>") 
     		&& m.desc.equals(desc)).findFirst().orElse(null);
     	List<JavaValue> javaArgs = new ArrayList<>();
-    	for(Object arg : args)
+    	for(int i = 0; i < args.length; i++)
     	{
+    		Object arg = args[i];
     		if(arg instanceof Type)
     		{
                 Type type = (Type)arg;
@@ -64,8 +67,10 @@ public class JavaConstructor {
                 javaArgs.add(0, new JavaDouble((Double)arg));
             else if(arg instanceof Long)
                 javaArgs.add(0, new JavaLong((Long)arg));
+            else if(arg != null && arg.getClass().isArray())
+            	javaArgs.add(new JavaArray(arg));
             else
-            	javaArgs.add(JavaValue.valueOf(arg));
+            	javaArgs.add(new JavaObject(arg, argTypes[i]));
     	}
     	JavaObject instance = new JavaObject(clazz.getName().replace(".", "/"));
     	context.provider.invokeMethod(clazz.getName().replace(".", "/"), method.name, method.desc,
