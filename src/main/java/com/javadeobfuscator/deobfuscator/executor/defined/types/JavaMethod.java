@@ -82,7 +82,9 @@ public class JavaMethod {
         return getDeclaringClass().getName().hashCode() ^ getName().hashCode();
     }
 
-    public Object invoke(JavaValue instance, Object[] args) {
+    public Object invoke(JavaValue instance, Object argsObject) {
+    	Object[] args = (Object[])((JavaArray)argsObject).value();
+    	String[] argTypes = ((JavaArray)argsObject).getTypeArray();
         try {
         	//Fix for unboxing/boxing
         	List<Integer> fixed = new ArrayList<>();
@@ -138,8 +140,12 @@ public class JavaMethod {
                 for (int i = 0; i < args.length; i++) {
                 	Object o = args[i];
                 	if(!fixed.contains(i))
-                		argsobjects.add(JavaValue.valueOf(o));
-                	else
+                	{
+                		if(o != null && o.getClass().isArray())
+                			argsobjects.add(new JavaArray(o));
+                        else
+                        	argsobjects.add(new JavaObject(o, argTypes[i]));
+                	}else
                 		argsobjects.add((JavaValue)o);
                 }
             }
