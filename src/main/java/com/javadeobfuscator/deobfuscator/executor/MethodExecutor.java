@@ -125,7 +125,10 @@ public class MethodExecutor {
                 result = new JavaShort((Short) value);
                 break;
             default:
-            	result = new JavaObject(value, ((JavaArray)arrValue).getValueType(index));
+            	if(value != null && value.getClass().isArray())
+            		result = new JavaArray(value);
+            	else
+            		result = new JavaObject(value, ((JavaArray)arrValue).getValueType(index));
                 break;
         }
         stack.add(0, result);
