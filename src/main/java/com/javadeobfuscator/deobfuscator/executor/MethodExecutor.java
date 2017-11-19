@@ -341,7 +341,6 @@ public class MethodExecutor {
         if (DEBUG) {
             System.out.println("Executing " + classNode.name + " " + method.name + method.desc);
         }
-        //TODO: JavaMethod/Constructor fix
         forever:
         while (true) {
             try {
