@@ -34,8 +34,8 @@ public class InstructionMatcher {
     }
 
     public boolean find() {
-        GroupedStep groupedStep = new GroupedStep(pattern.getSteps());
-        end = groupedStep.tryMatch(this, start);
+        Step mainStep = new CapturingStep(new MultiStep(pattern.getSteps()), "all");
+        end = mainStep.tryMatch(this, start);
         if (end != null) {
             end = Utils.getPrevious(end); // We want this inclusive
             if (end == null) {

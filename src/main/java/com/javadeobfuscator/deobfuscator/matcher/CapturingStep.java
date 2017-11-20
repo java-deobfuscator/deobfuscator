@@ -39,8 +39,9 @@ public class CapturingStep implements Step {
             return null;
         }
         List<AbstractInsnNode> captured = new ArrayList<>();
-        for (; start != end; start = Utils.getNext(start)) {
-            captured.add(start);
+        for (; start != end; start = start.getNext()) {
+            if (Utils.isInstruction(start))
+                captured.add(start);
         }
         matcher.capture(id, captured);
         return end;

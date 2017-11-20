@@ -19,10 +19,10 @@ package com.javadeobfuscator.deobfuscator.matcher;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
-public class GroupedStep implements Step {
+public class MultiStep implements Step {
     private final Step[] steps;
 
-    public GroupedStep(Step... steps) {
+    public MultiStep(Step... steps) {
         this.steps = steps;
     }
 
