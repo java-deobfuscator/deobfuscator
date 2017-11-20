@@ -37,6 +37,9 @@ public class Configuration {
     private List<File> path;
 
     @JsonProperty
+    private List<File> libraries;
+
+    @JsonProperty
     private List<String> ignoredClasses;
 
     @JsonProperty
@@ -88,5 +91,13 @@ public class Configuration {
 
     public void setIgnoredClasses(List<String> ignoredClasses) {
         this.ignoredClasses = ignoredClasses;
+    }
+
+    public List<File> getLibraries() {
+        return libraries;
+    }
+
+    public void setLibraries(List<File> libraries) {
+        this.libraries = libraries;
     }
 }

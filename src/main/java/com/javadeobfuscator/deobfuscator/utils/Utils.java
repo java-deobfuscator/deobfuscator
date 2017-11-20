@@ -16,20 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -68,6 +65,13 @@ public class Utils {
             next = next.getNext();
         }
         return next;
+    }
+
+    public static AbstractInsnNode getPrevious(AbstractInsnNode node, int amount) {
+        for (int i = 0; i < amount; i++) {
+            node = getPrevious(node);
+        }
+        return node;
     }
 
     public static AbstractInsnNode getPrevious(AbstractInsnNode node) {
@@ -363,8 +367,10 @@ public class Utils {
 		if(node.getOpcode() >= Opcodes.ICONST_M1
 			&& node.getOpcode() <= Opcodes.ICONST_5)
 			return node.getOpcode() - 3;
-		if(node.getOpcode() == Opcodes.SIPUSH
-			|| node.getOpcode() == Opcodes.BIPUSH)
+		if (node.getOpcode() == Opcodes.BIPUSH) {
+		    return ((IntInsnNode) node).operand & 0xFF;
+        }
+		if(node.getOpcode() == Opcodes.SIPUSH)
 			return ((IntInsnNode)node).operand;
 		if(node instanceof LdcInsnNode)
 		{
@@ -374,4 +380,44 @@ public class Utils {
 		}
 		return 0;
 	}
+
+    public static List<byte[]> loadBytes(File input) {
+        List<byte[]> result = new ArrayList<>();
+
+        if (input.getName().endsWith(".jar")) {
+            try (ZipFile zipIn = new ZipFile(input)) {
+                Enumeration<? extends ZipEntry> e = zipIn.entries();
+                while (e.hasMoreElements()) {
+                    ZipEntry next = e.nextElement();
+                    if (next.getName().endsWith(".class")) {
+                        try (InputStream in = zipIn.getInputStream(next)) {
+                            result.add(IOUtils.toByteArray(in));
+                        } catch (IllegalArgumentException x) {
+                            System.out.println("Could not parse " + next.getName() + " (is it a class?)");
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace(System.out);
+            }
+        } else if (input.getName().endsWith(".class")) {
+            try (InputStream in = new FileInputStream(input)) {
+                result.add(IOUtils.toByteArray(in));
+            } catch (Throwable x) {
+                System.out.println("Could not parse " + input.getName() + " (is it a class?)");
+            }
+        }
+
+        return result;
+    }
+
+    public static Map<LabelNode, LabelNode> generateCloneMap(InsnList list) {
+        Map<LabelNode, LabelNode> result = new HashMap<>();
+        list.iterator().forEachRemaining(insn -> {
+            if (insn instanceof LabelNode) {
+                result.put((LabelNode) insn, new LabelNode());
+            }
+        });
+        return result;
+    }
 }

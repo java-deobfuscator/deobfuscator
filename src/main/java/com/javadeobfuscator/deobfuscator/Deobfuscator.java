@@ -89,7 +89,7 @@ public class Deobfuscator {
         return this.constantPools;
     }
 
-    private Map<String, ClassNode> loadClasspathFile(File file) throws IOException {
+    private Map<String, ClassNode> loadClasspathFile(File file, boolean skipCode) throws IOException {
         Map<String, ClassNode> map = new HashMap<>();
 
         ZipFile zipIn = new ZipFile(file);
@@ -99,7 +99,7 @@ public class Deobfuscator {
             if (ent.getName().endsWith(".class")) {
                 ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                 ClassNode node = new ClassNode();
-                reader.accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                reader.accept(node, (skipCode ? ClassReader.SKIP_CODE : 0) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 map.put(node.name, node);
 
                 setConstantPool(node, new ConstantPool(reader));
@@ -114,18 +114,32 @@ public class Deobfuscator {
         if (configuration.getPath() != null) {
             for (File file : configuration.getPath()) {
                 if (file.isFile()) {
-                    classpath.putAll(loadClasspathFile(file));
+                    classpath.putAll(loadClasspathFile(file, true));
                 } else {
                     File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
                     if (files != null) {
                         for (File child : files) {
-                            classpath.putAll(loadClasspathFile(child));
+                            classpath.putAll(loadClasspathFile(child, true));
                         }
                     }
                 }
             }
-            libraryClassnodes.addAll(classpath.values());
         }
+        if (configuration.getLibraries() != null) {
+            for (File file : configuration.getLibraries()) {
+                if (file.isFile()) {
+                    classpath.putAll(loadClasspathFile(file, false));
+                } else {
+                    File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
+                    if (files != null) {
+                        for (File child : files) {
+                            classpath.putAll(loadClasspathFile(child, false));
+                        }
+                    }
+                }
+            }
+        }
+        libraryClassnodes.addAll(classpath.values());
     }
 
     private boolean isClassIgnored(ClassNode classNode) {
