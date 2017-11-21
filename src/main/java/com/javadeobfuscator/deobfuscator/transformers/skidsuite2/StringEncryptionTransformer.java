@@ -97,12 +97,6 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                                     if (child0 instanceof ArrayStoreFrame) {
                                         ArrayStoreFrame arrayStoreFrame = (ArrayStoreFrame) child0;
                                         if (arrayStoreFrame.getIndex() instanceof LdcFrame && arrayStoreFrame.getObject() instanceof LdcFrame) {
-                                        	if(arrayStoreFrame.getIndex().getChildren().get(0) instanceof DupFrame
-                                        		&& ((DupFrame)arrayStoreFrame.getIndex().getChildren().get(0)).getOpcode() == Opcodes.DUP_X2)
-                                        	{
-                                        		localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex().getChildren().get(0)));
-                                        		methodNode.instructions.insertBefore(methodInsnNode, new LdcInsnNode(((LdcFrame) arrayStoreFrame.getIndex()).getConstant()));
-                                        	}
                                         	localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex()));
                                         	localRemove.add(result.getMapping().get(arrayStoreFrame.getObject()));
                                         	localRemove.add(result.getMapping().get(arrayStoreFrame));
