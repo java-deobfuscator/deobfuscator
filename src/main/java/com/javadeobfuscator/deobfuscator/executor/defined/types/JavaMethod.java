@@ -82,9 +82,18 @@ public class JavaMethod {
         return getDeclaringClass().getName().hashCode() ^ getName().hashCode();
     }
 
-    public Object invoke(JavaValue instance, Object argsObject) {
-    	Object[] args = (Object[])((JavaArray)argsObject).value();
-    	String[] argTypes = ((JavaArray)argsObject).getTypeArray();
+    public Object invoke(JavaValue instance, JavaValue argsObject) {
+    	Object[] args; 
+    	String[] argTypes;
+    	if(argsObject.value() == null) 
+    	{
+    		args = null;
+    		argTypes = null;
+    	}else
+    	{
+    		args = (Object[])((JavaArray)argsObject).value();
+    		argTypes = ((JavaArray)argsObject).getTypeArray();
+    	}
         try {
         	//Fix for unboxing/boxing
         	List<Integer> fixed = new ArrayList<>();
