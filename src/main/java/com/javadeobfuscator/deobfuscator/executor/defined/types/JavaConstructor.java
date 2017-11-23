@@ -36,10 +36,19 @@ public class JavaConstructor {
         return params.toArray(new JavaClass[params.size()]);
     }
 
-    public Object newInstance(Context context, Object argsObject)
+    public Object newInstance(Context context, JavaValue argsObject)
     {
-    	Object[] args = (Object[])((JavaArray)argsObject).value();
-    	String[] argTypes = ((JavaArray)argsObject).getTypeArray();
+    	Object[] args; 
+    	String[] argTypes;
+    	if(argsObject.value() == null) 
+    	{
+    		args = null;
+    		argTypes = null;
+    	}else
+    	{
+    		args = (Object[])((JavaArray)argsObject).value();
+    		argTypes = ((JavaArray)argsObject).getTypeArray();
+    	}
     	MethodNode method = clazz.getClassNode().methods.stream().filter(m -> m.name.equals("<init>") 
     		&& m.desc.equals(desc)).findFirst().orElse(null);
     	List<JavaValue> javaArgs = new ArrayList<>();
