@@ -16,9 +16,14 @@
 
 package com.javadeobfuscator.deobfuscator.executor.values;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
 public class JavaObject extends JavaValue {
     private Object value;
     private String type;
+    public static final Map<String, Function<Object, Object>> patchClasses = new HashMap<>();
 
     public JavaObject(Object value, String type) {
         this.value = value;
@@ -39,7 +44,10 @@ public class JavaObject extends JavaValue {
     }
 
     public void initialize(Object value) {
-        this.value = value;
+    	if(patchClasses.containsKey(type))
+    		this.value = patchClasses.get(type).apply(value);
+    	else
+    		this.value = value;
     }
 
     public String type() {
