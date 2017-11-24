@@ -24,6 +24,8 @@ import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaArray;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -47,6 +49,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 public class ResourceEncryptionTransformer extends Transformer<TransformerConfig> {
 	@Override
@@ -131,6 +135,7 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         {
         	Context context = new Context(provider);
     		context.dictionary = classpath;
+    		String inflaterClass = null;
     		//Patch
     		for(AbstractInsnNode ain : init.instructions.toArray())
     			if(ain.getOpcode() == Opcodes.INVOKESPECIAL
@@ -142,7 +147,17 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
     				init.instructions.insert(ain.getNext(), new InsnNode(Opcodes.SWAP));
     				init.instructions.insert(ain.getNext(), new VarInsnNode(Opcodes.ALOAD, 0));
     				init.instructions.insert(ain, new InsnNode(Opcodes.DUP_X1));
-    			}
+    			}else if(ain.getOpcode() == Opcodes.NEW
+    				&& ((TypeInsnNode)ain).desc.equals("java/util/zip/InflaterInputStream"))
+    				inflaterClass = ((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc;
+    		final String inflaterClassF = inflaterClass;
+			JavaObject.patchClasses.put(inflaterClass, (r) ->
+			{
+				CustomInflater inflater = new CustomInflater(r);
+				inflater.context = context;
+				inflater.inflaterClass = inflaterClassF;
+				return inflater;
+			});
         	for(Entry<String, byte[]> entry : inputPassthrough.entrySet())
         	{
         		JavaValue arg = JavaValue.valueOf(new ByteArrayInputStream(entry.getValue()));
@@ -150,11 +165,27 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         		MethodExecutor.execute(decryptor, init, Arrays.asList(arg), instance, context);
         		Object in = context.provider.getField(decryptor.name, "in", "Ljava/io/InputStream;", 
         			instance, context);
-        		if(!(in instanceof PushbackInputStream) && in instanceof FilterInputStream)
-        		{
-        			try
-        			{
-        				for(AbstractInsnNode ain : init.instructions.toArray())
+    			try
+    			{
+	        		if(!(in instanceof PushbackInputStream) && in instanceof InflaterInputStream)
+	        		{
+	        			byte[] buffer = new byte[4096];
+	    				ByteArrayOutputStream output = new ByteArrayOutputStream();
+	        			while(true)
+	    				{
+	        				int n = (int)context.provider.invokeMethod("java/util/zip/InflaterInputStream", 
+	        					"read", "([B)I", new JavaObject(in, "java/util/zip/InflaterInputStream"), 
+	        					Arrays.asList(JavaValue.valueOf(buffer)), context);
+	        				if(n == -1)
+	        					break;
+	        				output.write(buffer, 0, n);
+	    				}
+	    				entry.setValue(output.toByteArray());
+	    				output.close();
+	    				total.incrementAndGet();
+	        		}else if(!(in instanceof PushbackInputStream) && in instanceof FilterInputStream)
+	        		{
+	        			for(AbstractInsnNode ain : init.instructions.toArray())
         					if(ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ALOAD
         					&& ain.getOpcode() == Opcodes.NEW && classes.containsKey(((TypeInsnNode)ain).desc)
         					&& ain.getNext() != null && ain.getNext().getOpcode() == Opcodes.DUP
@@ -183,12 +214,13 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
 		        				total.incrementAndGet();
 		        				break;
         					}
-        			}catch(IOException e)
-        			{
-        				Utils.sneakyThrow(e);
-        			}
-        		}
+	        		}
+    			}catch(IOException e)
+    			{
+    				Utils.sneakyThrow(e);
+    			}
         	}
+        	JavaObject.patchClasses.remove(inflaterClass);
         	//Cleanup
         	Set<String> remove = new HashSet<>();
         	for(AbstractInsnNode ain : init.instructions.toArray())
@@ -269,5 +301,29 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         			entry.getKey().methods.remove(method);
         }
         return total.get();
+    }
+    
+    public class CustomInflater extends Inflater
+    {
+    	public String inflaterClass;
+    	public Context context;
+    	public Object instance;
+    	
+    	public CustomInflater(Object instance)
+    	{
+    		this.instance = instance;
+    	}
+    	
+    	@Override
+	public void setInput(byte[] b, int off, int len) 
+	{
+    		if(Thread.currentThread().getStackTrace()[2].getClassName().startsWith(
+    			"com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider"))
+    			super.setInput(b, off, len);
+    		else
+    			MethodExecutor.execute(classes.get(inflaterClass), 
+    				classes.get(inflaterClass).methods.stream().filter(m -> m.name.equals("setInput")).findFirst().orElse(null),
+    				Arrays.asList(new JavaArray(b), new JavaInteger(off), new JavaInteger(len)), new JavaObject(this, inflaterClass), context);
+	}
     }
 }
