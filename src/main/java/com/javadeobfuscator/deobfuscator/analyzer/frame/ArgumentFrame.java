@@ -17,8 +17,21 @@
 package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
 public class ArgumentFrame extends Frame {
-    public ArgumentFrame() {
+	private int opcode;
+	private int local;
+	
+    public ArgumentFrame(int opcode, int local) {
         super(-1);
+        this.opcode = opcode;
+        this.local = local;
+    }
+    
+    public int getLocal() {
+    	return local;
+    }
+    
+    public int getStoreOpcode() {
+    	return opcode;
     }
     
     // fixme how to determine?
