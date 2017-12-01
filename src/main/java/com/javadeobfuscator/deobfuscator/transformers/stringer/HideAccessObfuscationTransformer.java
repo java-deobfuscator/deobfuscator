@@ -202,22 +202,12 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                                 }
                                                 methodNode.instructions.remove(insn.getPrevious());
                                             }
-                                            //Reverse bytecode analysis to get the previous X arguments
-                                            ArgsAnalyzer analyzer = new ArgsAnalyzer(
-                                                    methodNode, methodNode.instructions.indexOf(insn) - 1,
-                                                    Type.getArgumentTypes(result.getDesc()).length);
-                                            List<AbstractInsnNode> numberArgs;
-                                            try {
-                                                numberArgs = analyzer.lookupArgs();
-                                            } catch (RuntimeException e) {
-                                                numberArgs = new ArrayList<>();
-                                            }
-                                            //Writes the "add" part before the first insn
                                             AbstractInsnNode firstArgInsn;
-                                            if (numberArgs.size() > 0)
-                                                firstArgInsn = numberArgs.get(0);
+                                            if(Type.getArgumentTypes(result.getDesc()).length == 0)
+                                            	firstArgInsn = insn;
                                             else
-                                                firstArgInsn = insn;
+                                            	firstArgInsn = new ArgsAnalyzer(
+                                            		insn.getPrevious(), Type.getArgumentTypes(result.getDesc()).length, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs().getFirstArgInsn();
                                             methodNode.instructions.insertBefore(firstArgInsn, new TypeInsnNode(Opcodes.NEW, result.getClassName()));
                                             methodNode.instructions.insertBefore(firstArgInsn, new InsnNode(Opcodes.DUP));
                                             //The constructor is used to write a desc
