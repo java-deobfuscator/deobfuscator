@@ -1,6 +1,9 @@
 package com.javadeobfuscator.deobfuscator.transformers.smoke; 
  
-import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
+import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
@@ -74,15 +77,10 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         					}else
         					{
         						//Reverse bytecode to try to get the previous args
-        						ArgsAnalyzer analyzer = new ArgsAnalyzer(methodNode, index - 1, 2);
+        						AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
         						List<AbstractInsnNode> args = new ArrayList<>();
-        						try
-        						{
-        							args = analyzer.lookupArgs();
-        						}catch(Exception e)
-        						{
-        							
-        						}
+        						for(Frame arg : ((MethodFrame)result.getFrames().get(m).get(0)).getArgs())
+        							args.add(result.getInsnNode(arg));
         						if(args.get(0).getOpcode() == Opcodes.LDC
         							&& ((LdcInsnNode)args.get(0)).cst instanceof String
         							&& Utils.isNumber(args.get(1)))
