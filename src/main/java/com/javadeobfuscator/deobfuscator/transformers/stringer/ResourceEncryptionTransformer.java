@@ -158,7 +158,7 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
 				inflater.inflaterClass = inflaterClassF;
 				return inflater;
 			});
-        	for(Entry<String, byte[]> entry : inputPassthrough.entrySet())
+        	for(Entry<String, byte[]> entry : getDeobfuscator().getInputPassthrough().entrySet())
         	{
         		JavaValue arg = JavaValue.valueOf(new ByteArrayInputStream(entry.getValue()));
         		JavaObject instance = new JavaObject(decryptor.name);
