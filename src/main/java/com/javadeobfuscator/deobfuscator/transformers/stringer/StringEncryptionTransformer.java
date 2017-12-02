@@ -434,17 +434,17 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
     	if(insns.size() < 17)
     		return null;
     	if(insns.get(1).getOpcode() == Opcodes.IOR
-    		&& Utils.isNumber(insns.get(2))
+    		&& Utils.isInteger(insns.get(2))
     		&& insns.get(3).getOpcode() == Opcodes.ISHL
-    		&& Utils.isNumber(insns.get(4))
-    		&& Utils.isNumber(insns.get(5))
+    		&& Utils.isInteger(insns.get(4))
+    		&& Utils.isInteger(insns.get(5))
     		&& insns.get(6).getOpcode() == Opcodes.CASTORE
     		&& insns.get(7).getOpcode() == Opcodes.I2C
     		&& insns.get(8).getOpcode() == Opcodes.IXOR
-    		&& Utils.isNumber(insns.get(9))
+    		&& Utils.isInteger(insns.get(9))
     		&& insns.get(10).getOpcode() == Opcodes.CALOAD
     		&& insns.get(11).getOpcode() == Opcodes.DUP_X1
-    		&& Utils.isNumber(insns.get(12))
+    		&& Utils.isInteger(insns.get(12))
     		&& insns.get(13).getOpcode() == Opcodes.DUP
     		&& insns.get(14).getOpcode() == Opcodes.DUP
     		&& insns.get(15).getOpcode() == Opcodes.INVOKEVIRTUAL
