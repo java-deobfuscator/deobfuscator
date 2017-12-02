@@ -54,7 +54,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                         MethodInsnNode m = (MethodInsnNode) current;
                         String strCl = m.owner;
                         if (m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
-        					if (m.getPrevious() != null && Utils.isNumber(m.getPrevious()) 
+        					if (m.getPrevious() != null && Utils.isInteger(m.getPrevious()) 
         						&& m.getPrevious().getPrevious() != null 
         						&& m.getPrevious().getPrevious() instanceof LdcInsnNode
         						&& ((LdcInsnNode)m.getPrevious().getPrevious()).cst instanceof String) {
@@ -83,7 +83,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         							args.add(result.getInsnNode(arg));
         						if(args.get(0).getOpcode() == Opcodes.LDC
         							&& ((LdcInsnNode)args.get(0)).cst instanceof String
-        							&& Utils.isNumber(args.get(1)))
+        							&& Utils.isInteger(args.get(1)))
         						{
         							int number = Utils.getIntValue(args.get(1));
             						String obfString = (String)((LdcInsnNode)args.get(0)).cst;
