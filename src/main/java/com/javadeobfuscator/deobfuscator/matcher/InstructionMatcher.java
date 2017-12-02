@@ -19,11 +19,16 @@ package com.javadeobfuscator.deobfuscator.matcher;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class InstructionMatcher {
+    public InstructionPattern getPattern() {
+        return pattern;
+    }
+
     private final InstructionPattern pattern;
     private final AbstractInsnNode start;
     private AbstractInsnNode end;
@@ -54,18 +59,26 @@ public class InstructionMatcher {
         return end;
     }
 
-    private Map<String, List<AbstractInsnNode>> capturedInsns = new HashMap<>();
+    private Map<String, List<List<AbstractInsnNode>>> capturedInsns = new HashMap<>();
 
     public void capture(String id, List<AbstractInsnNode> captured) {
-        capturedInsns.put(id, captured);
+        capturedInsns.computeIfAbsent(id, k -> new ArrayList<>()).add(captured);
     }
 
-    public List<AbstractInsnNode> getCapturedInstructions(String id) {
+    public List<List<AbstractInsnNode>> getAllCapturedInstructions(String id) {
         return capturedInsns.get(id);
     }
 
+    public List<AbstractInsnNode> getCapturedInstructions(String id) {
+        List<List<AbstractInsnNode>> captured = capturedInsns.get(id);
+        if (captured == null || captured.size() > 1) {
+            return null;
+        }
+        return captured.get(0);
+    }
+
     public AbstractInsnNode getCapturedInstruction(String id) {
-        List<AbstractInsnNode> captured = capturedInsns.get(id);
+        List<AbstractInsnNode> captured = getCapturedInstructions(id);
         if (captured == null || captured.size() > 1) {
             return null;
         }

@@ -16,30 +16,31 @@
 
 package com.javadeobfuscator.deobfuscator.matcher;
 
-import com.javadeobfuscator.deobfuscator.utils.Utils;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 
-public class MultiStep implements Step {
-    private final Step[] steps;
+public class ANewArrayStep implements Step {
+    private final String type;
+    private final boolean basic;
 
-    public MultiStep(Step... steps) {
-        this.steps = steps;
+    public ANewArrayStep(String type, boolean basic) {
+        this.type = type;
+        this.basic = basic;
     }
 
     @Override
     public AbstractInsnNode tryMatch(InstructionMatcher matcher, AbstractInsnNode now) {
-        for (Step step : steps) {
-            while (!Utils.isInstruction(now)) now = now.getNext();
-            if (now == null) {
-                return null;
-            }
-
-            AbstractInsnNode next = step.tryMatch(matcher, now);
-            if (next == null) {
-                return null;
-            }
-            now = next;
+        if (now.getOpcode() != Opcodes.ANEWARRAY) {
+            return null;
         }
-        return now;
+
+        TypeInsnNode typeInsnNode = (TypeInsnNode) now;
+        if (!(basic ? TransformerHelper.basicType(typeInsnNode.desc) : typeInsnNode.desc).equals(type)) {
+            return null;
+        }
+        
+        return now.getNext();
     }
 }

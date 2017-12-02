@@ -21,17 +21,20 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 public class RepeatingStep implements Step {
 
     private final Step step;
-    private final int count;
+    private final int min;
+    private final int max;
 
-    public RepeatingStep(Step step, int count) {
+    public RepeatingStep(Step step, int min, int max) {
         this.step = step;
-        this.count = count;
+        this.min = min;
+        this.max = max;
     }
 
     @Override
     public AbstractInsnNode tryMatch(InstructionMatcher matcher, AbstractInsnNode now) {
-        if (count == -1) {
-            AbstractInsnNode next = null;
+        if (max == -1) {
+            int amount = 0;
+            AbstractInsnNode next;
             while (true) {
                 next = step.tryMatch(matcher, now);
                 if (next == null) {
@@ -39,13 +42,15 @@ public class RepeatingStep implements Step {
                 } else {
                     now = next;
                 }
+                amount++;
             }
-            return now;
+            return (min == -1 || amount >= min) ? now : null;
         } else {
-            AbstractInsnNode next = null;
-            for (int i = 0; i < count; i++) {
+            AbstractInsnNode next;
+            for (int i = 0; i < max; i++) {
                 next = step.tryMatch(matcher, now);
                 if (next == null) {
+                    if (min != -1 && i >= min) return now;
                     return null;
                 } else {
                     now = next;

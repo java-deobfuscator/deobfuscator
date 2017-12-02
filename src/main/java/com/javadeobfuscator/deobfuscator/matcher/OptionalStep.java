@@ -16,30 +16,26 @@
 
 package com.javadeobfuscator.deobfuscator.matcher;
 
-import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
-public class MultiStep implements Step {
-    private final Step[] steps;
+public class OptionalStep implements Step {
+    private final Step step;
 
-    public MultiStep(Step... steps) {
-        this.steps = steps;
+    public OptionalStep(Step step) {
+        this.step = step;
+    }
+
+    public OptionalStep(Step... steps) {
+        this.step = new MultiStep(steps);
     }
 
     @Override
     public AbstractInsnNode tryMatch(InstructionMatcher matcher, AbstractInsnNode now) {
-        for (Step step : steps) {
-            while (!Utils.isInstruction(now)) now = now.getNext();
-            if (now == null) {
-                return null;
-            }
-
-            AbstractInsnNode next = step.tryMatch(matcher, now);
-            if (next == null) {
-                return null;
-            }
-            now = next;
+        AbstractInsnNode next = step.tryMatch(matcher, now);
+        if (next != null) {
+            return next;
         }
+        // no progress was made
         return now;
     }
 }

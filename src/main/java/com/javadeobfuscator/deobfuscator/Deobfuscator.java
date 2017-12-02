@@ -46,7 +46,6 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -57,11 +56,16 @@ public class Deobfuscator {
     private Map<String, ClassTree> hierachy = new HashMap<>();
     private Set<ClassNode> libraryClassnodes = new HashSet<>();
 
+    public Map<String, byte[]> getInputPassthrough() {
+        return inputPassthrough;
+    }
+
     // Entries from the input jar that will be passed through to the output
     private Map<String, byte[]> inputPassthrough = new HashMap<>();
 
     // Constant pool data since ClassNodes don't support custom data
     private Map<ClassNode, ConstantPool> constantPools = new HashMap<>();
+    private Map<ClassNode, ClassReader> readers = new HashMap<>();
 
     private final Configuration configuration;
     private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
@@ -99,7 +103,7 @@ public class Deobfuscator {
             if (ent.getName().endsWith(".class")) {
                 ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
                 ClassNode node = new ClassNode();
-                reader.accept(node, (skipCode ? ClassReader.SKIP_CODE : 0) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                reader.accept(node, (skipCode ? 0 : 0) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 map.put(node.name, node);
 
                 setConstantPool(node, new ConstantPool(reader));
@@ -182,6 +186,7 @@ public class Deobfuscator {
                         ClassNode node = new ClassNode();
                         reader.accept(node, ClassReader.SKIP_FRAMES);
 
+                        readers.put(node, reader);
                         setConstantPool(node, new ConstantPool(reader));
 
                         if (!isClassIgnored(node)) {
@@ -293,7 +298,7 @@ public class Deobfuscator {
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
         Transformer transformer = config.getImplementation().newInstance();
-        transformer.init(this, config, classes, classpath);
+        transformer.init(this, config, classes, classpath, readers);
         return transformer.transform();
     }
 
@@ -450,6 +455,10 @@ public class Deobfuscator {
                     System.out.println("Error: " + ex.getClassName() + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
                     writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                     node.accept(writer);
+                } else if (e instanceof NegativeArraySizeException || e instanceof ArrayIndexOutOfBoundsException) {
+                    System.out.println("Error: failed to compute frames");
+                    writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+                    node.accept(writer);
                 } else if (e.getMessage() != null) {
                     if (e.getMessage().contains("JSR/RET")) {
                         System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
@@ -483,6 +492,14 @@ public class Deobfuscator {
 
     public Configuration getConfig() {
         return this.configuration;
+    }
+
+    public Map<String, ClassNode> getClasses() {
+        return this.classes;
+    }
+
+    public Map<ClassNode, ClassReader> getReaders() {
+        return readers;
     }
 
     public class CustomClassWriter extends ClassWriter {
