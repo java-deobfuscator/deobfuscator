@@ -10,6 +10,10 @@ The deobfuscator supports deobfuscation of transformations such as string litera
 
 Things like method names, class names, etc cannot be deobfuscated because their renaming is irreversible. The information needed to deobfuscate is removed.
 
+## My program wasn't deobfuscated
+
+Check out [this guide](CUSTOMTRANSFORMER.md)
+
 ## Examples
 
 ### As a library

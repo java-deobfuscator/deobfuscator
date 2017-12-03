@@ -38,7 +38,7 @@
                     <fork>true</fork>
                 </configuration>
             </plugin>
-            <plugin>
+            <!-- <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.1.0</version>
@@ -63,7 +63,7 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin> -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -78,6 +78,12 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>java-deobfuscator-repository</id>
+            <url>https://repo.samczsun.com/repository/java-deobfuscator</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <dependency>
@@ -135,6 +141,11 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.javadeobfuscator</groupId>
+            <artifactId>javavm</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <!-- ASM related dependencies -->
