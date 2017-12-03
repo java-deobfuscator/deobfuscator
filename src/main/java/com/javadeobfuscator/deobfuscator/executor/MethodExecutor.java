@@ -21,27 +21,18 @@ import static org.objectweb.asm.Opcodes.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.function.BiFunction;
 
 import com.google.common.base.Optional;
-import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.*;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaAddress;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaBoolean;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaByte;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaDouble;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaFloat;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaShort;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaTop;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
+import com.javadeobfuscator.deobfuscator.utils.TypeStore;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 public class MethodExecutor {
@@ -65,11 +56,11 @@ public class MethodExecutor {
         List<JavaValue> stack = new LinkedList<>();
         List<JavaValue> locals = new LinkedList<>();
         if (!Modifier.isStatic(method.access)) {
-            if (instance != null && instance instanceof JavaObject) {
-                locals.add((JavaObject) instance);
-            } else {
-                locals.add(new JavaObject(instance, "java/lang/Object"));
-            }
+        	if (instance == null) {
+            	locals.add(new JavaObject(null, "java/lang/Object"));
+        	} else {
+        		locals.add((JavaValue)instance);
+        	}
         }
         if (args != null) {
             for (JavaValue arg : args) {
@@ -96,7 +87,8 @@ public class MethodExecutor {
             throw new ExecutionException("Expected Object on stack");
         }
         int index = stack.remove(0).intValue();
-        Object array = stack.remove(0).value();
+        JavaValue arrValue = stack.remove(0);
+        Object array = arrValue.value();
         if (VERIFY && array == null) {
             throw new ExecutionException("Array is null");
         }
@@ -133,7 +125,10 @@ public class MethodExecutor {
                 result = new JavaShort((Short) value);
                 break;
             default:
-                result = new JavaObject(value, "java/lang/Object");
+            	if(value != null && value.getClass().isArray())
+            		result = new JavaArray(value);
+            	else
+            		result = new JavaObject(value, ((JavaArray)arrValue).getValueType(index));
                 break;
         }
         stack.add(0, result);
@@ -182,10 +177,12 @@ public class MethodExecutor {
         		Array.set(array.value(), index.intValue(), val);
         } else
     		Array.set(array.value(), index.intValue(), val);
+        if(value instanceof JavaObject)
+        	((JavaArray)array).onValueStored(index.intValue(), value.type());
     }
 
     public static Object convert(Object value, String type) {
-        if (value instanceof Number && Utils.isDigit(type)) {
+        if (value instanceof Number && Utils.canReturnDigit(type)) {
             Number cast = (Number) value;
             switch (type) {
                 case "I":
@@ -198,10 +195,20 @@ public class MethodExecutor {
                     return cast.longValue();
                 case "Z":
                 	return cast.intValue() != 0;
+                case "C":
+                	return (char)cast.intValue();
             }
         }
 
         return value;
+    }
+    
+    public static void convertArgs(List<JavaValue> args, Type[] methodParams) {
+        for(int i = 0; i < args.size(); i++) {
+        	JavaValue arg = args.get(i);
+        	if(arg instanceof JavaInteger && methodParams[i].getDescriptor().equals("I"))
+        		args.set(i, new JavaInteger(arg.intValue()));
+        }
     }
 
     public static Object value(JavaValue value) {
@@ -230,6 +237,7 @@ public class MethodExecutor {
                 val = value.doubleValue();
                 break;
             case "JavaObject":
+            case "JavaArray":
                 val = value.value();
                 break;
             default:
@@ -508,7 +516,7 @@ public class MethodExecutor {
                     case CASTORE:
                     case SASTORE:
                     case AASTORE:
-                        executeArrayStore(stack);
+                    	executeArrayStore(stack);
                         break;
                     case POP:
                         stack.remove(0);
@@ -947,7 +955,7 @@ public class MethodExecutor {
                     }
                     case IRETURN: {
                         context.pop();
-                        return (T) (Integer) stack.remove(0).intValue();
+                        return (T) convert(value(stack.remove(0)), Type.getReturnType(method.desc).getDescriptor());
                     }
                     case LRETURN: {
                         context.pop();
@@ -965,7 +973,9 @@ public class MethodExecutor {
                     }
                     case ARETURN: {
                         context.pop();
-                        return (T) stack.remove(0).value();
+                        JavaValue value = stack.remove(0);
+                        TypeStore.returnObjects.put(Thread.currentThread().getId(), (JavaObject)value);
+                        return (T) value.value();
                     }
                     case RETURN: {
                         context.pop();
@@ -1006,8 +1016,19 @@ public class MethodExecutor {
                                 break;
                             case Type.ARRAY:
                             case Type.OBJECT:
-                                stack.add(0, new JavaObject(provided, "java/lang/Object"));
-                                break;
+                            	if(provided != null && provided.getClass().isArray())
+                            	{
+                            		if(TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, null) != null)
+                            		{
+                            			Entry<Object, String[]> entry = (Entry<Object, String[]>)TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, null).getKey();
+                            			stack.add(0, new JavaArray(entry.getKey(), entry.getValue()));
+                            		}else if(provided != null)
+                            			stack.add(0, new JavaArray(provided));
+                            	}else if(TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, null) == null)
+                            		stack.add(0, JavaValue.valueOf(provided));
+                            	else
+                            		stack.add(0, new JavaObject(provided, TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, null).getValue()));
+                            	break;
                         }
                         break;
                     }
@@ -1020,17 +1041,15 @@ public class MethodExecutor {
                         	}
                         }
                         FieldInsnNode cast = (FieldInsnNode) now;
+                        if(obj instanceof JavaArray)
+                        	TypeStore.setFieldToStore(cast.owner, cast.name, cast.desc, null, new AbstractMap.SimpleEntry<>(((JavaArray)obj).getObjectArrayWithValues(), obj.type()));
+                        else if(obj instanceof JavaObject)
+                        	TypeStore.setFieldToStore(cast.owner, cast.name, cast.desc, null, new AbstractMap.SimpleEntry<>(convert(value(obj), cast.desc), obj.type()));
                         context.provider.setField(cast.owner, cast.name, cast.desc, null, convert(value(obj), cast.desc), context);
                         break;
                     }
                     case GETFIELD: {
                         JavaValue obj = stack.remove(0);
-                        if (obj instanceof JavaTop) {
-                        	obj = stack.remove(0);
-                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
-                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
-                        	}
-                        }
                         FieldInsnNode cast = (FieldInsnNode) now;
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
@@ -1064,15 +1083,36 @@ public class MethodExecutor {
                                 break;
                             case Type.ARRAY:
                             case Type.OBJECT:
-                                stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                            	if(provided != null && provided.getClass().isArray())
+                            	{
+                            		if(TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, obj) != null)
+                            		{
+                            			Entry<Object, String[]> entry = (Entry<Object, String[]>)TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, obj).getKey();
+                            			stack.add(0, new JavaArray(entry.getKey(), entry.getValue()));
+                            		}else if(provided != null)
+                            			stack.add(0, new JavaArray(provided));
+                            	}else if(TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, obj) == null)
+                            		stack.add(0, JavaValue.valueOf(provided));
+                            	else
+                            		stack.add(0, new JavaObject(provided, TypeStore.getFieldFromStore(cast.owner, cast.name, cast.desc, obj).getValue()));
                                 break;
                         }
                         break;
                     }
                     case PUTFIELD: {
                         JavaValue obj = stack.remove(0);
+                        if (obj instanceof JavaTop) {
+                        	obj = stack.remove(0);
+                        	if (VERIFY && !(obj instanceof JavaDouble) && !(obj instanceof JavaLong)) {
+                        		throw new ExecutionException("JavaTop not followed by JavaLong or JavaDouble");
+                        	}
+                        }
                         JavaValue instance = stack.remove(0);
                         FieldInsnNode cast = (FieldInsnNode) now;
+                        if(obj instanceof JavaArray)
+                        	TypeStore.setFieldToStore(cast.owner, cast.name, cast.desc, instance, new AbstractMap.SimpleEntry<>(((JavaArray)obj).getObjectArrayWithValues(), obj.type()));
+                        else if(obj instanceof JavaObject)	
+                        	TypeStore.setFieldToStore(cast.owner, cast.name, cast.desc, instance, new AbstractMap.SimpleEntry<>(convert(value(obj), cast.desc), obj.type()));
                         context.provider.setField(cast.owner, cast.name, cast.desc, instance, convert(value(obj), cast.desc), context);
                         break;
                     }
@@ -1089,8 +1129,9 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
-                        String owner = cast.owner;
+                        String owner = args.get(args.size() - 1).type();
                         while(true) {
                             try {
                                 if (context.provider.canInvokeMethod(owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
@@ -1124,11 +1165,27 @@ public class MethodExecutor {
                                             break;
                                         case Type.ARRAY:
                                         case Type.OBJECT:
-                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
-                                            break;
+                                        	if(provided != null && provided.getClass().isArray())
+                                        	{
+        	                                	if(TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+        	                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+        	                                	{
+        	                                		JavaArray array = (JavaArray)TypeStore.returnObjects.get(Thread.currentThread().getId());
+        	                                		stack.add(0, new JavaArray(array.value(), array.getTypeArray()));
+        	                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+        	                                	}else
+        	                                		stack.add(0, new JavaArray(provided));
+                                        	}else if(provided != null && TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+                                        		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+                                        	{
+                                        		stack.add(0, new JavaObject(provided, TypeStore.returnObjects.get(Thread.currentThread().getId()).type()));
+                                        		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+                                        	}else
+                                        		stack.add(0, JavaValue.valueOf(provided));
+                                        	break;
                                     }
                                 } else {
-                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
@@ -1157,6 +1214,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
                         String owner = cast.owner;
                         while(true) {
@@ -1192,7 +1250,23 @@ public class MethodExecutor {
                                             break;
                                         case Type.ARRAY:
                                         case Type.OBJECT:
-                                            stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                        	if(provided != null && provided.getClass().isArray())
+                                        	{
+        	                                	if(TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+        	                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+        	                                	{
+        	                                		JavaArray array = (JavaArray)TypeStore.returnObjects.get(Thread.currentThread().getId());
+        	                                		stack.add(0, new JavaArray(array.value(), array.getTypeArray()));
+        	                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+        	                                	}else
+        	                                		stack.add(0, new JavaArray(provided));
+                                        	}else if(provided != null && TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+                                        		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+                                        	{
+                                        		stack.add(0, new JavaObject(provided, TypeStore.returnObjects.get(Thread.currentThread().getId()).type()));
+                                        		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+                                        	}else
+                                        		stack.add(0, JavaValue.valueOf(provided));
                                             break;
                                     }
                                 } else {
@@ -1227,6 +1301,7 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, null, args, context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, null, args, context);
                             switch (type.getSort()) {
@@ -1258,7 +1333,23 @@ public class MethodExecutor {
                                     break;
                                 case Type.ARRAY:
                                 case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                	if(provided != null && provided.getClass().isArray())
+                                	{
+	                                	if(TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+	                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+	                                	{
+	                                		JavaArray array = (JavaArray)TypeStore.returnObjects.get(Thread.currentThread().getId());
+	                                		stack.add(0, new JavaArray(array.value(), array.getTypeArray()));
+	                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+	                                	}else
+	                                		stack.add(0, new JavaArray(provided));
+                                	}else if(provided != null && TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+                                	{
+                                		stack.add(0, new JavaObject(provided, TypeStore.returnObjects.get(Thread.currentThread().getId()).type()));
+                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+                                	}else
+                                		stack.add(0, JavaValue.valueOf(provided));
                                     break;
                             }
                         } else {
@@ -1279,8 +1370,59 @@ public class MethodExecutor {
                             }
                             args.add(0, stack.remove(0).copy());
                         }
+                        convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
-                        if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                        if (context.provider.canInvokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
+                        	Object provided = context.provider.invokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
+                            switch (type.getSort()) {
+                                case Type.BOOLEAN:
+                                    stack.add(0, new JavaBoolean((Boolean) provided));
+                                    break;
+                                case Type.CHAR:
+                                    stack.add(0, new JavaCharacter((Character) provided));
+                                    break;
+                                case Type.BYTE:
+                                    stack.add(0, new JavaByte((Byte) provided));
+                                    break;
+                                case Type.SHORT:
+                                    stack.add(0, new JavaShort((Short) provided));
+                                    break;
+                                case Type.INT:
+                                    stack.add(0, new JavaInteger((Integer) provided));
+                                    break;
+                                case Type.FLOAT:
+                                    stack.add(0, new JavaFloat((Float) provided));
+                                    break;
+                                case Type.LONG:
+                                    stack.add(0, new JavaLong((Long) provided));
+                                    stack.add(0, new JavaTop());
+                                    break;
+                                case Type.DOUBLE:
+                                    stack.add(0, new JavaDouble((Double) provided));
+                                    stack.add(0, new JavaTop());
+                                    break;
+                                case Type.ARRAY:
+                                case Type.OBJECT:
+                                	if(provided != null && provided.getClass().isArray())
+                                	{
+	                                	if(TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+	                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+	                                	{
+	                                		JavaArray array = (JavaArray)TypeStore.returnObjects.get(Thread.currentThread().getId());
+	                                		stack.add(0, new JavaArray(array.value(), array.getTypeArray()));
+	                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+	                                	}else
+	                                		stack.add(0, new JavaArray(provided));
+                                	}else if(provided != null && TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+                                	{
+                                		stack.add(0, new JavaObject(provided, TypeStore.returnObjects.get(Thread.currentThread().getId()).type()));
+                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+                                	}else
+                                		stack.add(0, JavaValue.valueOf(provided));
+                                    break;
+                            }
+                        } else if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
                             switch (type.getSort()) {
                                 case Type.BOOLEAN:
@@ -1311,11 +1453,27 @@ public class MethodExecutor {
                                     break;
                                 case Type.ARRAY:
                                 case Type.OBJECT:
-                                    stack.add(0, new JavaObject(provided, "java/lang/Object"));
+                                	if(provided != null && provided.getClass().isArray())
+                                	{
+	                                	if(TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+	                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+	                                	{
+	                                		JavaArray array = (JavaArray)TypeStore.returnObjects.get(Thread.currentThread().getId());
+	                                		stack.add(0, new JavaArray(array.value(), array.getTypeArray()));
+	                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+	                                	}else
+	                                		stack.add(0, new JavaArray(provided));
+                                	}else if(provided != null && TypeStore.returnObjects.containsKey(Thread.currentThread().getId())
+                                		&& TypeStore.returnObjects.get(Thread.currentThread().getId()).value() == provided)
+                                	{
+                                		stack.add(0, new JavaObject(provided, TypeStore.returnObjects.get(Thread.currentThread().getId()).type()));
+                                		TypeStore.returnObjects.remove(Thread.currentThread().getId());
+                                	}else
+                                		stack.add(0, JavaValue.valueOf(provided));
                                     break;
                             }
-                        } else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                        }else {
+                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
                         }
                         break;
                     }
@@ -1359,12 +1517,12 @@ public class MethodExecutor {
                             default:
                                 throw new ExecutionException("Unknown newarray type " + cast.operand);
                         }
-                        stack.add(0, new JavaObject(add, "java/lang/Object"));
+                        stack.add(0, new JavaArray(add));
                         break;
                     }
                     case ANEWARRAY: {
                         int len = stack.remove(0).intValue();
-                        stack.add(0, new JavaObject(new Object[len], "java/lang/Object"));
+                        stack.add(0, new JavaArray(new Object[len]));
                         break;
                     }
                     case ARRAYLENGTH: {
@@ -1448,7 +1606,7 @@ public class MethodExecutor {
                                 }
                             }
                         }
-                        stack.add(0, new JavaObject(root, "java/lang/Object"));
+                        stack.add(0, new JavaArray(root));
                         break;
                     }
                     case IFNULL: {
@@ -1486,7 +1644,7 @@ public class MethodExecutor {
                             if (method.instructions.indexOf(tcbn.start) <= method.instructions.indexOf(now) && method.instructions.indexOf(now) < method.instructions.indexOf(tcbn.end)) {
                                 if (tcbn.type == null || tcbn.type.equals("java/lang/Throwable")) {
                                     stack.clear();
-                                    stack.add(new JavaObject(toThrow, "java/lang/Object"));
+                                    stack.add(JavaValue.valueOf(toThrow));
                                     now = tcbn.handler;
                                     continue forever;
                                 } else {
@@ -1505,7 +1663,7 @@ public class MethodExecutor {
                                         }
                                         if (ok) {
                                             stack.clear();
-                                            stack.add(new JavaObject(toThrow, "java/lang/Object"));
+                                            stack.add(JavaValue.valueOf(toThrow));
                                             now = tcbn.handler;
                                             continue forever;
                                         }
@@ -1532,7 +1690,7 @@ public class MethodExecutor {
                         if (method.instructions.indexOf(tcbn.start) <= method.instructions.indexOf(now) && method.instructions.indexOf(now) < method.instructions.indexOf(tcbn.end)) {
                             if (tcbn.type == null || tcbn.type.equals("java/lang/Throwable")) {
                                 stack.clear();
-                                stack.add(new JavaObject(t, "java/lang/Object"));
+                                stack.add(JavaValue.valueOf(t));
                                 now = tcbn.handler;
                                 continue forever;
                             } else {
@@ -1551,7 +1709,7 @@ public class MethodExecutor {
                                     }
                                     if (ok) {
                                         stack.clear();
-                                        stack.add(new JavaObject(t, "java/lang/Object"));
+                                        stack.add(JavaValue.valueOf(t));
                                         now = tcbn.handler;
                                         continue forever;
                                     }

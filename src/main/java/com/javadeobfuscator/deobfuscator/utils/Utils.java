@@ -270,12 +270,14 @@ public class Utils {
         }
     }
 
-    public static boolean isDigit(String type) {
+    public static boolean canReturnDigit(String type) {
         switch (type) {
             case "I":
             case "S":
             case "B":
             case "J":
+            case "Z":
+            case "C":
                 return true;
             default:
                 return false;
@@ -348,7 +350,7 @@ public class Utils {
         }); 
     } 
 
-    public static boolean isNumber(AbstractInsnNode ain)
+    public static boolean isInteger(AbstractInsnNode ain)
 	{
 		if(ain.getOpcode() >= Opcodes.ICONST_M1
 			&& ain.getOpcode() <= Opcodes.SIPUSH)
@@ -356,7 +358,7 @@ public class Utils {
 		if(ain instanceof LdcInsnNode)
 		{
 			LdcInsnNode ldc = (LdcInsnNode)ain;
-			if(ldc.cst instanceof Number)
+			if(ldc.cst instanceof Integer)
 				return true;
 		}
 		return false;

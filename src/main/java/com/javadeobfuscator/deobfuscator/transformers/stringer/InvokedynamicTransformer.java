@@ -32,6 +32,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
@@ -137,9 +138,9 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                             ClassNode bootstrapClassNode = classes.get(bootstrap.getOwner());
                             MethodNode bootstrapMethodNode = bootstrapClassNode.methods.stream().filter(mn -> mn.name.equals(bootstrap.getName()) && mn.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
                             List<JavaValue> args = new ArrayList<>();
-                            args.add(JavaValue.valueOf(null)); //Lookup
+                            args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); //Lookup
                             args.add(JavaValue.valueOf(dyn.name)); //dyn method name
-                            args.add(JavaValue.valueOf(null)); //dyn method type
+                            args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
                             for (Object o : dyn.bsmArgs) {
                                 args.add(JavaValue.valueOf(o));
                             }
@@ -152,7 +153,9 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                                 MethodInsnNode replacement = null;
                                 switch (result.type) {
                                     case "virtual":
-                                        replacement = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc, false);
+                                        replacement = new MethodInsnNode((classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0 ? 
+                                        	 Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL, clazz, result.name, result.desc,
+                                        	 (classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0);
                                         break;
                                     case "static":
                                         replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, result.name, result.desc, false);

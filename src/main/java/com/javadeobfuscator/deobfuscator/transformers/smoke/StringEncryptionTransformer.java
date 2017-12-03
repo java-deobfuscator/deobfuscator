@@ -1,6 +1,9 @@
 package com.javadeobfuscator.deobfuscator.transformers.smoke; 
  
-import com.javadeobfuscator.deobfuscator.analyzer.ArgsAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
+import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
+import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
@@ -51,7 +54,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                         MethodInsnNode m = (MethodInsnNode) current;
                         String strCl = m.owner;
                         if (m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
-        					if (m.getPrevious() != null && Utils.isNumber(m.getPrevious()) 
+        					if (m.getPrevious() != null && Utils.isInteger(m.getPrevious()) 
         						&& m.getPrevious().getPrevious() != null 
         						&& m.getPrevious().getPrevious() instanceof LdcInsnNode
         						&& ((LdcInsnNode)m.getPrevious().getPrevious()).cst instanceof String) {
@@ -74,18 +77,13 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         					}else
         					{
         						//Reverse bytecode to try to get the previous args
-        						ArgsAnalyzer analyzer = new ArgsAnalyzer(methodNode, index - 1, 2);
+        						AnalyzerResult result = MethodAnalyzer.analyze(classNode, methodNode);
         						List<AbstractInsnNode> args = new ArrayList<>();
-        						try
-        						{
-        							args = analyzer.lookupArgs();
-        						}catch(Exception e)
-        						{
-        							
-        						}
+        						for(Frame arg : ((MethodFrame)result.getFrames().get(m).get(0)).getArgs())
+        							args.add(result.getInsnNode(arg));
         						if(args.get(0).getOpcode() == Opcodes.LDC
         							&& ((LdcInsnNode)args.get(0)).cst instanceof String
-        							&& Utils.isNumber(args.get(1)))
+        							&& Utils.isInteger(args.get(1)))
         						{
         							int number = Utils.getIntValue(args.get(1));
             						String obfString = (String)((LdcInsnNode)args.get(0)).cst;

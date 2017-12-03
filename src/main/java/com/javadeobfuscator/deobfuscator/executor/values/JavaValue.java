@@ -16,8 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.executor.values;
 
+import org.objectweb.asm.Type;
+
 import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstantPool;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstructor;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaThread;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 
 public abstract class JavaValue {
@@ -73,7 +82,28 @@ public abstract class JavaValue {
     }
 
     public static JavaValue valueOf(Object cst) {
-        return new JavaObject(cst, "java/lang/Object"); //fixme type
+    	if(cst == null)
+    		return new JavaObject(cst, "java/lang/Object");
+    	else if(cst.getClass().isArray())
+    		return new JavaObject(cst, "java/lang/Object");
+    	else if(cst instanceof JavaThread)
+    		return new JavaObject(cst, "java/lang/Thread");
+    	else if(cst instanceof JavaMethodHandle)
+    		return new JavaObject(cst, "java/lang/invoke/MethodHandle");
+    	else if(cst instanceof JavaMethod)
+    		return new JavaObject(cst, "java/lang/reflect/Method");
+    	else if(cst instanceof JavaField)
+    		return new JavaObject(cst, "java/lang/reflect/Field");
+    	else if(cst instanceof JavaConstructor)
+    		return new JavaObject(cst, "java/lang/reflect/Constructor");
+    	else if(cst instanceof JavaConstantPool)
+    		return new JavaObject(cst, "sun/reflect/ConstantPool");
+    	else if(cst instanceof JavaClass)
+    		return new JavaObject(cst, "java/lang/Class");
+    	else if(cst instanceof JavaObject)
+    		return new JavaObject(cst, ((JavaObject)cst).type());
+    	else
+    		return new JavaObject(cst, Type.getType(cst.getClass()).getInternalName());
     }
 
     public static JavaValue forPrimitive(Class<?> prim) {

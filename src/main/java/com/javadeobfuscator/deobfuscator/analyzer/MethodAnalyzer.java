@@ -25,6 +25,8 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.SwapFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.SwitchFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.ThrowFrame;
 import com.javadeobfuscator.deobfuscator.exceptions.PreventableStackOverflowError;
+
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -228,14 +230,28 @@ public class MethodAnalyzer {
 
         List<StackObject> stack = new ArrayList<>();
         List<StackObject> locals = new ArrayList<>();
-
+        
+        int counter = 0;
         if (!Modifier.isStatic(method.access)) {
-            locals.add(new StackObject(new ArgumentFrame(), classNode.name));
+            locals.add(new StackObject(new ArgumentFrame(Opcodes.ASTORE, 0), classNode.name));
+            counter++;
         }
 
         for (Type type : Type.getArgumentTypes(method.desc)) {
             Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
-            ArgumentFrame frame = new ArgumentFrame();
+            int opcode;
+            if(clazz == int.class)
+            	opcode = Opcodes.ISTORE;
+            else if(clazz == long.class)
+            	opcode = Opcodes.LSTORE;
+            else if(clazz == double.class)
+            	opcode = Opcodes.DSTORE;
+            else if(clazz == float.class)
+            	opcode = Opcodes.FSTORE;
+            else
+            	opcode = Opcodes.ASTORE;
+            ArgumentFrame frame = new ArgumentFrame(opcode, counter);
+            counter++;
             if (clazz == null) {
                 locals.add(new StackObject(Object.class, frame, type.getInternalName()));
             } else {
@@ -1000,7 +1016,7 @@ public class MethodAnalyzer {
                 for (TryCatchBlockNode tcbn : handler) {
                     if (jumped.add(new AbstractMap.SimpleEntry<>(now, tcbn.handler))) {
                         List<StackObject> newStack = new ArrayList<>();
-                        newStack.add(0, new StackObject(new ArgumentFrame(), tcbn.type == null ? "java/lang/Throwable" : tcbn.type));
+                        newStack.add(0, new StackObject(new ArgumentFrame(-1, -1), tcbn.type == null ? "java/lang/Throwable" : tcbn.type));
                         List<StackObject> newLocals = new ArrayList<>();
                         newLocals.addAll(locals);
                         execute(classNode, method, tcbn.handler, newStack, newLocals, handlers, result, jumped);

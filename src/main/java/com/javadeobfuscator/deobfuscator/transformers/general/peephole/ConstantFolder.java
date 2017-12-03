@@ -308,7 +308,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 Set<AbstractInsnNode> remove = new HashSet<>();
                                 for (Frame frame0 : frames) {
                                     PopFrame frame = (PopFrame) frame0;
-                                    if (frame.getRemoved().get(0) instanceof LdcFrame && (ain.getOpcode() == POP2 ? frame.getRemoved().get(1) instanceof LdcFrame : true)) {
+                                    if (frame.getRemoved().get(0) instanceof LdcFrame && (ain.getOpcode() == POP2 ? frame.getRemoved().size() == 2 && frame.getRemoved().get(1) instanceof LdcFrame : true)) {
                                         for (Frame deletedFrame : frame.getRemoved()) {
                                             if (deletedFrame.getChildren().size() > 1) {
                                                 // ldc -> ldc -> swap -> pop = we can't even

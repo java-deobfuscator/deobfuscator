@@ -204,7 +204,9 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                                         ClassNode cn = result.getDeclaringClass().getClassNode();
                                         MethodNode mn = cn.methods.stream().filter(m -> m.name.equals(result.getName()) && m.desc.startsWith(partDesc)).findFirst().orElse(null);
                                         methodInsnNode.desc = mn.desc;
-                                        methodInsnNode.setOpcode(Modifier.isStatic(mn.access) ? Opcodes.INVOKESTATIC : Opcodes.INVOKEVIRTUAL);
+                                        methodInsnNode.setOpcode(Modifier.isStatic(mn.access) ? Opcodes.INVOKESTATIC : 
+                                        	(cn.access & Opcodes.ACC_INTERFACE) != 0 ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL);
+                                        methodInsnNode.itf = methodInsnNode.getOpcode() == Opcodes.INVOKEINTERFACE;
                                         total.incrementAndGet();
                                         int x = (int) ((total.get() * 1.0d / expected) * 100);
                                         if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
