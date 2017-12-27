@@ -10,6 +10,10 @@ The deobfuscator supports deobfuscation of transformations such as string litera
 
 Things like method names, class names, etc cannot be deobfuscated because their renaming is irreversible. The information needed to deobfuscate is removed.
 
+## My program wasn't deobfuscated
+
+Check out [this guide](CUSTOMTRANSFORMER.md)
+
 ## Examples
 
 ### As a library
@@ -68,6 +72,7 @@ Official transformers are linked via the `Transformers` class.
 | Transformer | Canonical Name |  Description |
 | --- | --- | --- |
 | Allatori.STRING_ENCRYPTION | allatori.StringEncryptionTransformer | Decrypts strings encrypted by Allatori |
+| Allatori.FLOW_OBFUSCATION | allatori.FlowObfuscationTransformer | Removes flow obfuscation by Allatori |
 | DashO.STRING_ENCRYPTION | dasho.StringEncryptionTransformer | Decrypts strings encrypted by DashO |
 | SkidSuite.STRING_ENCRYPTION | skidsuite2.StringEncryptionTransformer | Decrypts strings encrypted by SkidSuite2 |
 | SkidSuite.FAKE_EXCEPTION | skidsuite2.FakeExceptionTransformer | Remove fake exceptions by SkidSuite2 |
