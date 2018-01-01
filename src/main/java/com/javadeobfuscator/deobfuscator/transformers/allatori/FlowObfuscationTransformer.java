@@ -421,6 +421,12 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	            								}
 	            							}
 	            						}
+	            					for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+	            						if(trycatch.start == label || trycatch.end == label || trycatch.handler == label)
+	            						{
+	            							failed = true;
+	            							break;
+	            						}
 	    							if(!failed)
 	    							{
 	    								ArgsAnalyzer.Result backwards = new ArgsAnalyzer(label, ((ArgsAnalyzer.FailedResult)result).getExtraArgs(), 
@@ -721,7 +727,47 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     	while(next != dup)
     	{
     		if(next instanceof LabelNode)
-    			return false;
+    		{
+    			boolean cannotInline = false;
+    			for(AbstractInsnNode a : method.instructions.toArray())
+					if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == next)
+					{
+						cannotInline = true;
+						break;
+					}else if(a instanceof TableSwitchInsnNode)
+					{
+						for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+							if(l == next)
+							{
+								cannotInline = true;
+								break;
+							}
+						if(((TableSwitchInsnNode)a).dflt == next)
+							cannotInline = true;
+						if(cannotInline)
+							break;
+					}else if(a instanceof LookupSwitchInsnNode)
+					{
+						for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+							if(l == next)
+							{
+								cannotInline = true;
+								break;
+							}
+						if(((LookupSwitchInsnNode)a).dflt == next)
+							cannotInline = true;
+						if(cannotInline)
+							break;
+					}
+				for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+					if(trycatch.start == next || trycatch.end == next || trycatch.handler == next)
+					{
+						cannotInline = true;
+						break;
+					}
+				if(cannotInline)
+					return false;
+    		}
     		next = next.getNext();
     	}
     	int stackSize = -1;
