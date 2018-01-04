@@ -52,6 +52,7 @@ import java.util.zip.ZipOutputStream;
 
 public class Deobfuscator {
     private Map<String, ClassNode> classpath = new HashMap<>();
+    private Map<String, ClassNode> libraries = new HashMap<>();
     private Map<String, ClassNode> classes = new HashMap<>();
     private Map<String, ClassTree> hierachy = new HashMap<>();
     private Set<ClassNode> libraryClassnodes = new HashSet<>();
@@ -114,6 +115,10 @@ public class Deobfuscator {
         return map;
     }
 
+    public Map<String, ClassNode> getLibraries() {
+        return libraries;
+    }
+
     private void loadClasspath() throws IOException {
         if (configuration.getPath() != null) {
             for (File file : configuration.getPath()) {
@@ -132,17 +137,18 @@ public class Deobfuscator {
         if (configuration.getLibraries() != null) {
             for (File file : configuration.getLibraries()) {
                 if (file.isFile()) {
-                    classpath.putAll(loadClasspathFile(file, false));
+                    libraries.putAll(loadClasspathFile(file, false));
                 } else {
                     File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
                     if (files != null) {
                         for (File child : files) {
-                            classpath.putAll(loadClasspathFile(child, false));
+                            libraries.putAll(loadClasspathFile(child, false));
                         }
                     }
                 }
             }
         }
+        classpath.putAll(libraries);
         libraryClassnodes.addAll(classpath.values());
     }
 
@@ -176,43 +182,46 @@ public class Deobfuscator {
                     continue;
                 }
 
-                boolean passthrough = true;
-
                 byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
-
-                if (next.getName().endsWith(".class")) {
-                    try {
-                        ClassReader reader = new ClassReader(data);
-                        ClassNode node = new ClassNode();
-                        reader.accept(node, ClassReader.SKIP_FRAMES);
-
-                        readers.put(node, reader);
-                        setConstantPool(node, new ConstantPool(reader));
-
-                        if (!isClassIgnored(node)) {
-                            for (int i = 0; i < node.methods.size(); i++) {
-                                MethodNode methodNode = node.methods.get(i);
-                                JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
-                                methodNode.accept(adapter);
-                                node.methods.set(i, adapter);
-                            }
-
-                            classes.put(node.name, node);
-                            passthrough = false;
-                        } else {
-                            classpath.put(node.name, node);
-                        }
-                    } catch (IllegalArgumentException x) {
-                        logger.error("Could not parse {} (is it a class file?)", next.getName(), x);
-                    }
-                }
-
-                if (passthrough) {
-                    inputPassthrough.put(next.getName(), data);
-                }
+                loadInput(next.getName(), data);
             }
 
             classpath.putAll(classes);
+        }
+    }
+
+    public void loadInput(String name, byte[] data) {
+        boolean passthrough = true;
+
+        if (name.endsWith(".class")) {
+            try {
+                ClassReader reader = new ClassReader(data);
+                ClassNode node = new ClassNode();
+                reader.accept(node, ClassReader.SKIP_FRAMES);
+
+                readers.put(node, reader);
+                setConstantPool(node, new ConstantPool(reader));
+
+                if (!isClassIgnored(node)) {
+                    for (int i = 0; i < node.methods.size(); i++) {
+                        MethodNode methodNode = node.methods.get(i);
+                        JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
+                        methodNode.accept(adapter);
+                        node.methods.set(i, adapter);
+                    }
+
+                    classes.put(node.name, node);
+                    passthrough = false;
+                } else {
+                    classpath.put(node.name, node);
+                }
+            } catch (IllegalArgumentException x) {
+                logger.error("Could not parse {} (is it a class file?)", name, x);
+            }
+        }
+
+        if (passthrough) {
+            inputPassthrough.put(name, data);
         }
     }
 
