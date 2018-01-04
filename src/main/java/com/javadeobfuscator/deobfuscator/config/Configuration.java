@@ -16,11 +16,10 @@
 
 package com.javadeobfuscator.deobfuscator.config;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 
-import java.io.File;
-import java.util.Collections;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
 public class Configuration {
 
@@ -44,6 +43,9 @@ public class Configuration {
 
     @JsonProperty
     private boolean verify;
+
+    @JsonProperty
+    private boolean detect;
 
     public File getInput() {
         return input;
@@ -99,5 +101,13 @@ public class Configuration {
 
     public void setLibraries(List<File> libraries) {
         this.libraries = libraries;
+    }
+
+    public boolean isDetect() {
+        return detect;
+    }
+
+    public void setDetect(boolean detect) {
+        this.detect = detect;
     }
 }

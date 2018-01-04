@@ -1,19 +1,14 @@
 <!-- 
-    If this issue is a bug report, please make sure that:
+    If this issue is a bug report (i.e. something wasn't deobfuscated),
+    please read the FAQs first (bottom of the README).
     
-    * The error does not mention "Could not locate a class file"
-        If it does, read the FAQs (in the README)
-    * The error does not mention "A StackOverflowError occurred during deobfuscation"
-        If it does, read the FAQs (in the README)
-    * You've provided some way of reproducing the bug, but only if you have permission to do so
-        If you don't have permission or don't provide a sample, feel free to open an issue anyways, but know that it may be closed without a fix
-    * You've provided the config file you used (or more precisely, the transformers you used)
-    * You've provided the error (please don't paste the error directly. put it in a code block)
-        Code blocks can be created like so:
-        
-        ```
-        This is inside a code block
-        ```
+    Please make sure that you've provided a copy of the file you're deobfuscation if possible.
+    If you don't have permission to provide the entire program or you don't want to,
+    then there's not much I can do. I'm not psychic.
+    
+    You should also provide a copy of the config/code you're using to run the deobfuscator.
+    Order of transformers matter, and sometimes you just need to switch them around.
+    Please paste the config/code in a code block. Here's how to do that: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet#code-and-syntax-highlighting
     
     Thank you!
 -->

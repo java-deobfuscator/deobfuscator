@@ -16,24 +16,29 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.javavm.VirtualMachine;
-import com.javadeobfuscator.javavm.nativeimpls.java_lang_Class;
-import com.javadeobfuscator.javavm.values.JavaWrapper;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.javavm.*;
+import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.tree.analysis.*;
 
-import java.io.File;
-import java.lang.reflect.Modifier;
+import java.io.*;
 import java.util.*;
 
-import static com.javadeobfuscator.deobfuscator.utils.Utils.loadBytes;
+import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
 
 public class TransformerHelper implements Opcodes {
     public static boolean isInvokeVirtual(AbstractInsnNode insn, String owner, String name, String desc) {
         if (insn.getOpcode() != INVOKEVIRTUAL) {
+            return false;
+        }
+        MethodInsnNode methodInsnNode = (MethodInsnNode) insn;
+        return (owner == null || methodInsnNode.owner.equals(owner)) &&
+                (name == null || methodInsnNode.name.equals(name)) &&
+                (desc == null || methodInsnNode.desc.equals(desc));
+    }
+
+    public static boolean isInvokeStatic(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn.getOpcode() != INVOKESTATIC) {
             return false;
         }
         MethodInsnNode methodInsnNode = (MethodInsnNode) insn;
@@ -57,18 +62,23 @@ public class TransformerHelper implements Opcodes {
     }
 
     public static MethodNode findMethodNode(ClassNode classNode, String name, String desc) {
-        List<MethodNode> methods = findMethodNodes(classNode, name, desc);
+        return findMethodNode(classNode, name, desc, false);
+    }
+
+    public static MethodNode findMethodNode(ClassNode classNode, String name, String desc, boolean basic) {
+        List<MethodNode> methods = findMethodNodes(classNode, name, desc, basic);
         if (methods.isEmpty() || methods.size() > 1) {
             return null;
         }
         return methods.get(0);
     }
 
-    public static List<MethodNode> findMethodNodes(ClassNode classNode, String name, String desc) {
+    public static List<MethodNode> findMethodNodes(ClassNode classNode, String name, String desc, boolean basic) {
         List<MethodNode> found = new ArrayList<>();
         for (MethodNode m : classNode.methods) {
-            if ((name == null || m.name.equals(name)) &&
-                    (desc == null || m.desc.equals(desc))) {
+            boolean nameMatches = name == null || m.name.equals(name);
+            boolean descMatches = desc == null || (basic ? TransformerHelper.basicType(m.desc) : m.desc).equals(desc);
+            if (nameMatches && descMatches) {
                 found.add(m);
             }
         }
@@ -94,14 +104,35 @@ public class TransformerHelper implements Opcodes {
         return fields;
     }
 
-    public static boolean containsInvokeVirtual(MethodNode methodNode, String owner, String name, String desc) {
+    public static boolean containsInvokeStatic(MethodNode methodNode, String owner, String name, String desc) {
         for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
             AbstractInsnNode insn = it.next();
-            if (isInvokeVirtual(insn, "java/lang/String", "intern", "()Ljava/lang/String;")) {
+            if (isInvokeStatic(insn, owner, name, desc)) {
                 return true;
             }
         }
         return false;
+    }
+
+    public static boolean containsInvokeVirtual(MethodNode methodNode, String owner, String name, String desc) {
+        for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
+            AbstractInsnNode insn = it.next();
+            if (isInvokeVirtual(insn, owner, name, desc)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int countOccurencesOf(MethodNode methodNode, int opcode) {
+        int i = 0;
+        for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
+            AbstractInsnNode insnNode = it.next();
+            if (insnNode.getOpcode() == opcode) {
+                i++;
+            }
+        }
+        return i;
     }
 
 
@@ -134,6 +165,7 @@ public class TransformerHelper implements Opcodes {
         vm.getFilesystem().map(new File("\\C:\\java_home_dir\\lib\\security\\local_policy.jar"), javaLibSecurity("local_policy.jar"));
         vm.getFilesystem().map(new File("\\currentjar.zip"), transformer.getDeobfuscator().getConfig().getInput());
         vm.classpath(transformer.getDeobfuscator().getClasses().values());
+        vm.classpath(transformer.getDeobfuscator().getLibraries().values());
         transformer.getDeobfuscator().getReaders().forEach((k, v) -> vm.registerClass(v, k));
         return vm;
     }
@@ -345,10 +377,37 @@ public class TransformerHelper implements Opcodes {
         return className.substring(0, lastIndex);
     }
 
+    public static String getFullClassName(String className) {
+        int lastIndex = className.lastIndexOf("/");
+        if (lastIndex == -1) {
+            return className;
+        }
+        return className.substring(lastIndex + 1);
+    }
+
+    public static String getOuterClassName(String className) {
+        className = getFullClassName(className);
+        int lastIndex = className.lastIndexOf("$");
+        if (lastIndex == -1) {
+            return className;
+        }
+        return className.substring(0, lastIndex);
+    }
+
+    public static String getInnerClassName(String className) {
+        className = getFullClassName(className);
+        int lastIndex = className.lastIndexOf("$");
+        if (lastIndex == -1) {
+            return className;
+        }
+        return className.substring(lastIndex + 1);
+    }
+
     public static Iterable<AbstractInsnNode> instructionIterator(MethodNode methodNode) {
         Iterator<AbstractInsnNode> iterator = methodNode.instructions.iterator();
         return () -> new Iterator<AbstractInsnNode>() {
             AbstractInsnNode next = null;
+
             @Override
             public boolean hasNext() {
                 while (iterator.hasNext()) {
@@ -370,5 +429,21 @@ public class TransformerHelper implements Opcodes {
                 return next;
             }
         };
+    }
+
+    public static boolean hasArgumentType(Type[] types, Type want) {
+        for (Type t : types) {
+            if (t.equals(want)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isConstantInt(AbstractInsnNode insn) {
+        if (insn.getOpcode() >= ICONST_M1 && insn.getOpcode() <= ICONST_5) return true;
+        if (insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH) return true;
+        if (insn.getOpcode() == LDC) return ((LdcInsnNode) insn).cst instanceof Integer;
+        return false;
     }
 }

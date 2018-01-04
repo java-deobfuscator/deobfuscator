@@ -370,7 +370,7 @@ public class Utils {
 			&& node.getOpcode() <= Opcodes.ICONST_5)
 			return node.getOpcode() - 3;
 		if (node.getOpcode() == Opcodes.BIPUSH) {
-		    return ((IntInsnNode) node).operand & 0xFF;
+		    return ((IntInsnNode) node).operand;
         }
 		if(node.getOpcode() == Opcodes.SIPUSH)
 			return ((IntInsnNode)node).operand;

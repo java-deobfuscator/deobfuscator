@@ -16,39 +16,26 @@
 
 package com.javadeobfuscator.deobfuscator;
 
-import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
-import com.javadeobfuscator.deobfuscator.config.Configuration;
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.ClassTree;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import org.apache.commons.io.IOUtils;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.JSRInlinerAdapter;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.util.CheckClassAdapter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.javadeobfuscator.deobfuscator.asm.*;
+import com.javadeobfuscator.deobfuscator.config.*;
+import com.javadeobfuscator.deobfuscator.exceptions.*;
+import com.javadeobfuscator.deobfuscator.rules.*;
+import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.utils.*;
+import org.apache.commons.io.*;
+import org.objectweb.asm.*;
+import org.objectweb.asm.commons.*;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.*;
+import org.slf4j.*;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Modifier;
-import java.util.AbstractMap.SimpleEntry;
+import java.io.*;
+import java.lang.reflect.*;
+import java.util.AbstractMap.*;
 import java.util.*;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
+import java.util.Map.*;
+import java.util.regex.*;
+import java.util.zip.*;
 
 public class Deobfuscator {
     private Map<String, ClassNode> classpath = new HashMap<>();
@@ -260,6 +247,33 @@ public class Deobfuscator {
 
         logger.info("Loading input");
         loadInput();
+
+        if (getConfig().isDetect()) {
+            logger.info("Detecting known obfuscators");
+
+            for (Rule rule : Rules.RULES) {
+                String message = rule.test(this);
+                if (message == null) {
+                    continue;
+                }
+
+                logger.info("");
+                logger.info("{}: {}", rule.getClass().getSimpleName(), rule.getDescription());
+                logger.info("\t{}", message);
+                logger.info("Recommend transformers:");
+
+                Collection<Class<? extends Transformer>> recommended = rule.getRecommendTransformers();
+                if (recommended == null) {
+                    logger.info("\tNone");
+                } else {
+                    for (Class<? extends Transformer> transformer : recommended) {
+                        logger.info("\t{}", transformer.getName());
+                    }
+                }
+            }
+
+            return;
+        }
 
         logger.info("Computing callers");
         computeCallers();
