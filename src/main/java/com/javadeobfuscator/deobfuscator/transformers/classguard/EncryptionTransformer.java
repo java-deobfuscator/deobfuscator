@@ -48,7 +48,6 @@ public class EncryptionTransformer extends Transformer<TransformerConfig> {
         } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
             throw new RuntimeException("Expected RSA Cipher", e);
         }
-
         Cipher aesCipher;
         try {
             aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -62,52 +61,36 @@ public class EncryptionTransformer extends Transformer<TransformerConfig> {
                 continue;
             }
 
-            RSAPrivateKeySpec spec = new RSAPrivateKeySpec(
-                    new BigInteger(1, Arrays.copyOfRange(lib, data.getModulusOffset(), data.getModulusOffset() + 128)),
-                    new BigInteger(1, Arrays.copyOfRange(lib, data.getExponentOffset(), data.getExponentOffset() + 128))
-            );
-
-            PrivateKey privateKey;
             try {
-                privateKey = rsaFactory.generatePrivate(spec);
-            } catch (InvalidKeySpecException e) {
+                rsaCipher.init(Cipher.DECRYPT_MODE, rsaFactory.generatePrivate(new RSAPrivateKeySpec(
+                        new BigInteger(1, Arrays.copyOfRange(lib, data.getModulusOffset(), data.getModulusOffset() + 128)),
+                        new BigInteger(1, Arrays.copyOfRange(lib, data.getExponentOffset(), data.getExponentOffset() + 128))
+                )));
+            } catch (GeneralSecurityException e) {
                 logger.debug("Failed {}", data.name(), e);
                 continue;
             }
 
-            madeChanges = madeChanges | tryDecryptEntriesUsingKey(rsaCipher, privateKey, aesCipher, Arrays.copyOfRange(lib, data.getClassEncKeyOffset(), data.getClassEncKeyOffset() + 128), data, true);
-            madeChanges = madeChanges | tryDecryptEntriesUsingKey(rsaCipher, privateKey, aesCipher, Arrays.copyOfRange(lib, data.getRsrcEncKeyOffset(), data.getRsrcEncKeyOffset() + 128), data, false);
+            madeChanges = madeChanges | tryDecryptEntriesUsingKey(rsaCipher, aesCipher, Arrays.copyOfRange(lib, data.getClassEncKeyOffset(), data.getClassEncKeyOffset() + 128), data, true);
+            madeChanges = madeChanges | tryDecryptEntriesUsingKey(rsaCipher, aesCipher, Arrays.copyOfRange(lib, data.getRsrcEncKeyOffset(), data.getRsrcEncKeyOffset() + 128), data, false);
         }
 
         return madeChanges;
     }
 
-    private boolean tryDecryptEntriesUsingKey(Cipher rsaCipher, PrivateKey privateKey, Cipher aesCipher, byte[] encAesKey, ClassGuardData data, boolean decryptingClasses) {
-        SecretKey aesKey;
+    private boolean tryDecryptEntriesUsingKey(Cipher rsaCipher, Cipher aesCipher, byte[] encAesKey, ClassGuardData data, boolean decryptingClasses) {
         try {
-            rsaCipher.init(Cipher.DECRYPT_MODE, privateKey);
-            aesKey = new SecretKeySpec(rsaCipher.doFinal(encAesKey), "AES");
-            aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
+            aesCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(rsaCipher.doFinal(encAesKey), "AES"));
         } catch (GeneralSecurityException e) {
             logger.debug("Failed {}", data.name(), e);
             return false;
         }
 
-        logger.info("Found working {} decryption key for {}", decryptingClasses ? "class" : "rsrc", data.name());
-
-        boolean madeChanges = false;
+        logger.info("Found valid {} decryption key for {}", decryptingClasses ? "class" : "rsrc", data.name());
 
         Map<String, byte[]> decrypted = new HashMap<>();
 
-        for (Iterator<Map.Entry<String, byte[]>> it = getDeobfuscator().getInputPassthrough().entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<String, byte[]> entry = it.next();
-
-            try {
-                aesCipher.init(Cipher.DECRYPT_MODE, aesKey);
-            } catch (InvalidKeyException e) {
-                throw new RuntimeException("Did not expect this", e);
-            }
-
+        for (Map.Entry<String, byte[]> entry : getDeobfuscator().getInputPassthrough().entrySet()) {
             byte[] decEntry;
             try {
                 decEntry = aesCipher.doFinal(entry.getValue());
@@ -115,22 +98,19 @@ public class EncryptionTransformer extends Transformer<TransformerConfig> {
                 continue;
             }
 
+            decrypted.put(entry.getKey(), decEntry);
+        }
+
+        for (Map.Entry<String, byte[]> entry : decrypted.entrySet()) {
             String modifiedName = entry.getKey();
             if (modifiedName.endsWith("x")) {
                 modifiedName = modifiedName.substring(0, modifiedName.length() - 1);
             }
             logger.info("Decrypted {} {} -> {}", decryptingClasses ? "class" : "rsrc", entry.getKey(), modifiedName);
-
-            decrypted.put(modifiedName, decEntry);
-            madeChanges = true;
-
-            it.remove();
+            getDeobfuscator().getInputPassthrough().remove(entry.getKey());
+            getDeobfuscator().loadInput(modifiedName, entry.getValue());
         }
 
-        for (Map.Entry<String, byte[]> ent : decrypted.entrySet()) {
-            getDeobfuscator().loadInput(ent.getKey(), ent.getValue());
-        }
-
-        return madeChanges;
+        return !decrypted.isEmpty();
     }
 }
