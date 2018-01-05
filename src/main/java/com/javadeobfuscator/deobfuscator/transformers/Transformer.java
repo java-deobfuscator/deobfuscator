@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.*;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -54,7 +55,11 @@ public abstract class Transformer<T extends TransformerConfig> {
         return this.classes.values();
     }
 
-    public abstract boolean transform() throws Throwable;
+    /**
+     * @return whether some modifications were made
+     * @throws WrongTransformerException If this transformer doesn't apply
+     */
+    public abstract boolean transform() throws Throwable, WrongTransformerException; // Throwable will be removed soon
 
     public Deobfuscator getDeobfuscator() {
         return this.deobfuscator;

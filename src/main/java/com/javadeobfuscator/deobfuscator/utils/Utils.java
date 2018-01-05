@@ -59,13 +59,6 @@ public class Utils {
         return next;
     }
 
-    public static AbstractInsnNode getNext(AbstractInsnNode node, int amount) {
-        for (int i = 0; i < amount; i++) {
-            node = getNext(node);
-        }
-        return node;
-    }
-    
     public static AbstractInsnNode getNext(AbstractInsnNode node) {
         AbstractInsnNode next = node.getNext();
         while (!Utils.isInstruction(next)) {
@@ -376,8 +369,10 @@ public class Utils {
 		if(node.getOpcode() >= Opcodes.ICONST_M1
 			&& node.getOpcode() <= Opcodes.ICONST_5)
 			return node.getOpcode() - 3;
-		if(node.getOpcode() == Opcodes.SIPUSH
-			|| node.getOpcode() == Opcodes.BIPUSH)
+		if (node.getOpcode() == Opcodes.BIPUSH) {
+		    return ((IntInsnNode) node).operand;
+        }
+		if(node.getOpcode() == Opcodes.SIPUSH)
 			return ((IntInsnNode)node).operand;
 		if(node instanceof LdcInsnNode)
 		{
