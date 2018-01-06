@@ -479,7 +479,9 @@ public class ArgsAnalyzer
         			break;
         		}
     			needed++;
-    		}else if(ain.getOpcode() == Opcodes.IRETURN || ain.getOpcode() == Opcodes.FRETURN
+    		}else if(ain.getOpcode() == Opcodes.MONITORENTER || ain.getOpcode() == Opcodes.MONITOREXIT)
+    			needed++;
+    		else if(ain.getOpcode() == Opcodes.IRETURN || ain.getOpcode() == Opcodes.FRETURN
     			|| ain.getOpcode() == Opcodes.ARETURN)
     			return new FailedResult(diff, needed, ain, null);
     		else if(ain.getOpcode() == Opcodes.LRETURN || ain.getOpcode() == Opcodes.DRETURN)
@@ -966,7 +968,9 @@ public class ArgsAnalyzer
         			break;
         		}
     			stackSize++;
-    		}else if(ain.getOpcode() == Opcodes.IRETURN || ain.getOpcode() == Opcodes.FRETURN
+    		}else if(ain.getOpcode() == Opcodes.MONITORENTER || ain.getOpcode() == Opcodes.MONITOREXIT)
+    			stackSize--;
+    		else if(ain.getOpcode() == Opcodes.IRETURN || ain.getOpcode() == Opcodes.FRETURN
     			|| ain.getOpcode() == Opcodes.ARETURN)
     		{
     			stackSize--;
