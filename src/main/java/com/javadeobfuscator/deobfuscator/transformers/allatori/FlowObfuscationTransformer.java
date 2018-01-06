@@ -22,7 +22,7 @@ import org.objectweb.asm.tree.*;
  
 public class FlowObfuscationTransformer extends Transformer<TransformerConfig> 
 {
-    @Override 
+	@Override 
     public boolean transform() throws Throwable {
     	DelegatingProvider provider = new DelegatingProvider();
         provider.register(new JVMMethodProvider());
@@ -105,6 +105,15 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        						if(!containsJump)
 	        							continue;
 	        					}
+	        					boolean cannotFix = false;
+	        					for(AbstractInsnNode a : method.instructions.toArray())
+	        						if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == label && a.getOpcode() != Opcodes.GOTO)
+	        						{
+	        							cannotFix = true;
+	        							break;
+	        						}
+	        					if(cannotFix)
+	        						continue;
 	        					if(isGoto)
 	    						{
 	    							ArgsAnalyzer backwards = new ArgsAnalyzer(label.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS);
@@ -119,11 +128,11 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 										else if(res.getOpcode() == store.getOpcode() - 33)
 											method.instructions.remove(res);
 										else
-											throw new RuntimeException("Unexpected opcode: " + res.getOpcode());
+											continue;
 									}
 	    						}
 	        					for(AbstractInsnNode a : method.instructions.toArray())
-	        						if(a instanceof JumpInsnNode && a != next2 && ((JumpInsnNode)a).label == label)
+	        						if(a.getOpcode() == Opcodes.GOTO && a != next2 && ((JumpInsnNode)a).label == label)
 	        						{
 	        							ArgsAnalyzer backwards = new ArgsAnalyzer(a.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS);
 	        							backwards.setIgnoreNeeded(true);
@@ -191,6 +200,15 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        						if(!containsJump)
 	        							continue;
 	        					}
+	        					boolean cannotFix = false;
+	        					for(AbstractInsnNode a : method.instructions.toArray())
+	        						if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == label && a.getOpcode() != Opcodes.GOTO)
+	        						{
+	        							cannotFix = true;
+	        							break;
+	        						}
+	        					if(cannotFix)
+	        						continue;
 	        					if(isGoto)
 	        					{
 	        						ArgsAnalyzer backwards = new ArgsAnalyzer(label.getPrevious(), 2, ArgsAnalyzer.Mode.BACKWARDS);
@@ -209,7 +227,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        						}
 	        					}
 	        					for(AbstractInsnNode a : method.instructions.toArray())
-	        						if(a instanceof JumpInsnNode && a != next2 && ((JumpInsnNode)a).label == label)
+	        						if(a.getOpcode() == Opcodes.GOTO && a != next2 && ((JumpInsnNode)a).label == label)
 	        						{
 	        							ArgsAnalyzer backwards = new ArgsAnalyzer(a.getPrevious(), 2, ArgsAnalyzer.Mode.BACKWARDS);
 	        							backwards.setIgnoreNeeded(true);
@@ -278,6 +296,51 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        								method.instructions.remove(label.getNext());
 	        							method.instructions.remove(label);
 	        						}
+        							AbstractInsnNode prev = ain.getPrevious();
+        					        while(!Utils.isInstruction(prev) && !(prev instanceof LabelNode))
+        					            prev = prev.getPrevious();
+        					        if(prev instanceof LabelNode)
+        					        {
+        					        	boolean labelUsed = false;
+        					        	for(AbstractInsnNode a : method.instructions.toArray())
+	    									if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == prev)
+	    									{
+	    										labelUsed = true;
+	    										break;
+	    									}else if(a instanceof TableSwitchInsnNode)
+	    									{
+	    										for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+	    											if(l == prev)
+	    											{
+	    												labelUsed = true;
+	    												break;
+	    											}
+	    										if(((TableSwitchInsnNode)a).dflt == prev)
+	    											labelUsed = true;
+	    										if(labelUsed)
+	    											break;
+	    									}else if(a instanceof LookupSwitchInsnNode)
+	    									{
+	    										for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+	    											if(l == prev)
+	    											{
+	    												labelUsed = true;
+	    												break;
+	    											}
+	    										if(((LookupSwitchInsnNode)a).dflt == prev)
+	    											labelUsed = true;
+	    										if(labelUsed)
+	    											break;
+	    									}
+	    								for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+	    									if(trycatch.start == prev || trycatch.end == prev || trycatch.handler == prev)
+	    									{
+	    										labelUsed = true;
+	    										break;
+	    									}
+	    								if(!labelUsed)
+	    									method.instructions.remove(prev);
+        					        }
 	        						method.instructions.remove(ain.getNext());
 	        						method.instructions.remove(ain);
 	        					}
@@ -317,7 +380,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        								continue;
 	        							}
 	        							ArgsAnalyzer.Result analysis = new ArgsAnalyzer(
-	        	    						ain1.getPrevious(), ain1.getOpcode() == Opcodes.GOTO ? 1 
+	        	    						ain1.getPrevious(), ain1.getOpcode() == Opcodes.GOTO || ain1.getOpcode() == Opcodes.JSR ? 1 
 	        	    							: ain.getNext().getOpcode() >= Opcodes.IFEQ
 	        	    	    						&& ain.getNext().getOpcode() <= Opcodes.IFLE ? 2 : 3, 
 	        	    	    						ArgsAnalyzer.Mode.BACKWARDS, Opcodes.SWAP).lookupArgs();
@@ -387,10 +450,49 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        				if(willPush(ain))
 	            			{
 	            				ArgsAnalyzer.Result result = new ArgsAnalyzer(ain.getNext(), 1, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
-	            				if(result instanceof ArgsAnalyzer.FailedResult && ((ArgsAnalyzer.FailedResult)result).getFailedPoint().getOpcode() == Opcodes.GOTO)
+	            				if(!(result instanceof ArgsAnalyzer.FailedResult) && result.getDiff() != -1 && result.getSwap() != null)
+	            				{
+	            					i++;
+	            					continue;
+	            				}
+	            				if(result instanceof ArgsAnalyzer.FailedResult && ((ArgsAnalyzer.FailedResult)result).getFailedPoint().getOpcode() == Opcodes.GOTO
+	            					&& ((ArgsAnalyzer.FailedResult)result).getSkippedDupsAtFailure().size() <= 0)
 	            				{
 	            					AbstractInsnNode jump = ((ArgsAnalyzer.FailedResult)result).getFailedPoint();
 									LabelNode label = ((JumpInsnNode)jump).label;
+									if(method.name.equals("<clinit>"))
+									{
+										if(Utils.isInteger(ain) && Utils.getIntValue(ain) == -1 && Utils.getNext(label) != null && Utils.getNext(label).getOpcode() == Opcodes.SWAP
+											&& Utils.getNext(label, 2) != null && Utils.getNext(label, 2).getOpcode() == Opcodes.INVOKEVIRTUAL
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).owner.equals("java/lang/String")
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).name.equals("toCharArray"))
+										{
+			            					i++;
+			            					continue;
+			            				}
+										if(ain.getOpcode() == Opcodes.ACONST_NULL && Utils.getNext(label) != null && Utils.getNext(label).getOpcode() == Opcodes.ASTORE
+											&& Utils.getNext(label, 2) != null && Utils.getNext(label, 2).getOpcode() == Opcodes.INVOKEVIRTUAL
+											&& ((((MethodInsnNode)Utils.getNext(label, 2)).owner.equals("java/lang/String")
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).name.equals("toCharArray")
+											&& Utils.getNext(label, 3) != null && Utils.getNext(label, 3).getOpcode() == Opcodes.DUP_X1)
+											|| (Utils.getNext(label, 2) != null && Utils.getNext(label, 2).getOpcode() == Opcodes.INVOKESTATIC
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).desc.equals("(Ljava/lang/String;)[C"))))
+										{
+			            					i++;
+			            					continue;
+			            				}
+										if(Utils.isInteger(ain) && Utils.getNext(label) != null && Utils.getNext(label).getOpcode() == Opcodes.ASTORE
+											&& Utils.getNext(label, 2) != null && Utils.getNext(label, 2).getOpcode() == Opcodes.INVOKEVIRTUAL
+											&& ((((MethodInsnNode)Utils.getNext(label, 2)).owner.equals("java/lang/String")
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).name.equals("toCharArray")
+											&& Utils.getNext(label, 3) != null && Utils.getNext(label, 3).getOpcode() == Opcodes.DUP)
+											|| (Utils.getNext(label, 2) != null && Utils.getNext(label, 2).getOpcode() == Opcodes.INVOKESTATIC
+											&& ((MethodInsnNode)Utils.getNext(label, 2)).desc.equals("(Ljava/lang/String;)[C"))))
+										{
+			            					i++;
+			            					continue;
+			            				}
+									}
 	            					boolean failed = false;
 	            					for(AbstractInsnNode ain1 : method.instructions.toArray())
 	            						if(ain1 instanceof JumpInsnNode && ain1 != jump && ((JumpInsnNode)ain1).label == label)
@@ -444,7 +546,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	            								if(forward.getArgsNeeded() != -((ArgsAnalyzer.FailedResult)result).getExtraArgs())
 	            									failed2 = true;
 	            							}
-	        							}
+	        							}else if(backwards instanceof ArgsAnalyzer.FailedResult 
+	        								&& ((ArgsAnalyzer.FailedResult)backwards).getFailedPoint() != Utils.getPrevious(label))
+	        								failed2 = true;
 	    								if(failed2)
 	    								{
 	    									i++;
@@ -455,8 +559,96 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	    								insertAnalyzer.setOnlyZero(true);
 	    								ArgsAnalyzer.Result insert = insertAnalyzer.lookupArgs();
 	    								if(insert instanceof ArgsAnalyzer.FailedResult || insert.getFirstArgInsn() == null
-	    									|| insert.getArgsNeeded() > 0)
+	    									|| insert.getArgsNeeded() > 0 || insert.getSkippedDups().size() > 0)
 	    								{
+	    									i++;
+	    									continue;
+	    								}
+	    								boolean pushes = false;
+	    								if(insert.getFirstArgInsn().getOpcode() >= Opcodes.IALOAD && insert.getFirstArgInsn().getOpcode() <= Opcodes.SALOAD)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn().getOpcode() >= Opcodes.DUP && insert.getFirstArgInsn().getOpcode() <= Opcodes.DUP2_X2)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn().getOpcode() >= Opcodes.IADD && insert.getFirstArgInsn().getOpcode() <= Opcodes.LXOR)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn().getOpcode() >= Opcodes.I2L && insert.getFirstArgInsn().getOpcode() <= Opcodes.DCMPG)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn().getOpcode() == Opcodes.GETFIELD)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn() instanceof MethodInsnNode 
+	    									&& Type.getReturnType(((MethodInsnNode)insert.getFirstArgInsn()).desc).getSort() != Type.VOID
+	    									&& Type.getReturnType(((MethodInsnNode)insert.getFirstArgInsn()).desc).getSort() != Type.METHOD)
+	    									pushes = true;
+	    								else if(insert.getFirstArgInsn().getOpcode() == Opcodes.MULTIANEWARRAY
+	    									|| insert.getFirstArgInsn().getOpcode() == Opcodes.INSTANCEOF
+	    									|| insert.getFirstArgInsn().getOpcode() == Opcodes.CHECKCAST
+	    									|| insert.getFirstArgInsn().getOpcode() == Opcodes.NEWARRAY
+	    									|| insert.getFirstArgInsn().getOpcode() == Opcodes.ANEWARRAY
+	    									|| insert.getFirstArgInsn().getOpcode() == Opcodes.ARRAYLENGTH)
+	    									pushes = true;
+	    								if(pushes)
+	    								{
+	    									i++;
+	    									continue;
+	    								}
+	    								AbstractInsnNode prev = Utils.getPrevious(insert.getFirstArgInsn());
+										boolean hasJumpBetween = false;
+										insn:
+	    								while(prev != insert.getFirstArgInsn())
+	    								{
+	    									if(prev instanceof LabelNode)
+	    									{
+	    										for(AbstractInsnNode a : method.instructions.toArray())
+	    	    									if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == prev)
+	    	    									{
+	    	    										hasJumpBetween = true;
+	    	    										break;
+	    	    									}else if(a instanceof TableSwitchInsnNode)
+	    	    									{
+	    	    										for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+	    	    											if(l == prev)
+	    	    											{
+	    	    												hasJumpBetween = true;
+	    	    												break insn;
+	    	    											}
+	    	    										if(((TableSwitchInsnNode)a).dflt == prev)
+	    	    										{
+	    	    											hasJumpBetween = true;
+	    	    											break insn;
+	    	    										}
+	    	    									}else if(a instanceof LookupSwitchInsnNode)
+	    	    									{
+	    	    										for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+	    	    											if(l == prev)
+	    	    											{
+		    	    											hasJumpBetween = true;
+		    	    											break insn;
+		    	    										}
+	    	    										if(((LookupSwitchInsnNode)a).dflt == prev)
+	    	    										{
+	    	    											hasJumpBetween = true;
+	    	    											break insn;
+	    	    										}
+	    	    									}
+	    	    								for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+	    	    									if(trycatch.start == prev || trycatch.end == prev || trycatch.handler == prev)
+	    	    									{
+    	    											hasJumpBetween = true;
+    	    											break insn;
+    	    										}
+	    									}
+	    									prev = prev.getNext();
+	    								}
+										if(hasJumpBetween)
+										{
+											i++;
+											continue;
+										}
+	    								if(insert.getSwap() != null && ((ArgsAnalyzer.FailedResult)result).getExtraArgs() == 2)
+	    								{
+	    									method.instructions.remove(ain);
+		        							method.instructions.insert(((JumpInsnNode)jump).label, ain);
+	    									modified = true;
 	    									i++;
 	    									continue;
 	    								}
@@ -470,7 +662,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	                							method.instructions.remove(res.getFirstArgInsn());
 	                						}
 	        							method.instructions.remove(ain);
-	        								method.instructions.insert(insert.getFirstArgInsn(), ain);
+	        							method.instructions.insert(insert.getFirstArgInsn(), ain);
 	        							modified = true;
 	    							}
 	            				}else if(!(result instanceof ArgsAnalyzer.FailedResult))
@@ -546,35 +738,153 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
         		for(int i = 0; i < method.instructions.size(); i++) 
         		{
         			AbstractInsnNode ain = method.instructions.get(i);
-        			if(ain.getOpcode() == Opcodes.POP)
+        			if(ain.getOpcode() == Opcodes.POP && 
+        				(Utils.getPrevious(ain).getOpcode() > Opcodes.DUP2_X2 || Utils.getPrevious(ain).getOpcode() < Opcodes.DUP))
         			{
         				ArgsAnalyzer analyzer = new ArgsAnalyzer(ain.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS, Opcodes.SWAP);
         				analyzer.setIgnoreNeeded(true);
         				ArgsAnalyzer.Result res = analyzer.lookupArgs();
         				if(!(res instanceof ArgsAnalyzer.FailedResult) && res.getFirstArgInsn() != null)
         				{
-        					if(Utils.getNext(res.getFirstArgInsn()).getOpcode() >= Opcodes.DUP
-        						&& Utils.getNext(res.getFirstArgInsn()).getOpcode() <= Opcodes.DUP2_X2)
-        						res = new ArgsAnalyzer(Utils.getNext(res.getFirstArgInsn()).getNext(), 1,
+        					ArgsAnalyzer.Result forward = new ArgsAnalyzer(res.getFirstArgInsn().getNext(), 1, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+        					while(forward.getFirstArgInsn().getOpcode() >= Opcodes.DUP
+        						&& forward.getFirstArgInsn().getOpcode() <= Opcodes.DUP2_X2)
+        					{
+        						int args = forward.getFirstArgInsn().getOpcode() >= Opcodes.DUP
+            						&& forward.getFirstArgInsn().getOpcode() <= Opcodes.DUP2_X2 ? 1 : 2;
+        						res = new ArgsAnalyzer(Utils.getNext(res.getFirstArgInsn()).getNext(), args,
         							ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
-        					int prev = method.instructions.indexOf(ain);
-        					method.instructions.remove(ain);
-        					method.instructions.insert(res.getFirstArgInsn(), ain);
-        					if(method.instructions.indexOf(ain) != prev)
-        						fixed.incrementAndGet();
+        						forward = new ArgsAnalyzer(res.getFirstArgInsn().getNext(), 1, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+        					}
+        					boolean hasJumpBetween = false;
+							AbstractInsnNode nxt = res.getFirstArgInsn();
+    						while(nxt != ain)
+    						{
+    							if(nxt instanceof LabelNode)
+    							{
+    								for(AbstractInsnNode a : method.instructions.toArray())
+    									if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == nxt)
+    									{
+    										hasJumpBetween = true;
+    										break;
+    									}else if(a instanceof TableSwitchInsnNode)
+    									{
+    										for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+    											if(l == nxt)
+    											{
+    												hasJumpBetween = true;
+    												break;
+    											}
+    										if(((TableSwitchInsnNode)a).dflt == nxt)
+    											hasJumpBetween = true;
+    										if(hasJumpBetween)
+    											break;
+    									}else if(a instanceof LookupSwitchInsnNode)
+    									{
+    										for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+    											if(l == nxt)
+    											{
+    												hasJumpBetween = true;
+    												break;
+    											}
+    										if(((LookupSwitchInsnNode)a).dflt == nxt)
+    											hasJumpBetween = true;
+    										if(hasJumpBetween)
+    											break;
+    									}
+    								for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+    									if(trycatch.start == nxt || trycatch.end == nxt || trycatch.handler == nxt)
+    									{
+    										hasJumpBetween = true;
+    										break;
+    									}
+    								if(hasJumpBetween)
+    									break;
+    							}
+    							nxt = nxt.getNext();
+    						}
+    						if(!hasJumpBetween)
+    						{
+	        					int prev = method.instructions.indexOf(ain);
+	        					method.instructions.remove(ain);
+	        					method.instructions.insert(res.getFirstArgInsn(), ain);
+	        					if(method.instructions.indexOf(ain) != prev)
+	        						fixed.incrementAndGet();
+    						}
         				}
-        			}else if(ain.getOpcode() == Opcodes.POP2)
+        			}else if(ain.getOpcode() == Opcodes.POP2 && 
+        				(Utils.getPrevious(ain).getOpcode() > Opcodes.DUP2_X2 || Utils.getPrevious(ain).getOpcode() < Opcodes.DUP))
         			{
         				ArgsAnalyzer analyzer = new ArgsAnalyzer(ain.getPrevious(), 2, ArgsAnalyzer.Mode.BACKWARDS, Opcodes.SWAP);
         				analyzer.setIgnoreNeeded(true);
         				ArgsAnalyzer.Result res = analyzer.lookupArgs();
         				if(!(res instanceof ArgsAnalyzer.FailedResult) && res.getFirstArgInsn() != null && res.getDiff() == -2)
         				{
-        					int prev = method.instructions.indexOf(ain);
-        					method.instructions.remove(ain);
-        					method.instructions.insert(res.getFirstArgInsn(), ain);
-        					if(method.instructions.indexOf(ain) != prev)
-        						fixed.incrementAndGet();
+        					ArgsAnalyzer.Result forward = new ArgsAnalyzer(res.getFirstArgInsn().getNext(), 2, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+        					while(forward.getFirstArgInsn().getOpcode() >= Opcodes.DUP
+        						&& forward.getFirstArgInsn().getOpcode() <= Opcodes.DUP2_X2)
+        					{
+        						int args = forward.getFirstArgInsn().getOpcode() >= Opcodes.DUP
+            						&& forward.getFirstArgInsn().getOpcode() <= Opcodes.DUP2_X2 ? 1 : 2;
+        						res = new ArgsAnalyzer(Utils.getNext(res.getFirstArgInsn()).getNext(), args,
+        							ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+        						forward = new ArgsAnalyzer(res.getFirstArgInsn().getNext(), 2, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+        					}
+        					boolean hasJumpBetween = false;
+        					AbstractInsnNode nxt = res.getFirstArgInsn();
+    						while(nxt != ain)
+    						{
+    							if(nxt instanceof LabelNode)
+    							{
+    								for(AbstractInsnNode a : method.instructions.toArray())
+    									if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == nxt)
+    									{
+    										hasJumpBetween = true;
+    										break;
+    									}else if(a instanceof TableSwitchInsnNode)
+    									{
+    										for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+    											if(l == nxt)
+    											{
+    												hasJumpBetween = true;
+    												break;
+    											}
+    										if(((TableSwitchInsnNode)a).dflt == nxt)
+    											hasJumpBetween = true;
+    										if(hasJumpBetween)
+    											break;
+    									}else if(a instanceof LookupSwitchInsnNode)
+    									{
+    										for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+    											if(l == nxt)
+    											{
+    												hasJumpBetween = true;
+    												break;
+    											}
+    										if(((LookupSwitchInsnNode)a).dflt == nxt)
+    											hasJumpBetween = true;
+    										if(hasJumpBetween)
+    											break;
+    									}
+    								for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+    									if(trycatch.start == nxt || trycatch.end == nxt || trycatch.handler == nxt)
+    									{
+    										hasJumpBetween = true;
+    										break;
+    									}
+    								if(hasJumpBetween)
+    									break;
+    							}
+    							nxt = nxt.getNext();
+    						}
+    						if(!hasJumpBetween)
+    						{
+	        					int prev = method.instructions.indexOf(ain);
+	        					method.instructions.remove(ain);
+	        					method.instructions.insert(res.getFirstArgInsn(), ain);
+	        					if(method.instructions.indexOf(ain) != prev)
+	        						fixed.incrementAndGet();
+    						}
         				}else
         				{
         					ArgsAnalyzer analyzer1 = new ArgsAnalyzer(ain.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS);
@@ -827,7 +1137,54 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     	if(result != null)
     	{
     		AbstractInsnNode insert;
-    		if(-diff - (res.getArgsNeeded() + 1) == 0)
+    		boolean cannotInline = false;
+    		AbstractInsnNode nxt = dup;
+    		while(nxt != result)
+    		{
+    			if(nxt instanceof LabelNode)
+    			{
+    				for(AbstractInsnNode a : method.instructions.toArray())
+    					if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == nxt)
+    					{
+    						cannotInline = true;
+    						break;
+    					}else if(a instanceof TableSwitchInsnNode)
+    					{
+    						for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+    							if(l == nxt)
+    							{
+    								cannotInline = true;
+    								break;
+    							}
+    						if(((TableSwitchInsnNode)a).dflt == nxt)
+    							cannotInline = true;
+    						if(cannotInline)
+    							break;
+    					}else if(a instanceof LookupSwitchInsnNode)
+    					{
+    						for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+    							if(l == nxt)
+    							{
+    								cannotInline = true;
+    								break;
+    							}
+    						if(((LookupSwitchInsnNode)a).dflt == nxt)
+    							cannotInline = true;
+    						if(cannotInline)
+    							break;
+    					}
+    				for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+    					if(trycatch.start == nxt || trycatch.end == nxt || trycatch.handler == nxt)
+    					{
+    						cannotInline = true;
+    						break;
+    					}
+    				if(cannotInline)
+    					break;
+    			}
+    			nxt = nxt.getNext();
+    		}
+    		if(!cannotInline && -diff - (res.getArgsNeeded() + 1) == 0)
     		{
     			method.instructions.insertBefore(result, insert = Utils.getPrevious(dup).clone(null));
         		method.instructions.remove(dup);
@@ -964,6 +1321,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		{
 			if(result.getDiff() == -1)
 			{
+				if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					return false;
 				fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 				method.instructions.remove(ain);
 				method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -974,6 +1333,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 1)
 				{
+					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
 					method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -1033,6 +1394,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
+    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
     							method.instructions.insertBefore(ain, backwards.getFirstArgInsn());
@@ -1048,6 +1411,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					{
 						if(backwards.getFirstArgInsn().getOpcode() == Opcodes.NEW)
 						{
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
     						method.instructions.insertBefore(backwards.getFirstArgInsn(), ain);
@@ -1106,6 +1471,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
+    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
     							method.instructions.remove(ain);
@@ -1116,6 +1483,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
 							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
@@ -1129,6 +1498,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 2)
 				{
+					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
 					method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -1188,6 +1559,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
+    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
     							method.instructions.insertBefore(ain, backwards.getFirstArgInsn());
@@ -1254,6 +1627,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
+    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
     							method.instructions.remove(ain);
@@ -1264,7 +1639,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
+							inlineArgs2(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
     						method.instructions.insertBefore(backwards.getFirstArgInsn(), ain);
@@ -1273,6 +1650,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					}else if(!(backwards instanceof ArgsAnalyzer.FailedResult) && backwards.getFirstArgInsn() != null
 						&& willPush(backwards.getFirstArgInsn()))
 					{
+						if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							return false;
 						fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 						method.instructions.remove(ain);
 						method.instructions.insertBefore(backwards.getFirstArgInsn(), ain);
@@ -1341,6 +1720,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		{
 			if(result.getDiff() == -2)
 			{
+				if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					return false;
 				fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 				method.instructions.remove(ain);
 				method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -1349,6 +1730,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 1)
 				{
+					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
 					method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -1408,6 +1791,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
+    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
     							method.instructions.insertBefore(ain, backwards.getFirstArgInsn());
@@ -1423,6 +1808,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					{
 						if(backwards.getFirstArgInsn().getOpcode() == Opcodes.NEW)
 						{
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
     						method.instructions.insertBefore(backwards.getFirstArgInsn(), ain);
@@ -1481,6 +1868,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
+    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
     							method.instructions.remove(ain);
@@ -1491,6 +1880,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
 							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
@@ -1504,6 +1895,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 2)
 				{
+					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
 					method.instructions.insertBefore(result.getFirstArgInsn(), ain);
@@ -1563,6 +1956,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
+    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
     							method.instructions.insertBefore(ain, backwards.getFirstArgInsn());
@@ -1629,6 +2024,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
+    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
     							method.instructions.remove(ain);
@@ -1639,7 +2036,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
+							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+								return false;
+							inlineArgs2(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
     						method.instructions.insertBefore(backwards.getFirstArgInsn(), ain);
@@ -1677,6 +2076,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     			if(a instanceof VarInsnNode && ((VarInsnNode)a).var > maxLocal)
     				maxLocal = ((VarInsnNode)a).var;
     		maxLocal++;
+    		method.maxLocals++;
     		AbstractInsnNode next2 = store;
     		while(next2 != null)
     		{
@@ -1689,10 +2089,28 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     				method.instructions.set(v, next2 = new VarInsnNode(v.getOpcode(), maxLocal));
     				if(other == v)
     					other = next2;
+    			}else if(next2 instanceof IincInsnNode && ((IincInsnNode)next2).var == ((VarInsnNode)store).var)
+    			{
+    				IincInsnNode v = (IincInsnNode)next2;
+    				method.instructions.set(v, next2 = new IincInsnNode(maxLocal, v.incr));
     			}
     			next2 = next2.getNext();
     		}
     	}
     	return other;
+    }
+    
+    private boolean hasIincInBetween(AbstractInsnNode start, AbstractInsnNode end)
+    {
+    	if(start.getOpcode() != Opcodes.ILOAD)
+    		return false;
+    	int var = ((VarInsnNode)start).var;
+    	while(start != end)
+    	{
+    		if(start.getOpcode() == Opcodes.IINC && ((IincInsnNode)start).var == var)
+    			return true;
+    		start = start.getNext();
+    	}
+    	return false;
     }
 } 
