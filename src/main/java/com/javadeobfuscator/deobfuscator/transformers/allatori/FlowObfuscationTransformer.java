@@ -1321,7 +1321,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		{
 			if(result.getDiff() == -1)
 			{
-				if(hasIincInBetween(ain, result.getFirstArgInsn()))
+				if(isFailedInline(method, ain, result.getFirstArgInsn()))
 					return false;
 				fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 				method.instructions.remove(ain);
@@ -1333,7 +1333,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 1)
 				{
-					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					if(isFailedInline(method, ain, result.getFirstArgInsn()))
 						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
@@ -1394,7 +1394,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
-    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    							if(isFailedInline(method, backwards.getFirstArgInsn(), ain))
     								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
@@ -1411,7 +1411,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					{
 						if(backwards.getFirstArgInsn().getOpcode() == Opcodes.NEW)
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
@@ -1471,7 +1471,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
-    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    							if(isFailedInline(method, ain, result.getFirstArgInsn()) || isFailedInline(method, backwardsResult, result.getFirstArgInsn()))
     								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
@@ -1483,7 +1483,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
@@ -1498,7 +1498,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 2)
 				{
-					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					if(isFailedInline(method, ain, result.getFirstArgInsn()))
 						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
@@ -1559,7 +1559,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
-    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    							if(isFailedInline(method, backwards.getFirstArgInsn(), ain))
     								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
@@ -1627,7 +1627,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
-    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    							if(isFailedInline(method, ain, result.getFirstArgInsn()) || isFailedInline(method, backwardsResult, result.getFirstArgInsn()))
     								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
@@ -1639,7 +1639,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							inlineArgs2(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
@@ -1650,7 +1650,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					}else if(!(backwards instanceof ArgsAnalyzer.FailedResult) && backwards.getFirstArgInsn() != null
 						&& willPush(backwards.getFirstArgInsn()))
 					{
-						if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+						if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 							return false;
 						fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 						method.instructions.remove(ain);
@@ -1720,7 +1720,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		{
 			if(result.getDiff() == -2)
 			{
-				if(hasIincInBetween(ain, result.getFirstArgInsn()))
+				if(isFailedInline(method, ain, result.getFirstArgInsn()))
 					return false;
 				fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 				method.instructions.remove(ain);
@@ -1730,7 +1730,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 1)
 				{
-					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					if(isFailedInline(method, ain, result.getFirstArgInsn()))
 						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
@@ -1791,7 +1791,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
-    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    							if(isFailedInline(method, backwards.getFirstArgInsn(), ain))
     								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
@@ -1808,7 +1808,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					{
 						if(backwards.getFirstArgInsn().getOpcode() == Opcodes.NEW)
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
 							method.instructions.remove(ain);
@@ -1868,7 +1868,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
-    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    							if(isFailedInline(method, ain, result.getFirstArgInsn()) || isFailedInline(method, backwardsResult, result.getFirstArgInsn()))
     								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
@@ -1880,7 +1880,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							inlineArgs(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
@@ -1895,7 +1895,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 			{
 				if(result.getArgsNeeded() == 2)
 				{
-					if(hasIincInBetween(ain, result.getFirstArgInsn()))
+					if(isFailedInline(method, ain, result.getFirstArgInsn()))
 						return false;
 					fixLocalClash(ain, result.getFirstArgInsn(), method, null);
 					method.instructions.remove(ain);
@@ -1956,7 +1956,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
     						if(!hasJumpBetween)
     						{
-    							if(hasIincInBetween(backwards.getFirstArgInsn(), ain))
+    							if(isFailedInline(method, backwards.getFirstArgInsn(), ain))
     								return false;
     							fixLocalClash(backwards.getFirstArgInsn(), ain, method, null);
     							method.instructions.remove(backwards.getFirstArgInsn());
@@ -2024,7 +2024,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						if(!hasJumpBetween)
     						{
     							AbstractInsnNode backwardsResult = backwards.getFirstArgInsn();
-    							if(hasIincInBetween(ain, result.getFirstArgInsn()) || hasIincInBetween(backwardsResult, result.getFirstArgInsn()))
+    							if(isFailedInline(method, ain, result.getFirstArgInsn()) || isFailedInline(method, backwardsResult, result.getFirstArgInsn()))
     								return false;
     							ain = fixLocalClash(backwards.getFirstArgInsn(), result.getFirstArgInsn(), method, ain);
     							backwardsResult = fixLocalClash(ain, result.getFirstArgInsn(), method, backwardsResult);
@@ -2036,7 +2036,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     						}
 						}else
 						{
-							if(hasIincInBetween(ain, backwards.getFirstArgInsn()))
+							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))
 								return false;
 							inlineArgs2(method, backwards.getFirstArgInsn(), forwards);
 							fixLocalClash(ain, backwards.getFirstArgInsn(), method, null);
@@ -2100,7 +2100,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     	return other;
     }
     
-    private boolean hasIincInBetween(AbstractInsnNode start, AbstractInsnNode end)
+    private boolean isFailedInline(MethodNode method, AbstractInsnNode start, AbstractInsnNode end)
     {
     	if(start.getOpcode() != Opcodes.ILOAD)
     		return false;
@@ -2110,6 +2110,28 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     		if(start.getOpcode() == Opcodes.IINC && ((IincInsnNode)start).var == var)
     			return true;
     		start = start.getNext();
+    	}
+    	if(Utils.getNext(start).getOpcode() == Opcodes.DUP || Utils.getNext(start).getOpcode() == Opcodes.DUP2)
+    		return true;
+    	ArgsAnalyzer.Result res = new ArgsAnalyzer(start, willPush(start) ? 1 : 2, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+    	if(res instanceof ArgsAnalyzer.FailedResult)
+    	{
+    		for(AbstractInsnNode skipped : ((ArgsAnalyzer.FailedResult)res).getSkippedDupsAtFailure())
+    			if(method.instructions.indexOf(skipped) < method.instructions.indexOf(end))
+    				return true;
+    		if(((ArgsAnalyzer.FailedResult)res).getSwapAtFailure() != null)
+    			if(method.instructions.indexOf(((ArgsAnalyzer.FailedResult)res).getSwapAtFailure()) < method.instructions.indexOf(end))
+    				return true;
+    	}else
+    	{
+    		if(res.getFirstArgInsn().getOpcode() == Opcodes.DUP || res.getFirstArgInsn().getOpcode() == Opcodes.DUP2)
+    			return true;
+    		for(AbstractInsnNode skipped : res.getSkippedDups())
+    			if(method.instructions.indexOf(skipped) < method.instructions.indexOf(end))
+    				return true;
+    		if(res.getSwap() != null)
+    			if(method.instructions.indexOf(res.getSwap()) < method.instructions.indexOf(end))
+    				return true;
     	}
     	return false;
     }
