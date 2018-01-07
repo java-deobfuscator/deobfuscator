@@ -128,7 +128,7 @@ public class ArgsAnalyzer
     	{
 			for(int code : stopCodes)
 				if(ain.getOpcode() == code)
-					return new FailedResult(diff, needed, ain, null);
+					return new FailedResult(diff, needed, ain, swap, null);
 			if(breakpoint == ain)
 				return new Result(diff, needed, ain, swap, null);
     		int prevNeeded = needed;
@@ -246,10 +246,14 @@ public class ArgsAnalyzer
     		{
     			if(needed == 2)
     			{
+    				if(swap != null)
+    					return new FailedResult(diff, needed, ain, swap, null);
         			swap = ain;
     				needed--;
     			}else if(needed == 1)
     			{
+    				if(swap != null)
+    					return new FailedResult(diff, needed, ain, swap, null);
         			swap = ain;
     				needed++;
     			}
@@ -433,11 +437,11 @@ public class ArgsAnalyzer
     			|| ain.getOpcode() == Opcodes.IFNULL || ain.getOpcode() == Opcodes.IFNONNULL 
     			|| ain.getOpcode() == Opcodes.TABLESWITCH || ain.getOpcode() == Opcodes.LOOKUPSWITCH 
     			|| ain.getOpcode() == Opcodes.ATHROW || ain.getOpcode() == Opcodes.RET)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		else if(ain.getOpcode() >= Opcodes.IF_ICMPEQ && ain.getOpcode() <= Opcodes.IF_ACMPNE)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		else if(ain.getOpcode() == Opcodes.GOTO)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		else if(ain.getOpcode() == Opcodes.MULTIANEWARRAY)
     		{
     			needed--;
@@ -483,11 +487,11 @@ public class ArgsAnalyzer
     			needed++;
     		else if(ain.getOpcode() == Opcodes.IRETURN || ain.getOpcode() == Opcodes.FRETURN
     			|| ain.getOpcode() == Opcodes.ARETURN)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		else if(ain.getOpcode() == Opcodes.LRETURN || ain.getOpcode() == Opcodes.DRETURN)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		else if(ain.getOpcode() == Opcodes.RETURN)
-    			return new FailedResult(diff, needed, ain, null);
+    			return new FailedResult(diff, needed, ain, swap, null);
     		if(Utils.isInstruction(ain))
     			diff = needed - prevNeeded;
     		if(needed <= 0 && !forceBreak)
@@ -518,7 +522,7 @@ public class ArgsAnalyzer
     	{
 			for(int code : stopCodes)
 				if(ain.getOpcode() == code)
-					return new FailedResult(diff, stackSize, ain, skippedDups);
+					return new FailedResult(diff, stackSize, ain, swap, skippedDups);
 			if(breakpoint == ain)
 				return new Result(diff, -stackSize, ain, swap, skippedDups);
     		int prevNeeded = stackSize;
@@ -703,10 +707,14 @@ public class ArgsAnalyzer
     		{
     			if(stackSize == 2)
     			{
+    				if(swap != null)
+    					return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
         			swap = ain;
     				stackSize--;
     			}else if(stackSize == 1)
     			{
+    				if(swap != null)
+    					return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
         			swap = ain;
     				stackSize++;
     			}
@@ -914,7 +922,7 @@ public class ArgsAnalyzer
         			result = ain;
         			break;
         		}
-    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, skippedDups);
+    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
     		}else if(ain.getOpcode() >= Opcodes.IF_ICMPEQ && ain.getOpcode() <= Opcodes.IF_ACMPNE)
     		{
     			stackSize -= 2;
@@ -924,7 +932,7 @@ public class ArgsAnalyzer
         			result = ain;
         			break;
         		}
-    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, skippedDups);
+    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
     		}else if(ain.getOpcode() == Opcodes.INSTANCEOF)
     		{
     			stackSize--;
@@ -946,7 +954,7 @@ public class ArgsAnalyzer
         		}
     			stackSize++;
     		}else if(ain.getOpcode() == Opcodes.GOTO)
-    			return new FailedResult(diff, stackSize, ain, skippedDups);
+    			return new FailedResult(diff, stackSize, ain, swap, skippedDups);
     		else if(ain.getOpcode() == Opcodes.MULTIANEWARRAY)
     		{
     			stackSize -= ((MultiANewArrayInsnNode)ain).dims;
@@ -980,7 +988,7 @@ public class ArgsAnalyzer
     				result = ain;
     				break;
     			}
-    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, skippedDups);
+    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
     		}else if(ain.getOpcode() == Opcodes.LRETURN || ain.getOpcode() == Opcodes.DRETURN)
     		{
     			stackSize -= 2;
@@ -990,9 +998,9 @@ public class ArgsAnalyzer
     				result = ain;
     				break;
     			}
-    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, skippedDups);
+    			return new FailedResult(stackSize - prevNeeded, stackSize, ain, swap, skippedDups);
     		}else if(ain.getOpcode() == Opcodes.RETURN)
-    			return new FailedResult(diff, stackSize, ain, skippedDups);
+    			return new FailedResult(diff, stackSize, ain, swap, skippedDups);
     		if(Utils.isInstruction(ain))
     			diff = stackSize - prevNeeded;
     		if(stackSize <= 0 && !forceBreak)
@@ -1060,14 +1068,16 @@ public class ArgsAnalyzer
 		private final int diff;
 		private final int extraArgs;
 		private final AbstractInsnNode failedPoint;
+		private final AbstractInsnNode swap;
 		private final List<AbstractInsnNode> skippedDups;
 		
-		public FailedResult(int diff, int extraArgs, AbstractInsnNode failedPoint, List<AbstractInsnNode> skippedDups)
+		public FailedResult(int diff, int extraArgs, AbstractInsnNode failedPoint, AbstractInsnNode swap, List<AbstractInsnNode> skippedDups)
 		{
 			super(-1, -1, null, null, null);
 			this.diff = diff;
 			this.extraArgs = extraArgs;
 			this.failedPoint = failedPoint;
+			this.swap = swap;
 			this.skippedDups = skippedDups;
 		}
 		
@@ -1084,6 +1094,11 @@ public class ArgsAnalyzer
 		public int getExtraArgs()
 		{
 			return extraArgs;
+		}
+		
+		public AbstractInsnNode getSwapAtFailure()
+		{
+			return swap;
 		}
 		
 		public List<AbstractInsnNode> getSkippedDupsAtFailure()
