@@ -43,7 +43,6 @@ public class RuleSuspiciousClinit implements Rule, Opcodes {
             boolean isZKM = true;
 
             isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "intern", "()Ljava/lang/String;");
-            isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "charAt", "(I)C");
             isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "toCharArray", "()[C");
             isZKM = isZKM && TransformerHelper.countOccurencesOf(clinit, TABLESWITCH) > 0;
             isZKM = isZKM && TransformerHelper.countOccurencesOf(clinit, IXOR) > 0;
