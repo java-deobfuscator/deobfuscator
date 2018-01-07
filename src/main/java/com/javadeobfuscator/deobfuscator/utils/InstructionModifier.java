@@ -32,6 +32,15 @@ public class InstructionModifier {
     private static final InsnList EMPTY_LIST = new InsnList();
 
     private final Map<AbstractInsnNode, InsnList> replacements = new HashMap<>();
+    private final Map<AbstractInsnNode, InsnList> appends = new HashMap<>();
+    private final Map<AbstractInsnNode, InsnList> prepends = new HashMap<>();
+
+    public void append(AbstractInsnNode original, InsnList append) {
+        appends.put(original, append);
+    }
+    public void prepend(AbstractInsnNode original, InsnList append) {
+        prepends.put(original, append);
+    }
 
     public void replace(AbstractInsnNode original, AbstractInsnNode replacement) {
         InsnList singleton = new InsnList();
@@ -57,6 +66,12 @@ public class InstructionModifier {
         replacements.forEach((insn, list) -> {
             methodNode.instructions.insert(insn, list);
             methodNode.instructions.remove(insn);
+        });
+        prepends.forEach((insn, list) -> {
+            methodNode.instructions.insertBefore(insn, list);
+        });
+        appends.forEach((insn, list) -> {
+            methodNode.instructions.insert(insn, list);
         });
     }
 }

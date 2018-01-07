@@ -29,7 +29,7 @@ import java.util.*;
 public class RuleSuspiciousClinit implements Rule, Opcodes {
     @Override
     public String getDescription() {
-        return "Zelix Klassmaster typically embeds a portion of the string decryption code within <clinit>. The decryption code is easy to manually identify";
+        return "Zelix Klassmaster typically embeds decryption code in <clinit>. This sample may have been obfuscated with Zelix Klassmaster";
     }
 
     @Override
@@ -44,7 +44,7 @@ public class RuleSuspiciousClinit implements Rule, Opcodes {
 
             isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "intern", "()Ljava/lang/String;");
             isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "charAt", "(I)C");
-            isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "length", "()I");
+            isZKM = isZKM && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "toCharArray", "()[C");
             isZKM = isZKM && TransformerHelper.countOccurencesOf(clinit, TABLESWITCH) > 0;
             isZKM = isZKM && TransformerHelper.countOccurencesOf(clinit, IXOR) > 0;
             isZKM = isZKM && TransformerHelper.countOccurencesOf(clinit, IREM) > 0;
@@ -59,6 +59,6 @@ public class RuleSuspiciousClinit implements Rule, Opcodes {
 
     @Override
     public Collection<Class<? extends Transformer>> getRecommendTransformers() {
-        return Collections.singletonList(StringEncryptionTransformer.class);
+        return null;
     }
 }

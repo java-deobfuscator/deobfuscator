@@ -23,6 +23,7 @@ import org.objectweb.asm.tree.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.*;
 
 import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
 
@@ -167,6 +168,9 @@ public class TransformerHelper implements Opcodes {
         vm.classpath(transformer.getDeobfuscator().getClasses().values());
         vm.classpath(transformer.getDeobfuscator().getLibraries().values());
         transformer.getDeobfuscator().getReaders().forEach((k, v) -> vm.registerClass(v, k));
+        if (transformer.getConfig().getVmModifiers() != null) {
+            transformer.getConfig().getVmModifiers().forEach(c -> c.accept(vm));
+        }
         return vm;
     }
 
@@ -445,5 +449,13 @@ public class TransformerHelper implements Opcodes {
         if (insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH) return true;
         if (insn.getOpcode() == LDC) return ((LdcInsnNode) insn).cst instanceof Integer;
         return false;
+    }
+
+    public static String insnToString(AbstractInsnNode insn) {
+        return Utils.prettyprint(insn);
+    }
+
+    public static String insnsToString(Set<AbstractInsnNode> insns) {
+        return insns.stream().map(Utils::prettyprint).collect(Collectors.joining(",", "[", "]"));
     }
 }

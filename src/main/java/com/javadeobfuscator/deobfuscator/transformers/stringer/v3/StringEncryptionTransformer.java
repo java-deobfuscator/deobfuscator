@@ -78,11 +78,13 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
                     String decryptedStr = vm.convertJavaObjectToString(result.getReturnValue());
 
-                    logger.debug("Decrypted {} {}{}, {}", classNode.name, methodNode.name, methodNode.desc, decryptedStr);
-                    decrypted++;
+                    if (decryptedStr != null) {
+                        logger.debug("Decrypted {} {}{}, {}", classNode.name, methodNode.name, methodNode.desc, decryptedStr);
+                        decrypted++;
 
-                    modifier.removeAll(matcher.getCapturedInstructions("all"));
-                    modifier.replace(matcher.getEnd(), new LdcInsnNode(decryptedStr));
+                        modifier.removeAll(matcher.getCapturedInstructions("all"));
+                        modifier.replace(matcher.getEnd(), new LdcInsnNode(decryptedStr));
+                    }
                 }
 
                 modifier.apply(methodNode);

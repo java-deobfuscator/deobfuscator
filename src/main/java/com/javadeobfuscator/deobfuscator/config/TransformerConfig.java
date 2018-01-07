@@ -17,9 +17,12 @@
 package com.javadeobfuscator.deobfuscator.config;
 
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.javavm.*;
 
 import java.lang.annotation.*;
 import java.lang.reflect.InvocationTargetException;
+import java.util.*;
+import java.util.function.*;
 
 public class TransformerConfig {
     @Inherited
@@ -31,12 +34,22 @@ public class TransformerConfig {
 
     private final Class<? extends Transformer> implementation;
 
+    private List<Consumer<VirtualMachine>> vmModifiers = new ArrayList<>();
+
     public TransformerConfig(Class<? extends Transformer> implementation) {
         this.implementation = implementation;
     }
 
     public Class<? extends Transformer> getImplementation() {
         return implementation;
+    }
+
+    public List<Consumer<VirtualMachine>> getVmModifiers() {
+        return vmModifiers;
+    }
+
+    public void setVmModifiers(List<Consumer<VirtualMachine>> vmModifiers) {
+        this.vmModifiers = vmModifiers;
     }
 
     public static TransformerConfig configFor(Class<? extends Transformer> implementation) {

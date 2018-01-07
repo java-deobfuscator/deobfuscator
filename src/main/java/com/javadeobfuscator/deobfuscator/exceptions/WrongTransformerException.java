@@ -17,7 +17,22 @@
 package com.javadeobfuscator.deobfuscator.exceptions;
 
 public class WrongTransformerException extends RuntimeException {
+    public WrongTransformerException() {
+    }
+
     public WrongTransformerException(String message) {
         super(message);
+    }
+
+    public WrongTransformerException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public WrongTransformerException(Throwable cause) {
+        super(cause);
+    }
+
+    public WrongTransformerException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

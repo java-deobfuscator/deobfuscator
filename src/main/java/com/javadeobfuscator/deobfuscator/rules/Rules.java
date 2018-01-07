@@ -43,6 +43,9 @@ public class Rules {
 
             // Zelix
             new RuleSuspiciousClinit(),
-            new RuleReflectionDecryptor()
+            new RuleReflectionDecryptor(),
+            new RuleSimpleStringEncryption(),
+            new RuleEnhancedStringEncryption(),
+            new RuleMethodParameterChangeStringEncryption()
     );
 }

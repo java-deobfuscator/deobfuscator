@@ -64,4 +64,8 @@ public abstract class Transformer<T extends TransformerConfig> {
     public Deobfuscator getDeobfuscator() {
         return this.deobfuscator;
     }
+
+    protected void oops(String why, Object... args) {
+        logger.debug("oops: " + why, args);
+    }
 }

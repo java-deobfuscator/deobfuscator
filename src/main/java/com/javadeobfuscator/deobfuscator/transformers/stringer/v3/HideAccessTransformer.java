@@ -237,6 +237,8 @@ public class HideAccessTransformer extends Transformer<TransformerConfig> implem
             replace.add(new InsnNode(DUP));
             replace.add(loadInsns);
             replace.add(new MethodInsnNode(INVOKESPECIAL, reflClass.name, reflMethod.name, reflMethod.desc, false));
+
+            destNode.maxLocals += size(argumentTypes);
         } else {
             replace.add(new MethodInsnNode(opcode, reflClass.name, reflMethod.name, reflMethod.desc, opcode == INVOKEINTERFACE));
             replace.add(TransformerHelper.box(Type.getReturnType(reflMethod.desc)));
