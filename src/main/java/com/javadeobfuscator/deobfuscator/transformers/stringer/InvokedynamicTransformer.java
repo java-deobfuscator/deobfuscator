@@ -73,7 +73,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
                     AbstractInsnNode abstractInsnNode = methodNode.instructions.get(i);
                     if (abstractInsnNode instanceof InvokeDynamicInsnNode) {
                         InvokeDynamicInsnNode dyn = (InvokeDynamicInsnNode) abstractInsnNode;
-                        if (dyn.bsmArgs[0] instanceof String) {
+                        if (dyn.bsmArgs.length > 0 && dyn.bsmArgs[0] instanceof String) {
                             total.incrementAndGet();
                         }
                     }

@@ -16,9 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.*;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,9 +40,11 @@ public class InstructionModifier {
         prepends.put(original, append);
     }
 
-    public void replace(AbstractInsnNode original, AbstractInsnNode replacement) {
+    public void replace(AbstractInsnNode original, AbstractInsnNode... insns) {
         InsnList singleton = new InsnList();
-        singleton.add(replacement);
+        for (AbstractInsnNode replacement : insns) {
+            singleton.add(replacement);
+        }
         replacements.put(original, singleton);
     }
 

@@ -16,44 +16,40 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
-import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
-import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.javadeobfuscator.deobfuscator.config.*;
+import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.utils.*;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.*;
 
 public class DeadCodeRemover extends Transformer<TransformerConfig> {
     @Override
     public boolean transform() throws Throwable {
-        AtomicInteger deadInstructions = new AtomicInteger();
-        classNodes().forEach(classNode -> {
-            classNode.methods.stream().filter(methodNode -> methodNode.instructions.getFirst() != null).forEach(methodNode -> {
-                if (methodNode.name.startsWith("DECRYPTOR_METHOD"))
-                    return;
+        int deadInstructions = 0;
+        for (ClassNode classNode : classes.values()) {
+            for (MethodNode methodNode : classNode.methods) {
+                if (methodNode.instructions.getFirst() == null) continue;
 
-                Map<AbstractInsnNode, List<Frame>> f = MethodAnalyzer.analyze(classNode, methodNode).getFrames();
-                Iterator<AbstractInsnNode> iterator = methodNode.instructions.iterator();
-                while (iterator.hasNext()) {
-                    AbstractInsnNode next = iterator.next();
-                    if (Utils.isInstruction(next) && f.get(next) == null) {
-                        iterator.remove();
-                        deadInstructions.incrementAndGet();
-                    }
+                InstructionModifier modifier = new InstructionModifier();
+
+                Frame<BasicValue>[] frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, methodNode);
+                for (int i = 0; i < methodNode.instructions.size(); i++) {
+                    if (!Utils.isInstruction(methodNode.instructions.get(i))) continue;
+                    if (frames[i] != null) continue;
+
+                    modifier.remove(methodNode.instructions.get(i));
+                    deadInstructions++;
                 }
+
+                modifier.apply(methodNode);
 
                 // empty try catch nodes are illegal
                 if (methodNode.tryCatchBlocks != null) {
                     methodNode.tryCatchBlocks.removeIf(tryCatchBlockNode -> Utils.getNext(tryCatchBlockNode.start) == Utils.getNext(tryCatchBlockNode.end));
                 }
-            });
-        });
-        System.out.println("Removed " + deadInstructions.get() + " dead instructions");
-        return deadInstructions.get() > 0;
+            }
+        }
+        logger.info("Removed {} dead instructions", deadInstructions);
+        return deadInstructions > 0;
     }
 }

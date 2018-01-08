@@ -22,13 +22,13 @@ import java.util.Map;
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.*;
-import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.*;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class Transformer<T extends TransformerConfig> {
+public abstract class Transformer<T extends TransformerConfig> implements Opcodes {
 
     protected Map<String, ClassNode> classes;
     protected Map<String, ClassNode> classpath;
