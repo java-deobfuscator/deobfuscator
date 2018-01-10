@@ -2102,18 +2102,20 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     
     private boolean isFailedInline(MethodNode method, AbstractInsnNode start, AbstractInsnNode end)
     {
-    	if(start.getOpcode() != Opcodes.ILOAD)
-    		return false;
-    	int var = ((VarInsnNode)start).var;
-    	while(start != end)
+    	if(start.getOpcode() == Opcodes.ILOAD)
     	{
-    		if(start.getOpcode() == Opcodes.IINC && ((IincInsnNode)start).var == var)
-    			return true;
-    		start = start.getNext();
+	    	int var = ((VarInsnNode)start).var;
+	    	AbstractInsnNode next = start;
+	    	while(next != end)
+	    	{
+	    		if(next.getOpcode() == Opcodes.IINC && ((IincInsnNode)next).var == var)
+	    			return true;
+	    		next = next.getNext();
+	    	}
     	}
     	if(Utils.getNext(start).getOpcode() == Opcodes.DUP || Utils.getNext(start).getOpcode() == Opcodes.DUP2)
     		return true;
-    	ArgsAnalyzer.Result res = new ArgsAnalyzer(start, willPush(start) ? 1 : 2, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
+    	ArgsAnalyzer.Result res = new ArgsAnalyzer(start.getNext(), willPush(start) ? 1 : 2, ArgsAnalyzer.Mode.FORWARDS).lookupArgs();
     	if(res instanceof ArgsAnalyzer.FailedResult)
     	{
     		for(AbstractInsnNode skipped : ((ArgsAnalyzer.FailedResult)res).getSkippedDupsAtFailure())
