@@ -151,8 +151,8 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     			insnCount.get(Opcodes.NEWARRAY) == null ||
     			invokeCount.get("charAt") == null || invokeCount.get("length") == null)
     			return false;
-        return ((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 8)) >= 50 &&
-                ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 50 &&
+        return ((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 8)) >= 12 &&
+                ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 25 &&
                 ((int) ((insnCount.get(Opcodes.NEWARRAY).get() * 100.0f) / 1)) >= 100 &&
                 ((int) ((invokeCount.get("charAt").get() * 100.0f) / 4)) >= 50 &&
                 ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50;
