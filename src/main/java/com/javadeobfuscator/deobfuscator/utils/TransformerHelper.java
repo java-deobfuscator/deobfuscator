@@ -154,9 +154,9 @@ public class TransformerHelper implements Opcodes {
         jvmFiles.addAll(loadBytes(javaLib("rt.jar")));
         jvmFiles.addAll(loadBytes(javaLib("jce.jar")));
         jvmFiles.addAll(loadBytes(javaLib("jsse.jar")));
-        jvmFiles.addAll(loadBytes(javaLibExt("sunjce_provider.jar")));
-        jvmFiles.addAll(loadBytes(javaLibExt("sunec.jar")));
-        jvmFiles.addAll(loadBytes(javaLibExt("sunmscapi.jar")));
+//        jvmFiles.addAll(loadBytes(javaLibExt("sunjce_provider.jar")));
+//        jvmFiles.addAll(loadBytes(javaLibExt("sunec.jar")));
+//        jvmFiles.addAll(loadBytes(javaLibExt("sunmscapi.jar")));
 
         VirtualMachine vm = new VirtualMachine(jvmFiles);
         vm.fullInitialization();
