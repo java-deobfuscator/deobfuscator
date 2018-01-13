@@ -88,6 +88,10 @@ public class DeobfuscatorMain {
             return 4;
         }
 
+        if (configuration.isDetect()) {
+            return run(configuration);
+        }
+
         if (configuration.getOutput() == null) {
             logger.error("An output JAR must be specified");
             return 5;
@@ -106,6 +110,10 @@ public class DeobfuscatorMain {
             return 6;
         }
 
+        return run(configuration);
+    }
+
+    private static int run(Configuration configuration) {
         Deobfuscator deobfuscator = new Deobfuscator(configuration);
 
         try {
