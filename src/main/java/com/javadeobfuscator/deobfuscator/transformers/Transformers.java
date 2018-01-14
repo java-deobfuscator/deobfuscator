@@ -26,6 +26,7 @@ import com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClass
 public class Transformers {
     public static class Allatori {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.allatori.StringEncryptionTransformer.class;
+        public static final Class<? extends Transformer> FLOW_OBFUSCATION = com.javadeobfuscator.deobfuscator.transformers.allatori.FlowObfuscationTransformer.class;
     }
 
     public static class DashO {

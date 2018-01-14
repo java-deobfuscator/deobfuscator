@@ -339,7 +339,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/lang/RuntimeException", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/String;)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/RuntimeException");
-                targetObject.initialize(args.get(0).value());
+                targetObject.initialize(new RuntimeException(args.get(0).as(String.class)));
                 return null;
             });
             put("<init>()V", (targetObject, args, context) -> {
