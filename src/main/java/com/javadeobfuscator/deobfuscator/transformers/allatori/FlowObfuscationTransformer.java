@@ -276,7 +276,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	                            	throw new RuntimeException();
 	        					if(res)
 	        					{
-	        						method.instructions.set(ain.getNext(),  new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode)ain).label));
+	        						method.instructions.set(ain.getNext(),  new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode)ain.getNext()).label));
 	        						method.instructions.remove(ain);
 	        					}else
 	        					{
