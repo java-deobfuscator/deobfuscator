@@ -322,7 +322,13 @@ public class Deobfuscator {
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
         Transformer transformer = config.getImplementation().newInstance();
         transformer.init(this, config, classes, classpath, readers);
-        return transformer.transform();
+        boolean madeChangesAtLeastOnce = false;
+        boolean madeChanges;
+        do {
+            madeChanges = transformer.transform();
+            madeChangesAtLeastOnce = madeChangesAtLeastOnce || madeChanges;
+        } while (madeChanges && getConfig().isSmartRedo());
+        return madeChangesAtLeastOnce;
     }
 
     public ClassNode assureLoaded(String ref) {
@@ -470,47 +476,44 @@ public class Deobfuscator {
         }
         ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
         try {
-            try {
+            node.accept(writer);
+        } catch (Throwable e) {
+            if (e instanceof NoClassInPathException) {
+                NoClassInPathException ex = (NoClassInPathException) e;
+                System.out.println("Error: " + ex.getClassName() + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
+                writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                 node.accept(writer);
-            } catch (RuntimeException e) {
-                if (e instanceof NoClassInPathException) {
-                    NoClassInPathException ex = (NoClassInPathException) e;
-                    System.out.println("Error: " + ex.getClassName() + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
+            } else if (e instanceof NegativeArraySizeException || e instanceof ArrayIndexOutOfBoundsException) {
+                System.out.println("Error: failed to compute frames");
+                writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
+                node.accept(writer);
+            } else if (e.getMessage() != null) {
+                if (e.getMessage().contains("JSR/RET")) {
+                    System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
                     writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                     node.accept(writer);
-                } else if (e instanceof NegativeArraySizeException || e instanceof ArrayIndexOutOfBoundsException) {
-                    System.out.println("Error: failed to compute frames");
-                    writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
-                    node.accept(writer);
-                } else if (e.getMessage() != null) {
-                    if (e.getMessage().contains("JSR/RET")) {
-                        System.out.println("ClassNode contained JSR/RET so COMPUTE_MAXS instead");
-                        writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
-                        node.accept(writer);
-                    } else {
-                        throw e;
-                    }
                 } else {
-                    throw e;
+                    System.out.println("Error while writing " + node.name);
+                    e.printStackTrace(System.out);
                 }
+            } else {
+                System.out.println("Error while writing " + node.name);
+                e.printStackTrace(System.out);
             }
-            byte[] classBytes = writer.toByteArray();
-
-            if (configuration.isVerify()) {
-                ClassReader cr = new ClassReader(classBytes);
-                try {
-                    cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
-                } catch (Throwable t) {
-                    System.out.println("Error: " + node.name + " failed verification");
-                    t.printStackTrace(System.out);
-                }
-            }
-            return classBytes;
-        } catch (Throwable t) {
-            System.out.println("Error while writing " + node.name);
-            t.printStackTrace(System.out);
         }
-        return null;
+        byte[] classBytes = writer.toByteArray();
+
+        if (configuration.isVerify()) {
+            ClassReader cr = new ClassReader(classBytes);
+            try {
+                cr.accept(new CheckClassAdapter(new ClassWriter(0)), 0);
+            } catch (Throwable t) {
+                System.out.println("Error: " + node.name + " failed verification");
+                t.printStackTrace(System.out);
+            }
+        }
+
+        return classBytes;
     }
 
     public Configuration getConfig() {

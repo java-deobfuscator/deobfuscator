@@ -16,6 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
+import com.google.common.primitives.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 import com.javadeobfuscator.javavm.*;
 import org.objectweb.asm.*;
@@ -435,13 +436,16 @@ public class TransformerHelper implements Opcodes {
         };
     }
 
-    public static boolean hasArgumentType(Type[] types, Type want) {
+    public static boolean hasArgumentTypes(Type[] types, Type... want) {
+        boolean[] found = new boolean[want.length];
         for (Type t : types) {
-            if (t.equals(want)) {
-                return true;
+            for (int i = 0; i < want.length; i++) {
+                if (!found[i] && t.equals(want[i])) {
+                    found[i] = true;
+                }
             }
         }
-        return false;
+        return Booleans.countTrue(found) == found.length;
     }
 
     public static boolean isConstantInt(AbstractInsnNode insn) {
@@ -455,7 +459,7 @@ public class TransformerHelper implements Opcodes {
         return Utils.prettyprint(insn);
     }
 
-    public static String insnsToString(Set<AbstractInsnNode> insns) {
+    public static String insnsToString(Collection<AbstractInsnNode> insns) {
         return insns.stream().map(Utils::prettyprint).collect(Collectors.joining(",", "[", "]"));
     }
 }

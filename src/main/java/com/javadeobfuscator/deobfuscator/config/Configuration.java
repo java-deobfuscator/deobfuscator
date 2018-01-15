@@ -42,6 +42,9 @@ public class Configuration {
     private List<String> ignoredClasses;
 
     @JsonProperty
+    private boolean smartRedo;
+
+    @JsonProperty
     private boolean verify;
 
     @JsonProperty
@@ -109,5 +112,13 @@ public class Configuration {
 
     public void setDetect(boolean detect) {
         this.detect = detect;
+    }
+
+    public boolean isSmartRedo() {
+        return smartRedo;
+    }
+
+    public void setSmartRedo(boolean smartRedo) {
+        this.smartRedo = smartRedo;
     }
 }

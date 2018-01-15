@@ -22,6 +22,8 @@ import java.util.Map;
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.*;
+import com.javadeobfuscator.javavm.*;
+import com.javadeobfuscator.javavm.exceptions.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;

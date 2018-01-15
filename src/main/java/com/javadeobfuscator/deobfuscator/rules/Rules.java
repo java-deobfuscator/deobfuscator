@@ -40,12 +40,17 @@ public class Rules {
             // Stringer
             new RuleStringDecryptor(),
             new RuleStringDecryptorWithThread(),
+            new RuleInvokedynamic1(),
+            new RuleInvokedynamic2(),
 
             // Zelix
             new RuleSuspiciousClinit(),
             new RuleReflectionDecryptor(),
             new RuleSimpleStringEncryption(),
             new RuleEnhancedStringEncryption(),
-            new RuleMethodParameterChangeStringEncryption()
+            new RuleMethodParameterChangeStringEncryption(),
+
+            // Dash-O
+            new com.javadeobfuscator.deobfuscator.rules.dasho.RuleStringDecryptor()
     );
 }

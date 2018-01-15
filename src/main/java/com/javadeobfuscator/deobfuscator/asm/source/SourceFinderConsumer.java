@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.javadeobfuscator.deobfuscator.rules;
+package com.javadeobfuscator.deobfuscator.asm.source;
 
-import com.javadeobfuscator.deobfuscator.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
 import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.*;
 
-import java.util.*;
+public abstract class SourceFinderConsumer implements Opcodes {
+    protected final SourceFinderConsumer parent;
 
-public interface Rule extends Opcodes {
-    String getDescription();
+    public SourceFinderConsumer(SourceFinderConsumer parent) {
+        this.parent = parent;
+    }
 
-    String test(Deobfuscator deobfuscator);
-
-    Collection<Class<? extends Transformer>> getRecommendTransformers();
+    public abstract SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, AbstractInsnNode source, SourceValue want, AbstractInsnNode now);
 }
