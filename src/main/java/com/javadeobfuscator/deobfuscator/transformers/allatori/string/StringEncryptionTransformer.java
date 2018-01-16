@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.javadeobfuscator.deobfuscator.transformers.dasho.string;
+package com.javadeobfuscator.deobfuscator.transformers.allatori.string;
 
 import com.javadeobfuscator.deobfuscator.asm.source.*;
 import com.javadeobfuscator.deobfuscator.config.*;
@@ -32,13 +32,11 @@ import org.objectweb.asm.tree.analysis.Frame;
 import java.util.*;
 
 public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
-    private static final Type STRING_TYPE = Type.getObjectType("java/lang/String");
-
     @Override
     public boolean transform() throws WrongTransformerException {
         VirtualMachine vm = TransformerHelper.newVirtualMachine(this);
 
-        // We don't need to initialize for DashO
+        // We don't need to initialize for Allatori
         for (ClassNode classNode : classes.values()) {
             JavaClass.forName(vm, classNode.name).setInitializationState(JavaClass.InitializationState.INITIALIZED, null);
         }
@@ -57,27 +55,19 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                     continue;
                 }
 
-                insns:
                 for (AbstractInsnNode abstractInsnNode : TransformerHelper.instructionIterator(methodNode)) {
                     if (abstractInsnNode.getOpcode() != INVOKESTATIC) continue;
 
                     MethodInsnNode methodInsnNode = (MethodInsnNode) abstractInsnNode;
-                    if (!Type.getReturnType(methodInsnNode.desc).equals(STRING_TYPE)) continue;
-
-                    Type[] argTypes = Type.getArgumentTypes(methodInsnNode.desc);
-                    if (!TransformerHelper.hasArgumentTypes(argTypes, Type.INT_TYPE, STRING_TYPE))
-                        continue;
+                    if (!methodInsnNode.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) continue;
 
                     Frame<SourceValue> currentFrame = frames[methodNode.instructions.indexOf(methodInsnNode)];
 
                     MethodNode decryptorMethod = new MethodNode(ACC_STATIC | ACC_PUBLIC, "decrypt" + decrypted, "()Ljava/lang/String;", null, null);
-                    for (int i = 0, stackOffset = currentFrame.getStackSize() - argTypes.length; i < argTypes.length; i++) {
-                        Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(stackOffset)).consensus();
-                        if (!consensus.isPresent()) continue insns;
+                    Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(currentFrame.getStackSize() - 1)).consensus();
+                    if (!consensus.isPresent()) continue;
 
-                        decryptorMethod.instructions.add(new LdcInsnNode(consensus.get()));
-                        stackOffset++;
-                    }
+                    decryptorMethod.instructions.add(new LdcInsnNode(consensus.get()));
                     decryptorMethod.instructions.add(methodInsnNode.clone(null));
                     decryptorMethod.instructions.add(new InsnNode(ARETURN));
 
@@ -103,7 +93,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
                     logger.info("Decrypted string in {} {}{}: {}", classNode.name, methodNode.name, methodNode.desc, value);
 
-                    modifier.replace(methodInsnNode, new InsnNode(POP2), new LdcInsnNode(value));
+                    modifier.replace(methodInsnNode, new InsnNode(POP), new LdcInsnNode(value));
                     decrypted++;
                 }
 

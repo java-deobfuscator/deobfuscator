@@ -24,10 +24,6 @@ import com.javadeobfuscator.deobfuscator.transformers.normalizer.ClassNormalizer
 import com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer;
 
 public class Transformers {
-    public static class Allatori {
-        public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.allatori.StringEncryptionTransformer.class;
-    }
-
     public static class Stringer {
         public static final Class<? extends Transformer> STRING_ENCRYPTION = com.javadeobfuscator.deobfuscator.transformers.stringer.StringEncryptionTransformer.class;
         public static final Class<? extends Transformer> INVOKEDYNAMIC = com.javadeobfuscator.deobfuscator.transformers.stringer.InvokedynamicTransformer.class;
