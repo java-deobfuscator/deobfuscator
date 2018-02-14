@@ -113,6 +113,11 @@ public class Invokedynamic1Transformer extends Transformer<TransformerConfig> im
                     String desc = java_lang_invoke_MethodType.asSignature(data.get(2), false);
                     MethodNode indyMethod = owner.findMethodNode(name, desc, true);
 
+                    if (indyMethod == null) {
+                        oops("couldn't find method {} {}{}", classNode.name, name, desc);
+                        continue;
+                    }
+
                     int opcode;
                     if (Modifier.isStatic(indyMethod.access)) {
                         opcode = INVOKESTATIC;
