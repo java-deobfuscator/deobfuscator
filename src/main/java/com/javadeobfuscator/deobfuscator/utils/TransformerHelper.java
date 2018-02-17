@@ -16,14 +16,19 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
+import com.google.common.base.*;
 import com.google.common.primitives.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 import com.javadeobfuscator.javavm.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.*;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.slf4j.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
@@ -461,5 +466,22 @@ public class TransformerHelper implements Opcodes {
 
     public static String insnsToString(Collection<AbstractInsnNode> insns) {
         return insns.stream().map(Utils::prettyprint).collect(Collectors.joining(",", "[", "]"));
+    }
+
+    private static final Supplier<ExecutorService> ASYNC_SERVICE = Suppliers.memoize(Executors::newCachedThreadPool);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransformerHelper.class);
+
+    public static Frame<SourceValue>[] analyze(ClassNode classNode, MethodNode methodNode) {
+        Future<Frame<SourceValue>[]> future = ASYNC_SERVICE.get().submit(() -> new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode));
+        try {
+            return future.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | TimeoutException e) {
+            LOGGER.debug("timed out while analyzing {} {}{}", classNode.name, methodNode.name, methodNode.desc);
+            return null;
+        } catch (ExecutionException e) {
+            LOGGER.debug("exception while analyzing {} {}{}", classNode.name, methodNode.name, methodNode.desc, e);
+            return null;
+        }
     }
 }

@@ -19,24 +19,25 @@ package com.javadeobfuscator.deobfuscator.rules.stringer;
 import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.stringer.*;
+import com.javadeobfuscator.deobfuscator.transformers.stringer.v9.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
-import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 
 import java.util.*;
 
-public class RuleStringDecryptor implements Rule, Opcodes {
+public class RuleStringDecryptorV3 implements Rule {
     @Override
     public String getDescription() {
-        return "This variant of Stringer's string decryptor can be identified by its use of Thread.currentThread().getStackTrace() and heavy math operations";
+        return "This variant of Stringer's string decryptor makes use of invokedynamic obfuscation within the string decryption classes";
     }
 
     @Override
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             for (MethodNode methodNode : classNode.methods) {
-                if (!methodNode.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) continue;
+                if (!TransformerHelper.basicType(methodNode.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;")) {
+                    continue;
+                }
 
                 boolean isStringer = true;
 
@@ -60,6 +61,6 @@ public class RuleStringDecryptor implements Rule, Opcodes {
 
     @Override
     public Collection<Class<? extends Transformer>> getRecommendTransformers() {
-        return Collections.singletonList(StringEncryptionTransformer.class);
+        return Collections.singleton(StringEncryptionTransformer.class);
     }
 }

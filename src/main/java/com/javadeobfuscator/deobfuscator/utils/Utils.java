@@ -352,6 +352,7 @@ public class Utils {
 
     public static boolean isInteger(AbstractInsnNode ain)
 	{
+	    if (ain == null) return false;
 		if(ain.getOpcode() >= Opcodes.ICONST_M1
 			&& ain.getOpcode() <= Opcodes.SIPUSH)
 			return true;

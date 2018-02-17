@@ -77,17 +77,19 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> imp
                     classNode.methods.add(decryptorMethod);
                     try {
                         vm.execute(classNode, decryptorMethod, null, Collections.<JavaWrapper>emptyList());
-                    } catch (VMException e) {
-                        vm.printException(e);
-                        throw new RuntimeException();
+                    } catch (Throwable e) {
+                        // dont care lol
+//                        vm.printException(e);
                     }
                     classNode.methods.remove(decryptorMethod);
 
                     if (capturedMethod.get() == null) {
-                        throw new WrongTransformerException("Expected non-null java/lang/reflect/Method");
+                        oops("Expected non-null java/lang/reflect/Method");
+                        continue;
                     }
                     if (capturedMethod.get().getJavaClass() != reflectMethod) {
-                        throw new WrongTransformerException("Expected java/lang/reflect/Method, got " + capturedMethod.get().getJavaClass());
+                        oops("Expected java/lang/reflect/Method, got " + capturedMethod.get().getJavaClass());
+                        continue;
                     }
 
                     JavaWrapper classObj = capturedMethod.get().asObject().getField("clazz", "Ljava/lang/Class;");

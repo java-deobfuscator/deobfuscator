@@ -70,4 +70,7 @@ public abstract class Transformer<T extends TransformerConfig> implements Opcode
     protected void oops(String why, Object... args) {
         logger.debug("oops: " + why, args);
     }
+    protected void fail(String why, Object... args) {
+        logger.error("fail: " + why, args);
+    }
 }

@@ -42,6 +42,7 @@ public class Rules {
             new RuleStringDecryptorWithThread(),
             new RuleInvokedynamic1(),
             new RuleInvokedynamic2(),
+            new RuleStringDecryptorV3(),
 
             // Zelix
             new RuleSuspiciousClinit(),
