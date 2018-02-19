@@ -743,6 +743,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
         			{
         				ArgsAnalyzer analyzer = new ArgsAnalyzer(ain.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS, Opcodes.SWAP);
         				analyzer.setIgnoreNeeded(true);
+        				analyzer.setSpecialDup(true);
         				ArgsAnalyzer.Result res = analyzer.lookupArgs();
         				if(!(res instanceof ArgsAnalyzer.FailedResult) && res.getFirstArgInsn() != null)
         				{
@@ -803,7 +804,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     							}
     							nxt = nxt.getNext();
     						}
-    						if(!hasJumpBetween)
+    						if(!hasJumpBetween && res.getFirstArgInsn().getOpcode() != Opcodes.DUP)
     						{
 	        					int prev = method.instructions.indexOf(ain);
 	        					method.instructions.remove(ain);
@@ -890,7 +891,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
         					ArgsAnalyzer analyzer1 = new ArgsAnalyzer(ain.getPrevious(), 1, ArgsAnalyzer.Mode.BACKWARDS);
         					analyzer1.setIgnoreNeeded(true);
             				ArgsAnalyzer.Result res1 = analyzer1.lookupArgs();
-            				if(!(res1 instanceof ArgsAnalyzer.FailedResult) && res1.getFirstArgInsn() != null)
+            				if(!(res instanceof ArgsAnalyzer.FailedResult) 
+            					&& !(res1 instanceof ArgsAnalyzer.FailedResult) && res1.getFirstArgInsn() != null)
             				{
             					if(Utils.getNext(res.getFirstArgInsn()).getOpcode() == Opcodes.DUP)
             						res = new ArgsAnalyzer(Utils.getNext(res.getFirstArgInsn()).getNext(), 1,
