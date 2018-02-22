@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
@@ -74,7 +75,13 @@ public class JVMMethodProvider extends MethodProvider {
             put("clone()Ljava/lang/Object;", (targetObject, args, context) -> {
             	Method clone = Object.class.getDeclaredMethod("clone");
             	clone.setAccessible(true);
-            	return clone.invoke(targetObject.value());
+            	try
+            	{
+            		return clone.invoke(targetObject.value());
+            	}catch(InvocationTargetException e)
+            	{
+            		throw e.getTargetException();
+            	}
             });
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, targetObject.type()); 
