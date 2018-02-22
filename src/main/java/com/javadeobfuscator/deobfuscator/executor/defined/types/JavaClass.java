@@ -267,17 +267,29 @@ public class JavaClass {
     public JavaMethod[] getMethods() {
         List<JavaMethod> methods = new ArrayList<>();
         ClassNode node = this.classNode;
+        getMethods0(methods, false);
         while(true)
         {
-	        for (MethodNode methodNode : node.methods) {
-	        	if(!methodNode.name.startsWith("<") && Modifier.isPublic(methodNode.access))
-	        		methods.add(new JavaMethod(this, methodNode));
-	        }
-	        if(node.superName == null)
-	        	break;
-	        node = new JavaClass(node.superName, context).classNode;
+        	for (MethodNode methodNode : node.methods) {
+        		if(!methodNode.name.startsWith("<") && Modifier.isPublic(methodNode.access))
+        			methods.add(new JavaMethod(this, methodNode));
+        	}
+        	if(node.superName == null)
+        		break;
+        	node = new JavaClass(node.superName, context).classNode;
         }
         return methods.toArray(new JavaMethod[methods.size()]);
+    }
+    
+    private void getMethods0(List<JavaMethod> methods, boolean excludeStatic)
+    {
+    	for (MethodNode methodNode : this.classNode.methods) {
+        	if(!methodNode.name.startsWith("<") && Modifier.isPublic(methodNode.access)
+        		&& (!Modifier.isStatic(methodNode.access) || !excludeStatic))
+        		methods.add(new JavaMethod(this, methodNode));
+        }
+    	for(String superItf : classNode.interfaces)
+    		new JavaClass(superItf, context).getMethods0(methods, true);
     }
     
     public JavaConstructor[] getDeclaredConstructors()
@@ -351,17 +363,30 @@ public class JavaClass {
     public JavaField[] getFields() {
         List<JavaField> fields = new ArrayList<>();
         ClassNode node = this.classNode;
-        while(true)
-        {
-	        for (FieldNode fieldNode : node.fields) {
-	        	if(Modifier.isPublic(fieldNode.access))
-	        		fields.add(new JavaField(this, fieldNode));
+        if(Modifier.isInterface(this.classNode.access))
+        	getFields0(fields);
+        else
+	        while(true)
+	        {
+		        for (FieldNode fieldNode : node.fields) {
+		        	if(Modifier.isPublic(fieldNode.access))
+		        		fields.add(new JavaField(this, fieldNode));
+		        }
+		        if(node.superName == null)
+		        	break;
+		        node = new JavaClass(node.superName, context).classNode;
 	        }
-	        if(node.superName == null)
-	        	break;
-	        node = new JavaClass(node.superName, context).classNode;
-        }
         return fields.toArray(new JavaField[fields.size()]);
+    }
+    
+    private void getFields0(List<JavaField> fields)
+    {
+    	for (FieldNode fieldNode : this.classNode.fields) {
+        	if(Modifier.isPublic(fieldNode.access))
+        		fields.add(new JavaField(this, fieldNode));
+        }
+    	for(String superItf : classNode.interfaces)
+    		new JavaClass(superItf, context).getFields0(fields);
     }
     
     public JavaField getDeclaredField(String fieldName) {
