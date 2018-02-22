@@ -35,6 +35,7 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,6 +45,11 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
 
 //TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
@@ -202,12 +208,94 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                                 }
                                                 methodNode.instructions.remove(insn.getPrevious());
                                             }
-                                            AbstractInsnNode firstArgInsn;
+                                            AbstractInsnNode firstArgInsn = null;
                                             if(Type.getArgumentTypes(result.getDesc()).length == 0)
                                             	firstArgInsn = insn;
                                             else
-                                            	firstArgInsn = new ArgsAnalyzer(
-                                            		insn.getPrevious(), Type.getArgumentTypes(result.getDesc()).length, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs().getFirstArgInsn();
+                                            {
+                                            	ArgsAnalyzer.Result res = new ArgsAnalyzer(
+                                            		insn.getPrevious(), Type.getArgumentTypes(result.getDesc()).length, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs();
+                                            	if(res instanceof ArgsAnalyzer.FailedResult)
+                                            	{
+                                            		boolean passed = false;
+                                            		AbstractInsnNode replace;
+                                            		methodNode.instructions.set(insn, replace = new MethodInsnNode(
+                                            			Opcodes.INVOKESPECIAL, result.getClassName(),
+                                            			"<init>", result.getDesc(), false));
+                                            		AbstractInsnNode newInsn = new TypeInsnNode(Opcodes.NEW, result.getClassName());
+                                            		AbstractInsnNode dupInsn = new InsnNode(Opcodes.DUP);
+                                            		for(int i1 = methodNode.instructions.indexOf(replace); i1 >= 0; i1--)
+                                            		{
+                                            			AbstractInsnNode a = methodNode.instructions.get(i1);
+                                            			if(!Utils.isInstruction(a) || a.getOpcode() == Opcodes.IINC)
+                                            				continue;
+                                            			methodNode.instructions.insertBefore(a, newInsn);
+                                            			methodNode.instructions.insertBefore(a, dupInsn);
+                                            			Frame<SourceValue>[] tempFrames;
+                                            			try {
+                                            				tempFrames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+                                            			} catch (AnalyzerException e) {
+                                            				methodNode.instructions.remove(newInsn);
+                                            				methodNode.instructions.remove(dupInsn);
+                                                         	continue;
+                                            			}
+                                            			Frame<SourceValue> currentFrame = tempFrames[methodNode.instructions.indexOf(replace)];
+                                            			Set<AbstractInsnNode> insns = new HashSet<>(currentFrame.getStack(currentFrame.getStackSize() -
+                                            				Type.getArgumentTypes(result.getDesc()).length - 2).insns);
+                                            			if(insns.size() == 1)
+                                            			{
+                                            				AbstractInsnNode singleton = null;
+                                            				for(AbstractInsnNode ain1 : insns)
+                                            					singleton = ain1;
+                                            				if(singleton == newInsn)
+                                            				{
+                                            					passed = true;
+                                            					break;
+                                            				}
+                                            			}
+                                            			methodNode.instructions.remove(newInsn);
+                                        				methodNode.instructions.remove(dupInsn);
+                                            		}
+                                            		if(!passed)
+                                            			for(int i1 = methodNode.instructions.indexOf(replace); i1 < methodNode.instructions.size(); i1++)
+                                                		{
+                                                			AbstractInsnNode a = methodNode.instructions.get(i1);
+                                                			if(!Utils.isInstruction(a) || a.getOpcode() == Opcodes.IINC)
+                                                				continue;
+                                                			methodNode.instructions.insertBefore(a, newInsn);
+                                                			methodNode.instructions.insertBefore(a, dupInsn);
+                                                			Frame<SourceValue>[] tempFrames;
+                                                			try {
+                                                				tempFrames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+                                                			} catch (AnalyzerException e) {
+                                                				methodNode.instructions.remove(newInsn);
+                                                				methodNode.instructions.remove(dupInsn);
+                                                             	continue;
+                                                			}
+                                                			Frame<SourceValue> currentFrame = tempFrames[methodNode.instructions.indexOf(replace)];
+                                                			Set<AbstractInsnNode> insns = new HashSet<>(currentFrame.getStack(currentFrame.getStackSize() -
+                                                				Type.getArgumentTypes(result.getDesc()).length - 1).insns);
+                                                			if(insns.size() == 1)
+                                                			{
+                                                				AbstractInsnNode singleton = null;
+                                                				for(AbstractInsnNode ain1 : insns)
+                                                					singleton = ain1;
+                                                				if(singleton == newInsn)
+                                                				{
+                                                					passed = true;
+                                                					break;
+                                                				}
+                                                			}
+                                                			methodNode.instructions.remove(newInsn);
+                                            				methodNode.instructions.remove(dupInsn);
+                                                		}
+                                            		if(!passed)
+                                            			throw new RuntimeException("Could not insert constructor!");
+                                            		count.getAndIncrement();
+                                            		break;
+                                            	}else
+                                            		firstArgInsn = res.getFirstArgInsn();
+                                            }
                                             methodNode.instructions.insertBefore(firstArgInsn, new TypeInsnNode(Opcodes.NEW, result.getClassName()));
                                             methodNode.instructions.insertBefore(firstArgInsn, new InsnNode(Opcodes.DUP));
                                             //The constructor is used to write a desc
@@ -271,9 +359,6 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
                                     JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
 
-                                    if (isValueOf(insn.getPrevious().getPrevious()))
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
-
                                     methodNode.instructions.remove(insn.getPrevious());
                                     methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETSTATIC, result.getClassName(), result.getName(), result.getDesc()));
                                     count.getAndIncrement();
@@ -297,10 +382,6 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
                                     JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
-                                    if (isValueOf(insn.getPrevious().getPrevious())) {
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                                    }
 
                                     methodNode.instructions.remove(insn.getPrevious());
                                     methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETFIELD, result.getClassName(), result.getName(), result.getDesc()));
