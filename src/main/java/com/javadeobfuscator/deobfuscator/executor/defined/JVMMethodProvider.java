@@ -26,6 +26,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.CodeSource;
+import java.security.Key;
+import java.security.MessageDigest;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 import java.util.*;
@@ -50,6 +52,8 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import org.objectweb.asm.Type;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 public class JVMMethodProvider extends MethodProvider {
@@ -185,6 +189,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/util/Arrays", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("asList([Ljava/lang/Object;)Ljava/util/List;", (targetObject, args, context) -> Arrays.asList(args.get(0).as(Object[].class)));
             put("toString([Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> Arrays.toString(args.get(0).as(Object[].class)));
+            put("copyOf([BI)[B", (targetObject, args, context) -> Arrays.copyOf(args.get(0).as(byte[].class), args.get(1).intValue()));
         }});
         put("java/util/ArrayList", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
@@ -252,13 +257,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("valueOf(Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).value()));
             put("valueOf([C)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class)));
             put("replaceAll(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replaceAll(args.get(0).as(String.class), args.get(1).as(String.class)));
-            put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> {
-                try {
-                    return targetObject.as(String.class).getBytes(args.get(0).as(String.class));
-                } catch (UnsupportedEncodingException e) {
-                    throw new ExecutionException(e);
-                }
-            });
+            put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes(args.get(0).as(String.class)));
             put("valueOf([CII)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class), args.get(1).intValue(), args.get(2).intValue()));
         }});
         put("java/lang/StringBuilder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
@@ -383,6 +382,10 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/security/CodeSource", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getLocation()Ljava/net/URL;", (targetObject, args, context) -> targetObject.as(CodeSource.class).getLocation());
+        }});
+        put("java/security/MessageDigest", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("getInstance(Ljava/lang/String;)Ljava/security/MessageDigest;", (targetObject, args, context) -> MessageDigest.getInstance(args.get(0).as(String.class)));
+            put("digest([B)[B", (targetObject, args, context) -> targetObject.as(MessageDigest.class).digest(args.get(0).as(byte[].class)));
         }});
         put("java/net/URL", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("toURI()Ljava/net/URI;", (targetObject, args, context) -> targetObject.as(URL.class).toURI());
@@ -660,11 +663,37 @@ public class JVMMethodProvider extends MethodProvider {
             put("intValue()I", (targetObject, args, context) -> new JavaInteger(targetObject.as(BigInteger.class).intValue()).intValue());
             put("valueOf(J)Ljava/math/BigInteger;", (targetObject, args, context) -> BigInteger.valueOf(args.get(0).longValue()));
         }});
+        put("java/util/Base64", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("getDecoder()Ljava/util/Base64$Decoder;", (targetObject, args, context) -> Base64.getDecoder());
+        }});
+        put("java/util/Base64$Decoder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("decode(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(Base64.Decoder.class).decode(args.get(0).as(String.class)));
+        }});
 
         // Javax
         put("javax/xml/bind/DatatypeConverter", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("parseBase64Binary(Ljava/lang/String;)[B", (targetObject, args, context) -> DatatypeConverter.parseBase64Binary(args.get(0).as(String.class)));
             put("parseHexBinary(Ljava/lang/String;)[B", (targetObject, args, context) -> DatatypeConverter.parseHexBinary(args.get(0).as(String.class)));
+        }});
+        put("javax/crypto/spec/SecretKeySpec", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>([BLjava/lang/String;)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/SecretKeySpec");
+                targetObject.initialize(new SecretKeySpec(args.get(0).as(byte[].class), args.get(1).as(String.class)));
+                return null;
+            });
+        	put("<init>([BIILjava/lang/String;)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/SecretKeySpec");
+                targetObject.initialize(new SecretKeySpec(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue(), args.get(3).as(String.class)));
+                return null;
+            });
+        }});
+        put("javax/crypto/Cipher", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("getInstance(Ljava/lang/String;)Ljavax/crypto/Cipher;", (targetObject, args, context) -> Cipher.getInstance(args.get(0).as(String.class)));
+        	put("init(ILjava/security/Key;)V", (targetObject, args, context) -> {
+        		targetObject.as(Cipher.class).init(args.get(0).intValue(), args.get(1).as(Key.class));
+        		return null;
+        	});
+        	put("doFinal([B)[B", (targetObject, args, context) -> targetObject.as(Cipher.class).doFinal(args.get(0).as(byte[].class)));
         }});
 
         // Sun
