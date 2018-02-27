@@ -59,6 +59,13 @@ public class Utils {
         return next;
     }
 
+    public static AbstractInsnNode getNext(AbstractInsnNode node, int amount) {
+        for (int i = 0; i < amount; i++) {
+            node = getNext(node);
+        }
+        return node;
+    }
+    
     public static AbstractInsnNode getNext(AbstractInsnNode node) {
         AbstractInsnNode next = node.getNext();
         while (!Utils.isInstruction(next)) {
@@ -321,8 +328,10 @@ public class Utils {
         return newInsnList;
     }
 
-    public static AbstractInsnNode getNumberInsn(short num) {
+    public static AbstractInsnNode getNumberInsn(int num) {
         switch (num) {
+        	case -1:
+        		return new InsnNode(Opcodes.ICONST_M1);
             case 0:
                 return new InsnNode(Opcodes.ICONST_0);
             case 1:
@@ -336,7 +345,12 @@ public class Utils {
             case 5:
                 return new InsnNode(Opcodes.ICONST_5);
             default:
-                return new IntInsnNode(Opcodes.SIPUSH, num);
+            	if(num >= -128 && num <= 127)
+            		return new IntInsnNode(Opcodes.BIPUSH, num);
+            	else if(num >= -32768 && num <= 32767)
+            		return new IntInsnNode(Opcodes.SIPUSH, num);
+            	else
+            		return new LdcInsnNode(num);
         }
     }
     
@@ -352,6 +366,7 @@ public class Utils {
 
     public static boolean isInteger(AbstractInsnNode ain)
 	{
+    	if (ain == null) return false;
 		if(ain.getOpcode() >= Opcodes.ICONST_M1
 			&& ain.getOpcode() <= Opcodes.SIPUSH)
 			return true;
@@ -369,10 +384,8 @@ public class Utils {
 		if(node.getOpcode() >= Opcodes.ICONST_M1
 			&& node.getOpcode() <= Opcodes.ICONST_5)
 			return node.getOpcode() - 3;
-		if (node.getOpcode() == Opcodes.BIPUSH) {
-		    return ((IntInsnNode) node).operand;
-        }
-		if(node.getOpcode() == Opcodes.SIPUSH)
+		if(node.getOpcode() == Opcodes.SIPUSH
+			|| node.getOpcode() == Opcodes.BIPUSH)
 			return ((IntInsnNode)node).operand;
 		if(node instanceof LdcInsnNode)
 		{
