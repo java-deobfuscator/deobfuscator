@@ -164,14 +164,34 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
 
     private void setNumber(InsnList insns, AbstractInsnNode insn, Integer number) {
         switch (number) {
+        	case -1:
+        		insns.set(insn, new InsnNode(Opcodes.ICONST_M1));
+        		break;
             case 0:
                 insns.set(insn, new InsnNode(Opcodes.ICONST_0));
                 break;
             case 1:
                 insns.set(insn, new InsnNode(Opcodes.ICONST_1));
                 break;
+            case 2:
+            	 insns.set(insn, new InsnNode(Opcodes.ICONST_2));
+            	 break;
+            case 3:
+            	 insns.set(insn, new InsnNode(Opcodes.ICONST_3));
+            	 break;
+            case 4:
+            	 insns.set(insn, new InsnNode(Opcodes.ICONST_4));
+            	 break;
+            case 5:
+            	 insns.set(insn, new InsnNode(Opcodes.ICONST_5));
+            	 break;
             default:
-                insns.set(insn, new LdcInsnNode(number));
+            	if(number >= -128 && number <= 127)
+            		insns.set(insn, new IntInsnNode(Opcodes.BIPUSH, number));
+            	else if(number >= -32768 && number <= 32767)
+            		insns.set(insn, new IntInsnNode(Opcodes.SIPUSH, number));
+            	else
+            		insns.set(insn, new LdcInsnNode(number));
         }
     }
 }
