@@ -27,8 +27,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.objectweb.asm.Opcodes.*;
-
 @TransformerConfig.ConfigOptions(configClass = ConstantFolder.Config.class)
 public class ConstantFolder extends Transformer<ConstantFolder.Config> {
 
