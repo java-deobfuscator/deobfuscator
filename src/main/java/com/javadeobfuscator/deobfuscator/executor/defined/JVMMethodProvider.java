@@ -71,7 +71,7 @@ public class JVMMethodProvider extends MethodProvider {
             });
             put("wait(J)V", (targetObject, args, context) -> {
                 synchronized (targetObject.as(Object.class)) {
-                    targetObject.as(Object.class).wait((long) args.get(0).value());
+                    targetObject.as(Object.class).wait(args.get(0).longValue());
                 }
                 return null;
             });
@@ -465,7 +465,13 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("hashCode()I", (targetObject, args, context) -> targetObject.as(JavaMethod.class).hashCode());
-            put("invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).invoke(args.get(0), args.get(1)));
+            put("invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> {
+            	context.push("java.lang.reflect.Method", "invoke", 0);
+            	context.push("sun.reflect.DelegatingMethodAccessorImpl", "invoke", 0);
+            	context.push("sun.reflect.NativeMethodAccessorImpl", "invoke", 0);
+            	context.push("sun.reflect.NativeMethodAccessorImpl", "invoke0", 0);
+            	return targetObject.as(JavaMethod.class).invoke(args.get(0), args.get(1), context);
+            });
         }});
         put("java/lang/reflect/Field", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaField.class).getName());
@@ -789,6 +795,8 @@ public class JVMMethodProvider extends MethodProvider {
     }
 
     private static JavaClass[] toJavaClass(Object[] arr) {
+    	if(arr == null)
+    		return new JavaClass[0];
         JavaClass[] clazz = new JavaClass[arr.length];
         for (int i = 0; i < arr.length; i++) {
             clazz[i] = (JavaClass) arr[i];
