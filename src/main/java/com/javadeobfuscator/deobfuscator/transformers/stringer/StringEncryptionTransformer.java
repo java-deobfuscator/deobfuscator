@@ -128,9 +128,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                 }
                             }
                         }
-                        if (currentInsn instanceof LdcInsnNode && currentInsn.getNext() instanceof MethodInsnNode) {
-                            LdcInsnNode ldc = (LdcInsnNode) currentInsn;
-                            MethodInsnNode m = (MethodInsnNode) ldc.getNext();
+                        if (getLegacyStringerInsns(currentInsn) != null) {
+                            LdcInsnNode ldc = (LdcInsnNode) getLegacyStringerInsns(currentInsn).get(0);
+                            MethodInsnNode m = (MethodInsnNode) getLegacyStringerInsns(currentInsn).get(1);
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
@@ -145,31 +145,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                     }
                                 }
                             }
-                        }else if (currentInsn.getOpcode() == Opcodes.GETSTATIC && currentInsn.getNext() instanceof MethodInsnNode) {
-                        	FieldInsnNode fieldNode = (FieldInsnNode) currentInsn;
-                        	boolean containsput = false;
-                        	MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                        	if (clinit != null) 
-                        		for (AbstractInsnNode ain : clinit.instructions.toArray())
-                        			if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(fieldNode.name) && ((FieldInsnNode) ain).desc.equals(fieldNode.desc) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
-                        				containsput = true;
-                        				break;
-                        			}
-                        	if(containsput) {
-	                        	MethodInsnNode m = (MethodInsnNode) currentInsn.getNext();
-	                        	String strCl = m.owner;
-	                            Type type = Type.getType(m.desc);
-	                            if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
-	                                ClassNode innerClassNode = classes.get(strCl);
-	                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
-	                                if (signature != null) {
-	                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
-	                                    if (decrypterNode != null) {
-	                                        count.getAndIncrement();
-	                                    }
-	                                }
-	                            }
-                        	}
                         }
                     }
                 }
