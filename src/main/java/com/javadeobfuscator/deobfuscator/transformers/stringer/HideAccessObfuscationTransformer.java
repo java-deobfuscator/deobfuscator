@@ -51,7 +51,6 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
-//TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
     private static final String[][] CLASS_TO_PRIMITIVE = {
             {"java/lang/Byte", "byte"},
