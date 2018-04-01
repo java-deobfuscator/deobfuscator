@@ -35,6 +35,29 @@ import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 @TransformerConfig.ConfigOptions(configClass = DuplicateRenamer.Config.class)
 public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config>
 {
+	private static final String[] ILLEGAL_WINDOWS_CHARACTERS = {
+		"aux", "con", "prn", "nul",
+		"com0", "com1", "com2", "com3", 
+		"com4", "com5", "com6", "com7",
+		"com8", "com9", "lpt0", "lpt1",
+		"lpt2", "lpt3", "lpt4", "lpt5",
+		"lpt6", "lpt7", "lpt8", "lpt9",
+	};
+	private static final String[] ILLEGAL_JAVA_NAMES = {
+		"abstract", "assert", "boolean", "break", 
+		"byte", "case", "catch", "char", "class", 
+		"const", "continue", "default", "do", 
+		"double", "else", "enum", "extends", 
+		"false", "final", "finally", "float", 
+		"for", "goto", "if", "implements", 
+		"import", "instanceof", "int", "interface", 
+		"long", "native", "new", "null", 
+		"package", "private", "protected", "public", 
+		"return", "short", "static", "strictfp", 
+		"super", "switch", "synchronized", "this", 
+		"throw", "throws", "transient", "true", 
+		"try", "void", "volatile", "while"};
+
 	@Override
 	public void remap(CustomRemapper remapper)
 	{
@@ -43,9 +66,38 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
 		classNodes().forEach(classNode -> {
 			String classNodeName = classNode.name;
 			if(!names.containsKey(classNodeName.toLowerCase(Locale.ROOT)))
+			{
 				names.put(classNodeName.toLowerCase(Locale.ROOT),
 					new AtomicInteger());
-			else
+				if(getConfig().renameIllegalNames())
+				{
+					String rawClassName = classNodeName;
+					if(classNode.name.contains("/"))
+						rawClassName = classNodeName.substring(classNode.name.lastIndexOf('/') + 1);
+					boolean illegal = false;
+					for(String s : ILLEGAL_WINDOWS_CHARACTERS)
+						if(s.equals(rawClassName.toLowerCase(Locale.ROOT)))
+						{
+							illegal = true;
+							break;
+						}
+					for(String s : ILLEGAL_JAVA_NAMES)
+						if(s.equals(rawClassName))
+						{
+							illegal = true;
+							break;
+						}
+					if(illegal)
+					{
+						String newName = classNodeName;
+						do {
+							newName = newName + "_"
+								+ names.get(classNodeName.toLowerCase(Locale.ROOT))
+								.getAndIncrement();
+						} while (!remapper.map(classNode.name, newName));
+					}
+				}
+			}else
 			{
 				String newName = classNodeName;
 				do {
@@ -214,9 +266,38 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                 if (!isLibrary.get()) {
                 	if(!methodNames.contains(
 						new MethodArgs(classNode.name, methodNode.name, Type.getArgumentTypes(methodNode.desc))))
+                	{
 						methodNames.add(new MethodArgs(classNode.name, 
 							methodNode.name, Type.getArgumentTypes(methodNode.desc)));
-					else if(!remapper.methodMappingExists(classNode.name,
+						if(getConfig().renameIllegalNames())
+						{
+							boolean illegal = false;
+							for(String s : ILLEGAL_JAVA_NAMES)
+								if(s.equals(methodNode.name))
+								{
+									illegal = true;
+									break;
+								}
+							if(illegal)
+								while(true)
+								{
+									String name = methodNode.name + "_"
+										+ methodIdNow.getAndIncrement();
+									if(remapper.mapMethodName(classNode.name,
+										methodNode.name, methodNode.desc, name,
+										false))
+									{
+										allMethodNodes.keySet().forEach(ent -> {
+											remapper.mapMethodName(
+												ent.getKey().name,
+												ent.getValue().name,
+												ent.getValue().desc, name, true);
+										});
+										break;
+									}
+								}
+						}
+                	}else if(!remapper.methodMappingExists(classNode.name,
 						methodNode.name, methodNode.desc))
 					{
 						while(true)
@@ -330,28 +411,50 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                         references.add(possibleClass);
                     }
                 }
-                if(!names
-					.containsKey(fieldNode.name))
-					names.put(fieldNode.name,
-						new AtomicInteger());
-				else if(!remapper.fieldMappingExists(classNode.name,
+                if(!names.containsKey(classNode.name + fieldNode.name))
+                {
+					names.put(classNode.name + fieldNode.name, new AtomicInteger());
+					if(getConfig().renameIllegalNames())
+					{
+						boolean illegal = false;
+						for(String s : ILLEGAL_JAVA_NAMES)
+							if(s.equals(fieldNode.name))
+							{
+								illegal = true;
+								break;
+							}
+						if(illegal)
+							while(true)
+							{
+								String newName = fieldNode.name + "_"
+									+ names.get(
+										classNode.name + fieldNode.name)
+										.getAndIncrement();
+								if(remapper.mapFieldName(classNode.name,
+									fieldNode.name, fieldNode.desc, newName, false))
+								{
+									for(String s : references)
+										remapper.mapFieldName(s, fieldNode.name,
+											fieldNode.desc, newName, true);
+									break;
+								}
+							}
+					}
+                }else if(!remapper.fieldMappingExists(classNode.name,
 					fieldNode.name, fieldNode.desc))
 				{
 					while(true)
 					{
 						String newName = fieldNode.name + "_"
-							+ names
-								.get(
-									fieldNode.name)
-								.getAndIncrement();
+							+ names.get(
+								classNode.name + fieldNode.name)
+							.getAndIncrement();
 						if(remapper.mapFieldName(classNode.name,
 							fieldNode.name, fieldNode.desc, newName, false))
 						{
 							for(String s : references)
-							{
 								remapper.mapFieldName(s, fieldNode.name,
 									fieldNode.desc, newName, true);
-							}
 							break;
 						}
 					}
@@ -450,9 +553,23 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
 		}
 	}
 	
-	public static class Config extends AbstractNormalizer.Config {
-        public Config() {
+	public static class Config extends AbstractNormalizer.Config 
+	{
+		private boolean renameIllegalNames = false;
+		
+        public Config() 
+        {
             super(DuplicateRenamer.class);
+        }
+        
+        public boolean renameIllegalNames() 
+        {
+            return renameIllegalNames;
+        }
+
+        public void setRenameIllegalNames(boolean renameIllegalNames) 
+        {
+            this.renameIllegalNames = renameIllegalNames;
         }
     }
 }
