@@ -477,6 +477,7 @@ public class JVMMethodProvider extends MethodProvider {
             	context.push("sun.reflect.NativeMethodAccessorImpl", "invoke0", 0);
             	return targetObject.as(JavaMethod.class).invoke(args.get(0), args.get(1), context);
             });
+            put("getDeclaringClass()Ljava/lang/Class;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).getDeclaringClass());
         }});
         put("java/lang/reflect/Field", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaField.class).getName());
@@ -495,6 +496,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaField.class).get(args.get(0).as(Object.class)));
+            put("getDeclaringClass()Ljava/lang/Class;", (targetObject, args, context) -> targetObject.as(JavaField.class).getDeclaringClass());
         }});
         put("java/lang/reflect/Modifier", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("isStatic(I)Z", (targetObject, args, context) -> Modifier.isStatic(args.get(0).intValue()));
@@ -502,10 +504,18 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/lang/invoke/MethodType", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("fromMethodDescriptorString(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> args.get(0).value());
+            put("methodType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> {
+            	JavaClass[] arguments = toJavaClass(args.get(1).as(Object[].class));
+            	Type[] types = new Type[arguments.length];
+            	for(int i = 0; i < arguments.length; i++)
+            		types[i] = arguments[i].getType();
+            	return Type.getMethodDescriptor(args.get(0).as(JavaClass.class).getType(), types);
+            });
         }});
         put("java/lang/invoke/MethodHandles$Lookup", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("findStatic(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "static"));
             put("findVirtual(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "virtual"));
+            put("findSpecial(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "special"));
             put("unreflect(Ljava/lang/reflect/Method;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaMethod.class).getDeclaringClass().getName().replace(".", "/"), args.get(0).as(JavaMethod.class).getName(), args.get(0).as(JavaMethod.class).getDesc(), args.get(0).as(JavaMethod.class).isStatic() ? "static" : "virtual"));
             put("findStaticGetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "static", false));
             put("findGetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "virtual", false));
