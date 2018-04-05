@@ -398,6 +398,35 @@ public class Utils {
 		return 0;
 	}
 
+    public static boolean isLong(AbstractInsnNode ain)
+	{
+    	if (ain == null) return false;
+    	if(ain.getOpcode() == Opcodes.LCONST_0
+    		|| ain.getOpcode() == Opcodes.LCONST_1)
+    		return true;
+    	if(ain instanceof LdcInsnNode)
+		{
+			LdcInsnNode ldc = (LdcInsnNode)ain;
+			if(ldc.cst instanceof Long)
+				return true;
+		}
+		return false;
+	}
+    
+	public static long getLongValue(AbstractInsnNode node)
+	{
+		if(node.getOpcode() >= Opcodes.LCONST_0
+			&& node.getOpcode() <= Opcodes.LCONST_1)
+			return node.getOpcode() - 9;
+		if(node instanceof LdcInsnNode)
+		{
+			LdcInsnNode ldc = (LdcInsnNode)node;
+			if(ldc.cst instanceof Long)
+				return (long)ldc.cst;
+		}
+		return 0;
+	}
+	
     public static List<byte[]> loadBytes(File input) {
         List<byte[]> result = new ArrayList<>();
 
