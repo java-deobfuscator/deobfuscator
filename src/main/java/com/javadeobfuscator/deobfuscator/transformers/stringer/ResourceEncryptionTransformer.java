@@ -227,8 +227,10 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         		if(ain.getOpcode() == Opcodes.NEW && classes.get(((TypeInsnNode)ain).desc) != null)
         		remove.add(((TypeInsnNode)ain).desc);
         	Map<ClassNode, Set<MethodNode>> getResource = new HashMap<>();
+        	List<MethodNode> toRemove = new ArrayList<>();
         	for(ClassNode classNode : classNodes())
         		if(classNode != decryptor)
+        		{
         			for(MethodNode methodNode : classNode.methods)
         			{
         				AbstractInsnNode ain = methodNode.instructions.getFirst();
@@ -248,12 +250,14 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         					MethodInsnNode methodInsn = (MethodInsnNode)ain;
         					MethodNode node = classNode.methods.stream().filter(m -> m.name.equals(methodInsn.name)
         						&& m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
-        					if(node != null)
-        						classNode.methods.remove(node);
+        					if(node != null && !toRemove.contains(node))
+        						toRemove.add(node);
         					getResource.putIfAbsent(classNode, new HashSet<>());
         					getResource.get(classNode).add(methodNode);
         				}
         			}
+        			toRemove.forEach(m -> classNode.methods.remove(m));
+        		}
         	for(Entry<ClassNode, Set<MethodNode>> entry : getResource.entrySet())
         		for(MethodNode method : entry.getValue())
 	        		if(method.desc.equals("(Ljava/lang/Class;Ljava/lang/String;)Ljava/net/URL;"))
@@ -315,8 +319,8 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
     	}
     	
     	@Override
-	public void setInput(byte[] b, int off, int len) 
-	{
+		public void setInput(byte[] b, int off, int len) 
+		{
     		if(Thread.currentThread().getStackTrace()[2].getClassName().startsWith(
     			"com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider"))
     			super.setInput(b, off, len);
@@ -324,6 +328,6 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
     			MethodExecutor.execute(classes.get(inflaterClass), 
     				classes.get(inflaterClass).methods.stream().filter(m -> m.name.equals("setInput")).findFirst().orElse(null),
     				Arrays.asList(new JavaArray(b), new JavaInteger(off), new JavaInteger(len)), new JavaObject(this, inflaterClass), context);
-	}
+		}
     }
 }
