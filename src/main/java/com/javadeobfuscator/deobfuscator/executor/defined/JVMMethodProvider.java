@@ -511,6 +511,7 @@ public class JVMMethodProvider extends MethodProvider {
             		types[i] = arguments[i].getType();
             	return Type.getMethodDescriptor(args.get(0).as(JavaClass.class).getType(), types);
             });
+            put("parameterCount()I", (targetObject, args, context) -> 0);
         }});
         put("java/lang/invoke/MethodHandles$Lookup", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("findStatic(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "static"));
@@ -526,6 +527,9 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/lang/invoke/MethodHandle", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("asType(Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> targetObject.value());
+        }});
+        put("java/lang/invoke/MethodHandles", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("dropArguments(Ljava/lang/invoke/MethodHandle;I[Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> args.get(0).value());
         }});
         put("java/lang/invoke/ConstantCallSite", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/invoke/MethodHandle;)V", (targetObject, args, context) -> {
