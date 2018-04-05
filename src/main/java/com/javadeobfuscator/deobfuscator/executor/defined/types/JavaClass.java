@@ -226,9 +226,9 @@ public class JavaClass {
 	                return 0;
 	            });
 	            MethodNode target = possibleMethods.stream().filter(mn -> mn.desc.endsWith(returnTypes.get(0).getDescriptor())).findFirst().orElse(null);
-	            return new JavaMethod(this, target);
+	            return new JavaMethod(clazz, target);
 	        } else if (possibleMethods.size() == 1) {
-	            return new JavaMethod(this, possibleMethods.get(0));
+	            return new JavaMethod(clazz, possibleMethods.get(0));
 	        }
 	        if(clazz.classNode.superName == null)
 	        	break;
