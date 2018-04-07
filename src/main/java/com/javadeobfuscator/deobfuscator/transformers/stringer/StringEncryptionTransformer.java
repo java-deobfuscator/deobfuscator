@@ -43,7 +43,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @TransformerConfig.ConfigOptions(configClass = StringEncryptionTransformer.Config.class)
 public class StringEncryptionTransformer extends Transformer<StringEncryptionTransformer.Config> {
-    public static final InstructionPattern DECRYPT_PATTERNV_3 = new InstructionPattern(
+    public static final InstructionPattern DECRYPT_PATTERN_LEGACY = new InstructionPattern(
+        new OpcodeStep(LDC),
+        new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/String;)Ljava/lang/String;", false)
+    );
+	public static final InstructionPattern DECRYPT_PATTERNV_3 = new InstructionPattern(
         new OpcodeStep(LDC),
         new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/Object;)Ljava/lang/String;", false)
     );
@@ -157,7 +161,13 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                             }
                         }
                         InstructionMatcher matcher1 = DECRYPT_PATTERNV_3.matcher(currentInsn);
-                        if (matcher1.find() && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
+                        boolean switched = false;
+                        if(!matcher1.find())
+                        {
+                        	matcher1 = DECRYPT_PATTERN_LEGACY.matcher(currentInsn);
+                        	switched = true;
+                        }
+                        if ((!switched || matcher1.find()) && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
                             LdcInsnNode ldc = (LdcInsnNode) matcher1.getCapturedInstructions("all").get(0);
                             MethodInsnNode m = (MethodInsnNode) matcher1.getCapturedInstructions("all").get(1);
                             if (ldc.cst instanceof String) {
@@ -279,7 +289,13 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                             }
                         }
                         InstructionMatcher matcher1 = DECRYPT_PATTERNV_3.matcher(currentInsn);
-                        if (matcher1.find() && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
+                        boolean switched = false;
+                        if(!matcher1.find())
+                        {
+                        	matcher1 = DECRYPT_PATTERN_LEGACY.matcher(currentInsn);
+                        	switched = true;
+                        }
+                        if ((!switched || matcher1.find()) && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
                             LdcInsnNode ldc = (LdcInsnNode) matcher1.getCapturedInstructions("all").get(0);
                             MethodInsnNode m = (MethodInsnNode) matcher1.getCapturedInstructions("all").get(1);
                             if (ldc.cst instanceof String) {
@@ -353,7 +369,13 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                 for (int innerInsnIndex = 0; innerInsnIndex < innerMethodInsns.size(); innerInsnIndex++) {
                                     AbstractInsnNode innerCurrentInsn = innerMethodInsns.get(innerInsnIndex);
                                     InstructionMatcher matcher = DECRYPT_PATTERNV_3.matcher(innerCurrentInsn);
-                                    if (matcher.find() && matcher.getCapturedInstructions("all").get(0) == innerCurrentInsn) {
+                                    boolean switched = false;
+                                    if(!matcher.find())
+                                    {
+                                    	matcher = DECRYPT_PATTERN_LEGACY.matcher(innerCurrentInsn);
+                                    	switched = true;
+                                    }
+                                    if ((!switched || matcher.find()) && matcher.getCapturedInstructions("all").get(0) == innerCurrentInsn) {
                                         LdcInsnNode innerLdc = (LdcInsnNode) matcher.getCapturedInstructions("all").get(0);
                                         MethodInsnNode innerMethod = (MethodInsnNode) matcher.getCapturedInstructions("all").get(1);
                                         if (innerLdc.cst instanceof String) {
