@@ -965,7 +965,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
         					AbstractInsnNode jump = null;
         					while(next != null)
         					{
-        						if(next.getOpcode() == Opcodes.ILOAD && ((VarInsnNode)next).var == ((IincInsnNode)ain).var)
+        						if(next instanceof VarInsnNode && ((VarInsnNode)next).var == ((IincInsnNode)ain).var)
+        							break;
+        						else if(next != ain && next instanceof IincInsnNode && ((IincInsnNode)next).var == ((IincInsnNode)ain).var)
         							break;
         						else if(next instanceof JumpInsnNode)
         						{
@@ -1253,7 +1255,10 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     			while(aaa != prev.getFirstArgInsn())
     			{
     				if(aaa.getOpcode() == Opcodes.DUP_X1 || aaa.getOpcode() == Opcodes.DUP_X2
-    					|| aaa.getOpcode() == Opcodes.DUP2_X1 || aaa.getOpcode() == Opcodes.DUP2_X2)
+    					|| aaa.getOpcode() == Opcodes.DUP2_X1 || aaa.getOpcode() == Opcodes.DUP2_X2
+    					|| (Utils.getPrevious(dup).getOpcode() >= Opcodes.ILOAD && Utils.getPrevious(dup).getOpcode() <= Opcodes.ALOAD
+    					&& aaa.getOpcode() >= Opcodes.ISTORE && aaa.getOpcode() <= Opcodes.ASTORE
+    					&& ((VarInsnNode)Utils.getPrevious(dup)).var == ((VarInsnNode)aaa).var))
     					return false;
     				aaa = aaa.getPrevious();
     			}
