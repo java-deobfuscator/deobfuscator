@@ -86,6 +86,8 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     							ClassNode innerClassNode = classes.get(strCl);
     							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) 
     								&& mn.desc.equals(m.desc)).findFirst().orElse(null);
+    							if(decrypterNode == null || decrypterNode.instructions.getFirst() == null)
+    								continue;
     					        Map<Integer, AtomicInteger> insnCount = new HashMap<>();
     					        Map<String, AtomicInteger> invokeCount = new HashMap<>();
     					        for(AbstractInsnNode i = decrypterNode.instructions.getFirst(); i != null; i = i.getNext()) 
