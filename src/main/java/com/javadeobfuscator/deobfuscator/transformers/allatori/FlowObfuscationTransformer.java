@@ -1381,6 +1381,12 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					}
 				if(cannotInline)
 					break;
+			}else if(ain.getOpcode() >= Opcodes.ILOAD && ain.getOpcode() <= Opcodes.ALOAD
+				&& ((next.getOpcode() >= Opcodes.ISTORE && next.getOpcode() <= Opcodes.ASTORE && ((VarInsnNode)ain).var == ((VarInsnNode)next).var)
+					|| (next.getOpcode() == Opcodes.IINC && ((VarInsnNode)ain).var == ((IincInsnNode)next).var)))
+			{
+				cannotInline = true;
+				break;
 			}
 			next = next.getNext();
 		}
@@ -1458,6 +1464,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -1536,6 +1550,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -1697,6 +1719,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -1793,6 +1823,12 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					}
 				if(cannotInline)
 					break;
+			}else if(ain.getOpcode() >= Opcodes.ILOAD && ain.getOpcode() <= Opcodes.ALOAD
+				&& ((next.getOpcode() >= Opcodes.ISTORE && next.getOpcode() <= Opcodes.ASTORE && ((VarInsnNode)ain).var == ((VarInsnNode)next).var)
+					|| (next.getOpcode() == Opcodes.IINC && ((VarInsnNode)ain).var == ((IincInsnNode)next).var)))
+			{
+				cannotInline = true;
+				break;
 			}
 			next = next.getNext();
 		}
@@ -1868,6 +1904,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -1946,6 +1990,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -2040,6 +2092,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -2108,6 +2168,14 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     									}
     								if(hasJumpBetween)
     									break;
+    							}else if(backwards.getFirstArgInsn().getOpcode() >= Opcodes.ILOAD && backwards.getFirstArgInsn().getOpcode() <= Opcodes.ALOAD
+    								&& ((nxt.getOpcode() >= Opcodes.ISTORE && nxt.getOpcode() <= Opcodes.ASTORE 
+    								&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((VarInsnNode)nxt).var)
+    									|| (nxt.getOpcode() == Opcodes.IINC 
+    									&& ((VarInsnNode)backwards.getFirstArgInsn()).var == ((IincInsnNode)nxt).var)))
+    							{
+    								hasJumpBetween = true;
+    								break;
     							}
     							nxt = nxt.getNext();
     						}
@@ -2167,11 +2235,26 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     	if(store != null)
     	{
     		int maxLocal = ((VarInsnNode)store).var;
+    		boolean stack2 = false;
     		for(AbstractInsnNode a : method.instructions.toArray())
     			if(a instanceof VarInsnNode && ((VarInsnNode)a).var > maxLocal)
+    			{
+    				if(a.getOpcode() == Opcodes.LLOAD || a.getOpcode() == Opcodes.DLOAD
+    					|| a.getOpcode() == Opcodes.LSTORE || a.getOpcode() == Opcodes.DSTORE)
+    					stack2 = true;
+    				else 
+    					stack2 = false;
     				maxLocal = ((VarInsnNode)a).var;
-    		maxLocal++;
-    		method.maxLocals++;
+    			}
+    		if(stack2)
+    		{
+    			maxLocal += 2;
+    			method.maxLocals += 2;
+    		}else
+    		{
+    			maxLocal++;
+    			method.maxLocals++;
+    		}
     		AbstractInsnNode next2 = store;
     		while(next2 != null)
     		{
@@ -2201,7 +2284,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     
     private boolean isFailedInline(MethodNode method, AbstractInsnNode start, AbstractInsnNode end)
     {
-    	if(start.getOpcode() == Opcodes.ILOAD)
+    	if(start.getOpcode() >= Opcodes.ILOAD && start.getOpcode() <= Opcodes.ALOAD)
     	{
 	    	int var = ((VarInsnNode)start).var;
 	    	AbstractInsnNode next = start;
@@ -2218,7 +2301,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	    	for(Entry<LabelNode, List<AbstractInsnNode>> entry : firstFlow.entrySet())
 	    		for(AbstractInsnNode ain : entry.getValue())
 	    			if((ain.getOpcode() == Opcodes.IINC && ((IincInsnNode)ain).var == var)
-	    			|| (ain.getOpcode() == Opcodes.ILOAD && ((VarInsnNode)ain).var == var))
+	    			|| (ain.getOpcode() >= Opcodes.ILOAD && ain.getOpcode() <= Opcodes.ALOAD && ((VarInsnNode)ain).var == var))
 	    				for(Entry<LabelNode, List<AbstractInsnNode>> entry1 : endFlow.entrySet())
 	    		    		for(AbstractInsnNode ain1 : entry1.getValue())
 	    		    			if(ain1 == ain)
