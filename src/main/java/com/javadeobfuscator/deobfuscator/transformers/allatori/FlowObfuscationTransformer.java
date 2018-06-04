@@ -1177,12 +1177,18 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 				for(AbstractInsnNode a : ent.getValue())
 				{
 					ArgsAnalyzer.Result insertPoint = new ArgsAnalyzer(a.getPrevious(), needed, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs();
-					method.instructions.insertBefore(insertPoint.getFirstArgInsn(), Utils.getPrevious(dup).clone(null));
+					try
+					{
+						method.instructions.insertBefore(insertPoint.getFirstArgInsn(), Utils.getPrevious(dup).clone(null));
+					}catch(RuntimeException e)
+					{
+						return false;
+					}
 				}
 			}
 			method.instructions.insertBefore(prev.getFirstArgInsn(), Utils.getPrevious(dup).clone(null));
     		method.instructions.remove(dup);
-			return false;
+			return true;
     	}
     	List<AbstractInsnNode> skippedDups = res.getSkippedDups();
     	AbstractInsnNode result = res.getFirstArgInsn();
