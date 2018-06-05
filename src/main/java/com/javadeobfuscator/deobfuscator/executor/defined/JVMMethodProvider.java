@@ -215,7 +215,7 @@ public class JVMMethodProvider extends MethodProvider {
             });
             put("<init>([BI)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/String");
-                targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).intValue()));
+                targetObject.initialize(new String(args.get(0).as(byte[].class), Charset.defaultCharset()));
                 return null;
             });
             put("<init>([BLjava/lang/String;)V", (targetObject, args, context) -> {
