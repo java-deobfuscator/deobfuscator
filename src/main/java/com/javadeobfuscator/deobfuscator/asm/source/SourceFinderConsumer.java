@@ -16,9 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.asm.source;
 
-import org.objectweb.asm.*;
-import org.objectweb.asm.tree.*;
-import org.objectweb.asm.tree.analysis.*;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.SourceValue;
 
 public abstract class SourceFinderConsumer implements Opcodes {
     protected final SourceFinderConsumer parent;

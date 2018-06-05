@@ -16,17 +16,21 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer.v9;
 
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.matcher.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.stringer.v9.utils.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.matcher.InstructionMatcher;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.stringer.v9.utils.Constants;
+import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import com.javadeobfuscator.javavm.MethodExecution;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.exceptions.VMException;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
 
 public class StringEncryptionTransformer extends Transformer<TransformerConfig> implements Opcodes {
     @Override

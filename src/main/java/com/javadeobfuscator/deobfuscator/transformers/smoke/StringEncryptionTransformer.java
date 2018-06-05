@@ -1,5 +1,5 @@
-package com.javadeobfuscator.deobfuscator.transformers.smoke; 
- 
+package com.javadeobfuscator.deobfuscator.transformers.smoke;
+
 import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
 import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
@@ -14,21 +14,12 @@ import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger; 
  
 public class StringEncryptionTransformer extends Transformer<TransformerConfig> {

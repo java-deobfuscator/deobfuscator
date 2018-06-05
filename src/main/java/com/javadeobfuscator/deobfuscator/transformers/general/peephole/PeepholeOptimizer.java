@@ -19,7 +19,8 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class PeepholeOptimizer extends Transformer<TransformerConfig> {
     private static final Set<Class<? extends Transformer>> PEEPHOLE_TRANSFORMERS = new LinkedHashSet<>();

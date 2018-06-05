@@ -17,9 +17,9 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 
 public class IllegalVarargsRemover extends Transformer<TransformerConfig> {
     @Override

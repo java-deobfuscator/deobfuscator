@@ -17,10 +17,10 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;

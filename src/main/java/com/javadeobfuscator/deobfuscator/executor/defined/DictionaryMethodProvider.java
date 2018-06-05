@@ -16,18 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
-import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class DictionaryMethodProvider extends MethodProvider {
     private final Map<String, ClassNode> classes;

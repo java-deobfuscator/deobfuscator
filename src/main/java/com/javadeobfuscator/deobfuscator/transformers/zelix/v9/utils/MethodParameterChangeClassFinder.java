@@ -16,7 +16,6 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.zelix.v9.utils;
 
-import com.javadeobfuscator.deobfuscator.graph.inheritancegraph.InheritanceGraph;
 import com.javadeobfuscator.deobfuscator.transformers.ClassFinder;
 import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import org.objectweb.asm.tree.ClassNode;

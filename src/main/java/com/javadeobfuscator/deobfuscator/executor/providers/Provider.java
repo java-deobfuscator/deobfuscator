@@ -16,11 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.executor.providers;
 
-import java.util.List;
-
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Type;
+
+import java.util.List;
 
 public interface Provider {
 

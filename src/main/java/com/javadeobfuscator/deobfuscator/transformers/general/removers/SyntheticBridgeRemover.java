@@ -17,8 +17,8 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.Opcodes;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import org.objectweb.asm.Opcodes;
 
 public class SyntheticBridgeRemover extends Transformer<TransformerConfig> {
     @Override

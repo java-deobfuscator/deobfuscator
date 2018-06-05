@@ -1,13 +1,15 @@
 package com.javadeobfuscator.deobfuscator.transformers.skidsuite2;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
-
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FakeExceptionTransformer extends Transformer<TransformerConfig>
 {

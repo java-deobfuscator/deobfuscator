@@ -16,15 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.rules.dasho;
 
-import com.javadeobfuscator.deobfuscator.*;
-import com.javadeobfuscator.deobfuscator.rules.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.dasho.string.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import org.objectweb.asm.*;
-import org.objectweb.asm.tree.*;
+import com.javadeobfuscator.deobfuscator.Deobfuscator;
+import com.javadeobfuscator.deobfuscator.rules.Rule;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.dasho.string.StringEncryptionTransformer;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
 
 public class RuleStringDecryptor implements Rule {
     @Override

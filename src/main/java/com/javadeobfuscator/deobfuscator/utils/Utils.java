@@ -16,6 +16,15 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
+import org.apache.commons.io.IOUtils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.Printer;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceMethodVisitor;
+import sun.misc.Unsafe;
+
 import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -25,15 +34,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.objectweb.asm.Opcodes.*;
-
-import org.apache.commons.io.IOUtils;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.Printer;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceMethodVisitor;
-import sun.misc.Unsafe;
 
 public class Utils {
     public static boolean isInstruction(AbstractInsnNode node) {

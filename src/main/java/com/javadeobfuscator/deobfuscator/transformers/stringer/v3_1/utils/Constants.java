@@ -16,7 +16,10 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer.v3_1.utils;
 
-import com.javadeobfuscator.deobfuscator.matcher.*;
+import com.javadeobfuscator.deobfuscator.matcher.InstructionPattern;
+import com.javadeobfuscator.deobfuscator.matcher.InvocationStep;
+import com.javadeobfuscator.deobfuscator.matcher.LoadIntStep;
+import com.javadeobfuscator.deobfuscator.matcher.OpcodeStep;
 import org.objectweb.asm.Opcodes;
 
 public class Constants implements Opcodes {

@@ -16,13 +16,13 @@
 
 package com.javadeobfuscator.deobfuscator.executor.providers;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Type;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class DelegatingProvider implements Provider {
 

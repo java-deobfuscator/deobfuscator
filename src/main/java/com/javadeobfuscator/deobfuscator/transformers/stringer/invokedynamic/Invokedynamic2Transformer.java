@@ -16,21 +16,25 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer.invokedynamic;
 
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import com.javadeobfuscator.javavm.mirrors.*;
-import com.javadeobfuscator.javavm.nativeimpls.*;
-import com.javadeobfuscator.javavm.values.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.WrongTransformerException;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.exceptions.AbortException;
+import com.javadeobfuscator.javavm.exceptions.VMException;
+import com.javadeobfuscator.javavm.mirrors.JavaClass;
+import com.javadeobfuscator.javavm.nativeimpls.java_lang_Class;
+import com.javadeobfuscator.javavm.nativeimpls.java_lang_invoke_MethodType;
+import com.javadeobfuscator.javavm.values.JavaWrapper;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This mode of Stringer's invokedynamic obfuscation generates a bootstrap method for each invokedynamic with the signature

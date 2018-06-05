@@ -1,18 +1,12 @@
 package com.javadeobfuscator.deobfuscator.analyzer;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InvokeDynamicInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MultiANewArrayInsnNode;
+import org.objectweb.asm.tree.*;
 
-import com.javadeobfuscator.deobfuscator.utils.Utils;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is used to retrieve where a method's args begin.

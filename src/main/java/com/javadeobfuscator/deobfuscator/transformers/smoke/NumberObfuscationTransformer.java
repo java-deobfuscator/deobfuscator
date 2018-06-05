@@ -6,10 +6,10 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.Frame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.LdcFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.MathFrame;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -18,8 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import static org.objectweb.asm.Opcodes.*;
 
 public class NumberObfuscationTransformer extends Transformer<TransformerConfig> {
 

@@ -19,13 +19,12 @@ package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
 
 public class UnconditionalSwitchRemover extends Transformer<TransformerConfig> {
 	

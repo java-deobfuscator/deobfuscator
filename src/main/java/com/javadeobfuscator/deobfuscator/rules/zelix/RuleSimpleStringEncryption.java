@@ -16,12 +16,13 @@
 
 package com.javadeobfuscator.deobfuscator.rules.zelix;
 
-import com.javadeobfuscator.deobfuscator.*;
-import com.javadeobfuscator.deobfuscator.rules.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.zelix.string.*;
+import com.javadeobfuscator.deobfuscator.Deobfuscator;
+import com.javadeobfuscator.deobfuscator.rules.Rule;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.zelix.string.SimpleStringEncryptionTransformer;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
 
 public class RuleSimpleStringEncryption implements Rule {
     @Override

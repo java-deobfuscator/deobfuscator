@@ -16,11 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.executor.values;
 
+import org.objectweb.asm.Type;
+
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.Map.Entry;
-
-import org.objectweb.asm.Type;
 
 public class JavaArray extends JavaObject {
     private Object array;

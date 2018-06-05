@@ -16,7 +16,10 @@
 
 package com.javadeobfuscator.deobfuscator.asm.source;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Since {@link java.lang.Throwable} doesn't override {@link Object#equals(Object)}, we use an ExceptionHolder to represent

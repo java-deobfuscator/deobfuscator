@@ -17,7 +17,6 @@
 package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.LabelNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
