@@ -17,7 +17,6 @@
 package com.javadeobfuscator.deobfuscator.transformers.stringer.v3.utils;
 
 import com.javadeobfuscator.deobfuscator.transformers.ClassFinder;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;

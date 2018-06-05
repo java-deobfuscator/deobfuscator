@@ -16,14 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.rules.generic;
 
-import com.javadeobfuscator.deobfuscator.*;
-import com.javadeobfuscator.deobfuscator.rules.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.general.removers.*;
-import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.*;
+import com.javadeobfuscator.deobfuscator.Deobfuscator;
+import com.javadeobfuscator.deobfuscator.rules.Rule;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.general.removers.IllegalSignatureRemover;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.util.CheckClassAdapter;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
 
 public class RuleIllegalSignature implements Rule {
     @Override

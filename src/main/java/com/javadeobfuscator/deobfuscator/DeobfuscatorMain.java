@@ -16,13 +16,6 @@
 
 package com.javadeobfuscator.deobfuscator;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -31,19 +24,12 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfigDeserializer;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.exceptions.PreventableStackOverflowError;
-import com.javadeobfuscator.deobfuscator.transformers.DelegatingTransformer;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 public class DeobfuscatorMain {
     public static void main(String[] args) throws ClassNotFoundException {

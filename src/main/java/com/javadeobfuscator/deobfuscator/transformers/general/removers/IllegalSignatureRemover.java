@@ -17,8 +17,8 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.removers;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import org.objectweb.asm.util.CheckClassAdapter;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import org.objectweb.asm.util.CheckClassAdapter;
 
 public class IllegalSignatureRemover extends Transformer<TransformerConfig> {
     @Override

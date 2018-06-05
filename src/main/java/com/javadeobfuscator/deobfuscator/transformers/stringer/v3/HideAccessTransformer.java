@@ -41,9 +41,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.javadeobfuscator.deobfuscator.transformers.stringer.v3.utils.Constants.*;
-import static com.javadeobfuscator.deobfuscator.utils.TransformerHelper.load;
-import static com.javadeobfuscator.deobfuscator.utils.TransformerHelper.size;
-import static com.javadeobfuscator.deobfuscator.utils.TransformerHelper.store;
+import static com.javadeobfuscator.deobfuscator.utils.TransformerHelper.*;
 
 public class HideAccessTransformer extends Transformer<TransformerConfig> implements Opcodes {
     private VirtualMachine vm;

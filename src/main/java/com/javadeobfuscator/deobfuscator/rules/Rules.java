@@ -16,14 +16,15 @@
 
 package com.javadeobfuscator.deobfuscator.rules;
 
-import com.google.common.collect.*;
-import com.javadeobfuscator.deobfuscator.rules.classguard.*;
-import com.javadeobfuscator.deobfuscator.rules.generic.*;
-import com.javadeobfuscator.deobfuscator.rules.normalizer.*;
+import com.google.common.collect.ImmutableList;
+import com.javadeobfuscator.deobfuscator.rules.classguard.RuleClassGuardPackage;
+import com.javadeobfuscator.deobfuscator.rules.classguard.RuleEncryptedClass;
+import com.javadeobfuscator.deobfuscator.rules.generic.RuleIllegalSignature;
+import com.javadeobfuscator.deobfuscator.rules.normalizer.RuleSourceFileAttribute;
 import com.javadeobfuscator.deobfuscator.rules.stringer.*;
 import com.javadeobfuscator.deobfuscator.rules.zelix.*;
 
-import java.util.*;
+import java.util.List;
 
 public class Rules {
     public static final List<Rule> RULES = ImmutableList.of(

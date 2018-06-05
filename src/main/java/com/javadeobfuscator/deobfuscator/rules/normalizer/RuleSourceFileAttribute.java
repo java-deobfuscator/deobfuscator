@@ -16,14 +16,15 @@
 
 package com.javadeobfuscator.deobfuscator.rules.normalizer;
 
-import com.javadeobfuscator.deobfuscator.*;
-import com.javadeobfuscator.deobfuscator.rules.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.normalizer.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import org.objectweb.asm.tree.*;
+import com.javadeobfuscator.deobfuscator.Deobfuscator;
+import com.javadeobfuscator.deobfuscator.rules.Rule;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.transformers.normalizer.SourceFileClassNormalizer;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import org.objectweb.asm.tree.ClassNode;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
 
 public class RuleSourceFileAttribute implements Rule {
     @Override

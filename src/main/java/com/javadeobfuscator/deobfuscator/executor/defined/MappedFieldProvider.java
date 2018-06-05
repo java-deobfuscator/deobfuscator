@@ -16,14 +16,14 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.providers.FieldProvider;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 
 public class MappedFieldProvider extends FieldProvider {
     private final Map<String, Object> staticFields = Collections.synchronizedMap(new HashMap<>());

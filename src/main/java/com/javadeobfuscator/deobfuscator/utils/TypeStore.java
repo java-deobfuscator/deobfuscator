@@ -1,13 +1,13 @@
 package com.javadeobfuscator.deobfuscator.utils;
 
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 
 public class TypeStore
 {

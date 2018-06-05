@@ -16,20 +16,21 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.allatori.string;
 
-import com.javadeobfuscator.deobfuscator.asm.source.*;
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import com.javadeobfuscator.javavm.mirrors.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.asm.source.ConstantPropagatingSourceFinder;
+import com.javadeobfuscator.deobfuscator.asm.source.SourceFinder;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.WrongTransformerException;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import com.javadeobfuscator.javavm.MethodExecution;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.exceptions.VMException;
+import com.javadeobfuscator.javavm.mirrors.JavaClass;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
-import org.objectweb.asm.tree.analysis.Frame;
 
-import java.util.*;
+import java.util.Optional;
 
 public class StringEncryptionTransformer extends Transformer<TransformerConfig> {
     @Override

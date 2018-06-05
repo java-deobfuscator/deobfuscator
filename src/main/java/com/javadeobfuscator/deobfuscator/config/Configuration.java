@@ -16,10 +16,10 @@
 
 package com.javadeobfuscator.deobfuscator.config;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.util.List;
 
 public class Configuration {
 

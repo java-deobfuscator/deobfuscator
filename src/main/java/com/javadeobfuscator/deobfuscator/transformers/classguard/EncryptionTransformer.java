@@ -16,16 +16,23 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.classguard;
 
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.WrongTransformerException;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 
-import javax.crypto.*;
-import javax.crypto.spec.*;
-import java.math.*;
-import java.security.*;
-import java.security.spec.*;
-import java.util.*;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.RSAPrivateKeySpec;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class encryption doesn't work, folks

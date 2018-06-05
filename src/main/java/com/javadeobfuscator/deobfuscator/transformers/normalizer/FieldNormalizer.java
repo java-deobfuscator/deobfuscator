@@ -18,7 +18,6 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
-import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 

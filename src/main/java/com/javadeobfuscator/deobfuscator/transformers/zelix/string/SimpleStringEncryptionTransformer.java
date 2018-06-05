@@ -16,25 +16,30 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.zelix.string;
 
-import com.fasterxml.jackson.annotation.*;
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.WrongTransformerException;
 import com.javadeobfuscator.deobfuscator.matcher.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import com.javadeobfuscator.javavm.mirrors.*;
-import com.javadeobfuscator.javavm.utils.*;
-import com.javadeobfuscator.javavm.values.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.javavm.ExecutionOptions;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.exceptions.AbortException;
+import com.javadeobfuscator.javavm.exceptions.VMException;
+import com.javadeobfuscator.javavm.mirrors.JavaClass;
+import com.javadeobfuscator.javavm.utils.ASMHelper;
+import com.javadeobfuscator.javavm.values.JavaArray;
+import com.javadeobfuscator.javavm.values.JavaValueType;
+import com.javadeobfuscator.javavm.values.JavaWrapper;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
-import org.objectweb.asm.tree.analysis.Frame;
 
 import java.util.*;
-import java.util.function.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * This is a transformer for the simplest version of Zelix string encryption. There are a few possible obfuscated outcomes:

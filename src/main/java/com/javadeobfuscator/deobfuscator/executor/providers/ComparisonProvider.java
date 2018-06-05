@@ -16,10 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.executor.providers;
 
-import java.util.List;
-
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+
+import java.util.List;
+
 ;
 
 public abstract class ComparisonProvider implements Provider {

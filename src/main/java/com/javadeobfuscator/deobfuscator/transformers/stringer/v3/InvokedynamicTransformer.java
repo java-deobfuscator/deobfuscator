@@ -16,22 +16,27 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer.v3;
 
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import com.javadeobfuscator.javavm.mirrors.*;
-import com.javadeobfuscator.javavm.nativeimpls.*;
-import com.javadeobfuscator.javavm.values.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import com.javadeobfuscator.javavm.StackTraceHolder;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.exceptions.AbortException;
+import com.javadeobfuscator.javavm.mirrors.JavaClass;
+import com.javadeobfuscator.javavm.nativeimpls.java_lang_Class;
+import com.javadeobfuscator.javavm.values.JavaWrapper;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.concurrent.atomic.*;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class InvokedynamicTransformer extends Transformer<TransformerConfig> implements Opcodes {
     private VirtualMachine vm;

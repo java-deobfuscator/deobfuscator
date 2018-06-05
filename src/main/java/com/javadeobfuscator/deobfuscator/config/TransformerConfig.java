@@ -17,12 +17,13 @@
 package com.javadeobfuscator.deobfuscator.config;
 
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.javavm.*;
+import com.javadeobfuscator.javavm.VirtualMachine;
 
 import java.lang.annotation.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.function.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class TransformerConfig {
     @Inherited

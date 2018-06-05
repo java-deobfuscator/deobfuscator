@@ -28,7 +28,6 @@ import com.javadeobfuscator.javavm.values.JavaWrapper;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;

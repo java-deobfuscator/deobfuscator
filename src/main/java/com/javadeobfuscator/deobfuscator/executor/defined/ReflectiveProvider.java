@@ -20,8 +20,8 @@ import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import org.objectweb.asm.Type;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import sun.invoke.util.BytecodeDescriptor;
 

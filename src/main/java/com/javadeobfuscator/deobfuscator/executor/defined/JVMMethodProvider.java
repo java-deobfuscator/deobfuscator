@@ -16,6 +16,18 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined;
 
+import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
+import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+
+import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -29,27 +41,7 @@ import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.zip.Inflater;
-import java.util.zip.InflaterInputStream;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
-import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
-import com.javadeobfuscator.deobfuscator.executor.values.*; 
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaCharacter;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-
-import com.javadeobfuscator.deobfuscator.executor.Context;
-import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
-import org.objectweb.asm.Type;
-import javax.xml.bind.DatatypeConverter;
+import java.util.zip.*;
 
 public class JVMMethodProvider extends MethodProvider {
     @SuppressWarnings("serial")
@@ -215,7 +207,7 @@ public class JVMMethodProvider extends MethodProvider {
             });
             put("<init>([BI)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/String");
-                targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).intValue()));
+                targetObject.initialize(new String(args.get(0).as(byte[].class), Charset.defaultCharset()));
                 return null;
             });
             put("<init>([BLjava/lang/String;)V", (targetObject, args, context) -> {

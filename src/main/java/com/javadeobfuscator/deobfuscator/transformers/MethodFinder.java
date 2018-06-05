@@ -16,7 +16,6 @@
 
 package com.javadeobfuscator.deobfuscator.transformers;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 

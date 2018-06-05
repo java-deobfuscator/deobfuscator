@@ -16,7 +16,18 @@
 
 package com.javadeobfuscator.deobfuscator.executor;
 
-import static org.objectweb.asm.Opcodes.*;
+import com.google.common.base.Optional;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.FallingOffCodeException;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchComparisonHandlerException;
+import com.javadeobfuscator.deobfuscator.executor.exceptions.NoSuchMethodHandlerException;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
+import com.javadeobfuscator.deobfuscator.utils.TypeStore;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
@@ -24,16 +35,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 
-import com.google.common.base.Optional;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
-import com.javadeobfuscator.deobfuscator.executor.exceptions.*;
-import com.javadeobfuscator.deobfuscator.executor.values.*;
-
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
-import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
-import com.javadeobfuscator.deobfuscator.utils.TypeStore;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
+import static org.objectweb.asm.Opcodes.*;
 
 public class MethodExecutor {
     private static final boolean VERIFY;

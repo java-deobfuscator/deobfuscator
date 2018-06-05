@@ -16,8 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.stringer.v9.utils;
 
-import com.javadeobfuscator.deobfuscator.matcher.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.matcher.InstructionPattern;
+import com.javadeobfuscator.deobfuscator.matcher.InvocationStep;
+import com.javadeobfuscator.deobfuscator.matcher.LoadIntStep;
+import com.javadeobfuscator.deobfuscator.matcher.OpcodeStep;
+import org.objectweb.asm.Opcodes;
 
 public class Constants implements Opcodes {
     public static final InstructionPattern DECRYPT_PATTERN = new InstructionPattern(

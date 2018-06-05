@@ -17,17 +17,15 @@
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.objectweb.asm.Opcodes.*;
 
 public class TrapHandlerMerger extends Transformer<TransformerConfig> {
 

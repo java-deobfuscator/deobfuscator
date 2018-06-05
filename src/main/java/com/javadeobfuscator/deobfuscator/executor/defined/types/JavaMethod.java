@@ -16,16 +16,16 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.*;
-
+import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
-import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class JavaMethod {
     private final JavaClass clazz;

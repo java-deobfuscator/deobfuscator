@@ -16,19 +16,17 @@
 
 package com.javadeobfuscator.deobfuscator.transformers;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.javavm.*;
-import com.javadeobfuscator.javavm.exceptions.*;
-import org.objectweb.asm.*;
+import com.javadeobfuscator.deobfuscator.exceptions.WrongTransformerException;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Map;
 
 public abstract class Transformer<T extends TransformerConfig> implements Opcodes {
 

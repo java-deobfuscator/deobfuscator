@@ -16,22 +16,27 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import com.google.common.base.*;
-import com.google.common.primitives.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.javavm.*;
-import org.objectweb.asm.*;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.primitives.Booleans;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.tree.analysis.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.Frame;
-import org.slf4j.*;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.*;
+import java.util.stream.Collectors;
 
-import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
+import static com.javadeobfuscator.deobfuscator.utils.Utils.loadBytes;
 
 public class TransformerHelper implements Opcodes {
     public static boolean isInvokeVirtual(AbstractInsnNode insn, String owner, String name, String desc) {
