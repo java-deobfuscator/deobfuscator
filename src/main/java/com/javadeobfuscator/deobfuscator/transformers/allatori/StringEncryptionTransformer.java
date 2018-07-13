@@ -127,21 +127,21 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
         System.out.println("[Allatori] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
         System.out.println("[Allatori] [StringEncryptionTransformer] Done");
-        return true;
+        return count.get() > 0;
     }
 
     private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {
         //XXX: Better detector
     	if(insnCount.get(Opcodes.IXOR) == null ||
     		insnCount.get(Opcodes.ISHL) == null ||
-    			insnCount.get(Opcodes.NEWARRAY) == null ||
-    			invokeCount.get("charAt") == null || invokeCount.get("length") == null)
+    		insnCount.get(Opcodes.NEWARRAY) == null ||
+    		invokeCount.get("charAt") == null || invokeCount.get("length") == null)
     			return false;
-        return ((int) ((insnCount.get(Opcodes.IXOR).get() * 100.0f) / 8)) >= 50 &&
-                ((int) ((insnCount.get(Opcodes.ISHL).get() * 100.0f) / 4)) >= 25 &&
-                ((int) ((insnCount.get(Opcodes.NEWARRAY).get() * 100.0f) / 1)) >= 100 &&
-                ((int) ((invokeCount.get("charAt").get() * 100.0f) / 4)) >= 50 &&
-                ((int) ((invokeCount.get("length").get() * 100.0f) / 2)) >= 50;
+        return insnCount.get(Opcodes.IXOR).get() >= 4 &&
+               insnCount.get(Opcodes.ISHL).get() >= 1 &&
+               insnCount.get(Opcodes.NEWARRAY).get() >= 1 &&
+               invokeCount.get("charAt").get()>= 2 &&
+               invokeCount.get("length").get() >= 1;
     }
 
     private void patchMethod(Map<String, AtomicInteger> invokeCount, MethodNode method) {
