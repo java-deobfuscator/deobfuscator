@@ -20,10 +20,20 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class OpcodeStep implements Step {
     private final List<Integer> wantOpcodes;
+    private Function<AbstractInsnNode, Boolean> function;
 
+    public OpcodeStep(Function<AbstractInsnNode, Boolean> function, int... opcodes) {
+    	this.function = function;
+        this.wantOpcodes = new ArrayList<>();
+        for (int opcode : opcodes) {
+            this.wantOpcodes.add(opcode);
+        }
+    }
+    
     public OpcodeStep(int... opcodes) {
         this.wantOpcodes = new ArrayList<>();
         for (int opcode : opcodes) {
@@ -33,7 +43,7 @@ public class OpcodeStep implements Step {
 
     @Override
     public AbstractInsnNode tryMatch(InstructionMatcher matcher, AbstractInsnNode now) {
-        if (this.wantOpcodes.contains(now.getOpcode())) {
+        if (this.wantOpcodes.contains(now.getOpcode()) && (function == null || function.apply(now))) {
             return now.getNext();
         }
         return null;

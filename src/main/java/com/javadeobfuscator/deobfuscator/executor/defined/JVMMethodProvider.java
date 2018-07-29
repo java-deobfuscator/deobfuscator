@@ -18,6 +18,7 @@ package com.javadeobfuscator.deobfuscator.executor.defined;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
@@ -25,6 +26,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.CodeSource;
+import java.security.Key;
+import java.security.MessageDigest;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 import java.util.*;
@@ -49,6 +52,8 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import org.objectweb.asm.Type;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 public class JVMMethodProvider extends MethodProvider {
@@ -66,7 +71,7 @@ public class JVMMethodProvider extends MethodProvider {
             });
             put("wait(J)V", (targetObject, args, context) -> {
                 synchronized (targetObject.as(Object.class)) {
-                    targetObject.as(Object.class).wait((long) args.get(0).value());
+                    targetObject.as(Object.class).wait(args.get(0).longValue());
                 }
                 return null;
             });
@@ -74,7 +79,13 @@ public class JVMMethodProvider extends MethodProvider {
             put("clone()Ljava/lang/Object;", (targetObject, args, context) -> {
             	Method clone = Object.class.getDeclaredMethod("clone");
             	clone.setAccessible(true);
-            	return clone.invoke(targetObject.value());
+            	try
+            	{
+            		return clone.invoke(targetObject.value());
+            	}catch(InvocationTargetException e)
+            	{
+            		throw e.getTargetException();
+            	}
             });
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, targetObject.type()); 
@@ -178,6 +189,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/util/Arrays", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("asList([Ljava/lang/Object;)Ljava/util/List;", (targetObject, args, context) -> Arrays.asList(args.get(0).as(Object[].class)));
             put("toString([Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> Arrays.toString(args.get(0).as(Object[].class)));
+            put("copyOf([BI)[B", (targetObject, args, context) -> Arrays.copyOf(args.get(0).as(byte[].class), args.get(1).intValue()));
         }});
         put("java/util/ArrayList", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
@@ -198,6 +210,11 @@ public class JVMMethodProvider extends MethodProvider {
             put("iterator()Ljava/util/Iterator;", (targetObject, args, context) -> targetObject.as(ArrayList.class).iterator());
         }});
         put("java/lang/String", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>(Ljava/lang/StringBuffer;)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/String");
+                targetObject.initialize(new String(args.get(0).as(StringBuffer.class)));
+                return null;
+            });
             put("<init>([CII)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/String");
                 targetObject.initialize(new String(args.get(0).as(char[].class), args.get(1).intValue(), args.get(2).intValue()));
@@ -245,13 +262,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("valueOf(Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).value()));
             put("valueOf([C)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class)));
             put("replaceAll(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replaceAll(args.get(0).as(String.class), args.get(1).as(String.class)));
-            put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> {
-                try {
-                    return targetObject.as(String.class).getBytes(args.get(0).as(String.class));
-                } catch (UnsupportedEncodingException e) {
-                    throw new ExecutionException(e);
-                }
-            });
+            put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes(args.get(0).as(String.class)));
             put("valueOf([CII)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class), args.get(1).intValue(), args.get(2).intValue()));
         }});
         put("java/lang/StringBuilder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
@@ -339,7 +350,7 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/lang/RuntimeException", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/String;)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/RuntimeException");
-                targetObject.initialize(args.get(0).value());
+                targetObject.initialize(new RuntimeException(args.get(0).as(String.class)));
                 return null;
             });
             put("<init>()V", (targetObject, args, context) -> {
@@ -376,6 +387,10 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/security/CodeSource", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getLocation()Ljava/net/URL;", (targetObject, args, context) -> targetObject.as(CodeSource.class).getLocation());
+        }});
+        put("java/security/MessageDigest", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("getInstance(Ljava/lang/String;)Ljava/security/MessageDigest;", (targetObject, args, context) -> MessageDigest.getInstance(args.get(0).as(String.class)));
+            put("digest([B)[B", (targetObject, args, context) -> targetObject.as(MessageDigest.class).digest(args.get(0).as(byte[].class)));
         }});
         put("java/net/URL", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("toURI()Ljava/net/URI;", (targetObject, args, context) -> targetObject.as(URL.class).toURI());
@@ -455,7 +470,14 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("hashCode()I", (targetObject, args, context) -> targetObject.as(JavaMethod.class).hashCode());
-            put("invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).invoke(args.get(0), args.get(1)));
+            put("invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> {
+            	context.push("java.lang.reflect.Method", "invoke", 0);
+            	context.push("sun.reflect.DelegatingMethodAccessorImpl", "invoke", 0);
+            	context.push("sun.reflect.NativeMethodAccessorImpl", "invoke", 0);
+            	context.push("sun.reflect.NativeMethodAccessorImpl", "invoke0", 0);
+            	return targetObject.as(JavaMethod.class).invoke(args.get(0), args.get(1), context);
+            });
+            put("getDeclaringClass()Ljava/lang/Class;", (targetObject, args, context) -> targetObject.as(JavaMethod.class).getDeclaringClass());
         }});
         put("java/lang/reflect/Field", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(JavaField.class).getName());
@@ -474,6 +496,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(JavaField.class).get(args.get(0).as(Object.class)));
+            put("getDeclaringClass()Ljava/lang/Class;", (targetObject, args, context) -> targetObject.as(JavaField.class).getDeclaringClass());
         }});
         put("java/lang/reflect/Modifier", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("isStatic(I)Z", (targetObject, args, context) -> Modifier.isStatic(args.get(0).intValue()));
@@ -481,14 +504,32 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/lang/invoke/MethodType", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("fromMethodDescriptorString(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> args.get(0).value());
+            put("methodType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> {
+            	JavaClass[] arguments = toJavaClass(args.get(1).as(Object[].class));
+            	Type[] types = new Type[arguments.length];
+            	for(int i = 0; i < arguments.length; i++)
+            		types[i] = arguments[i].getType();
+            	return Type.getMethodDescriptor(args.get(0).as(JavaClass.class).getType(), types);
+            });
+            put("parameterCount()I", (targetObject, args, context) -> 0);
         }});
         put("java/lang/invoke/MethodHandles$Lookup", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("findStatic(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "static"));
             put("findVirtual(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "virtual"));
+            put("findSpecial(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "special"));
             put("unreflect(Ljava/lang/reflect/Method;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaMethod.class).getDeclaringClass().getName().replace(".", "/"), args.get(0).as(JavaMethod.class).getName(), args.get(0).as(JavaMethod.class).getDesc(), args.get(0).as(JavaMethod.class).isStatic() ? "static" : "virtual"));
+            put("findStaticGetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "static", false));
+            put("findGetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "virtual", false));
+            put("findStaticSetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "static", true));
+            put("findSetter(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(JavaClass.class).getType().getDescriptor(), "virtual", true));
+            put("unreflectGetter(Ljava/lang/reflect/Field;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaField.class).getDeclaringClass().getName().replace(".", "/"), args.get(0).as(JavaField.class).getName(), args.get(0).as(JavaField.class).getDesc(), Modifier.isStatic(args.get(0).as(JavaField.class).getModifiers()) ? "static" : "virtual", false));
+            put("unreflectSetter(Ljava/lang/reflect/Field;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaFieldHandle(args.get(0).as(JavaField.class).getDeclaringClass().getName().replace(".", "/"), args.get(0).as(JavaField.class).getName(), args.get(0).as(JavaField.class).getDesc(), Modifier.isStatic(args.get(0).as(JavaField.class).getModifiers()) ? "static" : "virtual", true));
         }});
         put("java/lang/invoke/MethodHandle", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("asType(Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> targetObject.value());
+        }});
+        put("java/lang/invoke/MethodHandles", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("dropArguments(Ljava/lang/invoke/MethodHandle;I[Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> args.get(0).value());
         }});
         put("java/lang/invoke/ConstantCallSite", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/invoke/MethodHandle;)V", (targetObject, args, context) -> {
@@ -544,13 +585,23 @@ public class JVMMethodProvider extends MethodProvider {
             put("getFileName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getFileName());
         }});
         put("java/lang/Long", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>(J)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/Long");
+                targetObject.initialize(new Long(args.get(0).longValue()));
+                return null;
+            });
             put("parseLong(Ljava/lang/String;)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class)));
             put("parseLong(Ljava/lang/String;I)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class), args.get(1).intValue()));
             put("valueOf(J)Ljava/lang/Long;", (targetObject, args, context) -> Long.valueOf(args.get(0).longValue()));
             put("longValue()J", (targetObject, args, context) -> ((Long)targetObject.value()).longValue());
         }});
         put("java/lang/Integer", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("parseInt(Ljava/lang/String;)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class)));
+        	put("<init>(I)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/Integer");
+                targetObject.initialize(new Integer(args.get(0).intValue()));
+                return null;
+            });
+        	put("parseInt(Ljava/lang/String;)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/String;)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/String;I)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).as(String.class), args.get(1).intValue()));
             put("valueOf(I)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).intValue()));
@@ -653,11 +704,37 @@ public class JVMMethodProvider extends MethodProvider {
             put("intValue()I", (targetObject, args, context) -> new JavaInteger(targetObject.as(BigInteger.class).intValue()).intValue());
             put("valueOf(J)Ljava/math/BigInteger;", (targetObject, args, context) -> BigInteger.valueOf(args.get(0).longValue()));
         }});
+        put("java/util/Base64", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("getDecoder()Ljava/util/Base64$Decoder;", (targetObject, args, context) -> Base64.getDecoder());
+        }});
+        put("java/util/Base64$Decoder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("decode(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(Base64.Decoder.class).decode(args.get(0).as(String.class)));
+        }});
 
         // Javax
         put("javax/xml/bind/DatatypeConverter", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("parseBase64Binary(Ljava/lang/String;)[B", (targetObject, args, context) -> DatatypeConverter.parseBase64Binary(args.get(0).as(String.class)));
             put("parseHexBinary(Ljava/lang/String;)[B", (targetObject, args, context) -> DatatypeConverter.parseHexBinary(args.get(0).as(String.class)));
+        }});
+        put("javax/crypto/spec/SecretKeySpec", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>([BLjava/lang/String;)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/SecretKeySpec");
+                targetObject.initialize(new SecretKeySpec(args.get(0).as(byte[].class), args.get(1).as(String.class)));
+                return null;
+            });
+        	put("<init>([BIILjava/lang/String;)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/SecretKeySpec");
+                targetObject.initialize(new SecretKeySpec(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue(), args.get(3).as(String.class)));
+                return null;
+            });
+        }});
+        put("javax/crypto/Cipher", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("getInstance(Ljava/lang/String;)Ljavax/crypto/Cipher;", (targetObject, args, context) -> Cipher.getInstance(args.get(0).as(String.class)));
+        	put("init(ILjava/security/Key;)V", (targetObject, args, context) -> {
+        		targetObject.as(Cipher.class).init(args.get(0).intValue(), args.get(1).as(Key.class));
+        		return null;
+        	});
+        	put("doFinal([B)[B", (targetObject, args, context) -> targetObject.as(Cipher.class).doFinal(args.get(0).as(byte[].class)));
         }});
 
         // Sun
@@ -753,6 +830,8 @@ public class JVMMethodProvider extends MethodProvider {
     }
 
     private static JavaClass[] toJavaClass(Object[] arr) {
+    	if(arr == null)
+    		return new JavaClass[0];
         JavaClass[] clazz = new JavaClass[arr.length];
         for (int i = 0; i < arr.length; i++) {
             clazz[i] = (JavaClass) arr[i];
