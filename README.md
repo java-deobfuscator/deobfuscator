@@ -3,7 +3,7 @@
 This project aims to deobfuscate most commercially-available obfuscators for Java.
 
 ## Update 02/20/18
-This project will likely be on pause for the next month or two because my arm is broken
+This project will likely be on pause for the next month or two because my arm is broken and after that for another year or two
 
 ## Quick Start
 
