@@ -1,5 +1,5 @@
 # Deobfuscator [![Build Status](https://ci.samczsun.com/buildStatus/icon?job=java-deobfuscator/Deobfuscator)](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator)
-
+ 
 This project aims to deobfuscate most commercially-available obfuscators for Java.
 
 ## Update 02/20/18
