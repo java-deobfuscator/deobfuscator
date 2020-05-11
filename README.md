@@ -9,7 +9,7 @@ If you would like to run this program with a GUI, go to https://github.com/java-
 
 ## Quick Start
 
-* [Download](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator/) the deobfuscator.
+* [Download](https://github.com/java-deobfuscator/deobfuscator/releases) the deobfuscator.
 * If you know what obfuscators were used, skip the next two steps
 * Create `detect.yml` with the following contents. Replace `input.jar` with the name of the input
 ```yaml
