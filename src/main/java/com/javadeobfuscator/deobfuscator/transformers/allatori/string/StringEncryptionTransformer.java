@@ -24,7 +24,6 @@ import com.javadeobfuscator.deobfuscator.utils.*;
 import com.javadeobfuscator.javavm.*;
 import com.javadeobfuscator.javavm.exceptions.*;
 import com.javadeobfuscator.javavm.mirrors.*;
-import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
 import org.objectweb.asm.tree.analysis.Frame;
@@ -64,7 +63,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                     Frame<SourceValue> currentFrame = frames[methodNode.instructions.indexOf(methodInsnNode)];
 
                     MethodNode decryptorMethod = new MethodNode(ACC_STATIC | ACC_PUBLIC, "decrypt" + decrypted, "()Ljava/lang/String;", null, null);
-                    Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(currentFrame.getStackSize() - 1)).consensus();
+                    Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ArrayList<>(), new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(currentFrame.getStackSize() - 1)).consensus();
                     if (!consensus.isPresent()) continue;
 
                     decryptorMethod.instructions.add(new LdcInsnNode(consensus.get()));

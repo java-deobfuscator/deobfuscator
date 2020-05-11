@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.asm.source;
 
+import java.util.List;
+
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
 
@@ -29,9 +31,9 @@ public class SimpleMethodConstantSourceFinder extends SourceFinderConsumer {
     }
 
     @Override
-    public SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, AbstractInsnNode source, SourceValue want, AbstractInsnNode now) {
+    public SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, List<AbstractInsnNode> instructions, AbstractInsnNode source, SourceValue want, AbstractInsnNode now) {
 
 
-        return parent == null ? SourceResult.unknown() : parent.findSource(methodNode, frames, source, want, now);
+        return parent == null ? SourceResult.unknown() : parent.findSource(methodNode, frames, instructions, source, want, now);
     }
 }

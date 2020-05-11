@@ -17,10 +17,16 @@
 package com.javadeobfuscator.deobfuscator.matcher;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.LdcInsnNode;
 
 public class LoadIntStep extends OpcodeStep {
     public LoadIntStep() {
-        super(Opcodes.ICONST_M1,
+        super((a) -> 
+        {
+        	if(!(a instanceof LdcInsnNode))
+        		return true;
+        	return ((LdcInsnNode)a).cst instanceof Integer;
+        },Opcodes.ICONST_M1,
                 Opcodes.ICONST_0,
                 Opcodes.ICONST_1,
                 Opcodes.ICONST_2,

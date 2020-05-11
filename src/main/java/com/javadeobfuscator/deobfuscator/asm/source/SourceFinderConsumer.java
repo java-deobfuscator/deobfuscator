@@ -16,6 +16,8 @@
 
 package com.javadeobfuscator.deobfuscator.asm.source;
 
+import java.util.List;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
@@ -27,5 +29,5 @@ public abstract class SourceFinderConsumer implements Opcodes {
         this.parent = parent;
     }
 
-    public abstract SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, AbstractInsnNode source, SourceValue want, AbstractInsnNode now);
+    public abstract SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, List<AbstractInsnNode> instructions, AbstractInsnNode source, SourceValue want, AbstractInsnNode now);
 }

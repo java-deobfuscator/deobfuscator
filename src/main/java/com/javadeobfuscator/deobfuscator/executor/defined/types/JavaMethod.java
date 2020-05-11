@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator.executor.defined.types;
 import java.util.ArrayList;
 import java.util.List;
 import com.google.common.primitives.Primitives;
+import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.*;
 
@@ -82,7 +83,7 @@ public class JavaMethod {
         return getDeclaringClass().getName().hashCode() ^ getName().hashCode();
     }
 
-    public Object invoke(JavaValue instance, JavaValue argsObject) {
+    public Object invoke(JavaValue instance, JavaValue argsObject, Context context) {
     	Object[] args; 
     	String[] argTypes;
     	if(argsObject.value() == null) 
@@ -159,8 +160,13 @@ public class JavaMethod {
                 }
             }
 
-            if (this.clazz.getContext().provider.canInvokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext())) {
-                return this.clazz.getContext().provider.invokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, this.clazz.getContext());
+            if (context.provider.canInvokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, context)) {
+            	Object o = this.clazz.getContext().provider.invokeMethod(this.clazz.getClassNode().name, this.method.name, this.method.desc, instance, argsobjects, context);
+            	context.pop();
+            	context.pop();
+            	context.pop();
+            	context.pop();
+            	return o;
             }
         } catch (ExecutionException ex) {
             throw ex;

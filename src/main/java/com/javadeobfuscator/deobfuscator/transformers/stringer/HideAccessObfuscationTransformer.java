@@ -35,6 +35,7 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,8 +45,14 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.BasicInterpreter;
+import org.objectweb.asm.tree.analysis.BasicValue;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
 
-//TODO: Support Java6(50) and below (Reflection obfuscation)
 public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
     private static final String[][] CLASS_TO_PRIMITIVE = {
             {"java/lang/Byte", "byte"},
@@ -202,12 +209,99 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                                 }
                                                 methodNode.instructions.remove(insn.getPrevious());
                                             }
-                                            AbstractInsnNode firstArgInsn;
+                                            AbstractInsnNode firstArgInsn = null;
                                             if(Type.getArgumentTypes(result.getDesc()).length == 0)
                                             	firstArgInsn = insn;
                                             else
-                                            	firstArgInsn = new ArgsAnalyzer(
-                                            		insn.getPrevious(), Type.getArgumentTypes(result.getDesc()).length, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs().getFirstArgInsn();
+                                            {
+                                            	int length = 0;
+                                            	for(Type t : Type.getArgumentTypes(result.getDesc()))
+                                            		if(t.getSort() == Type.LONG || t.getSort() == Type.DOUBLE)
+                                            			length += 2;
+                                            		else
+                                            			length++;
+                                            	ArgsAnalyzer.Result res = new ArgsAnalyzer(insn.getPrevious(), length, ArgsAnalyzer.Mode.BACKWARDS).lookupArgs();
+                                            	if(res instanceof ArgsAnalyzer.FailedResult)
+                                            	{
+                                            		boolean passed = false;
+                                            		AbstractInsnNode replace;
+                                            		methodNode.instructions.set(insn, replace = new MethodInsnNode(
+                                            			Opcodes.INVOKESPECIAL, result.getClassName(),
+                                            			"<init>", result.getDesc(), false));
+                                            		AbstractInsnNode newInsn = new TypeInsnNode(Opcodes.NEW, result.getClassName());
+                                            		AbstractInsnNode dupInsn = new InsnNode(Opcodes.DUP);
+                                            		for(int i1 = methodNode.instructions.indexOf(replace); i1 >= 0; i1--)
+                                            		{
+                                            			AbstractInsnNode a = methodNode.instructions.get(i1);
+                                            			if(!Utils.isInstruction(a) || a.getOpcode() == Opcodes.IINC)
+                                            				continue;
+                                            			methodNode.instructions.insertBefore(a, newInsn);
+                                            			methodNode.instructions.insertBefore(a, dupInsn);
+                                            			Frame<SourceValue>[] tempFrames;
+                                            			try {
+                                            				tempFrames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+                                            			} catch (AnalyzerException e) {
+                                            				methodNode.instructions.remove(newInsn);
+                                            				methodNode.instructions.remove(dupInsn);
+                                                         	continue;
+                                            			}
+                                            			Frame<SourceValue> currentFrame = tempFrames[methodNode.instructions.indexOf(replace)];
+                                            			Set<AbstractInsnNode> insns = new HashSet<>(currentFrame.getStack(currentFrame.getStackSize() -
+                                            				Type.getArgumentTypes(result.getDesc()).length - 2).insns);
+                                            			if(insns.size() == 1)
+                                            			{
+                                            				AbstractInsnNode singleton = null;
+                                            				for(AbstractInsnNode ain1 : insns)
+                                            					singleton = ain1;
+                                            				if(singleton == newInsn)
+                                            				{
+                                            					passed = true;
+                                            					break;
+                                            				}
+                                            			}
+                                            			methodNode.instructions.remove(newInsn);
+                                        				methodNode.instructions.remove(dupInsn);
+                                            		}
+                                            		if(!passed)
+                                            			for(int i1 = methodNode.instructions.indexOf(replace); i1 < methodNode.instructions.size(); i1++)
+                                                		{
+                                                			AbstractInsnNode a = methodNode.instructions.get(i1);
+                                                			if(!Utils.isInstruction(a) || a.getOpcode() == Opcodes.IINC)
+                                                				continue;
+                                                			methodNode.instructions.insertBefore(a, newInsn);
+                                                			methodNode.instructions.insertBefore(a, dupInsn);
+                                                			Frame<SourceValue>[] tempFrames;
+                                                			try {
+                                                				tempFrames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+                                                			} catch (AnalyzerException e) {
+                                                				methodNode.instructions.remove(newInsn);
+                                                				methodNode.instructions.remove(dupInsn);
+                                                             	continue;
+                                                			}
+                                                			Frame<SourceValue> currentFrame = tempFrames[methodNode.instructions.indexOf(replace)];
+                                                			Set<AbstractInsnNode> insns = new HashSet<>(currentFrame.getStack(currentFrame.getStackSize() -
+                                                				Type.getArgumentTypes(result.getDesc()).length - 1).insns);
+                                                			if(insns.size() == 1)
+                                                			{
+                                                				AbstractInsnNode singleton = null;
+                                                				for(AbstractInsnNode ain1 : insns)
+                                                					singleton = ain1;
+                                                				if(singleton == newInsn)
+                                                				{
+                                                					passed = true;
+                                                					break;
+                                                				}
+                                                			}
+                                                			methodNode.instructions.remove(newInsn);
+                                            				methodNode.instructions.remove(dupInsn);
+                                                		}
+                                            		if(!passed)
+                                            			throw new RuntimeException("Could not insert constructor!");
+                                            		count.getAndIncrement();
+                                            		break;
+                                            	}else
+                                            		firstArgInsn = res.getFirstArgInsn();
+                                            }
                                             methodNode.instructions.insertBefore(firstArgInsn, new TypeInsnNode(Opcodes.NEW, result.getClassName()));
                                             methodNode.instructions.insertBefore(firstArgInsn, new InsnNode(Opcodes.DUP));
                                             //The constructor is used to write a desc
@@ -271,9 +365,11 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
                                     JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
 
-                                    if (isValueOf(insn.getPrevious().getPrevious()))
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
-
+                                    if (insn.getNext().getOpcode() == Opcodes.CHECKCAST && isUnboxingMethod((TypeInsnNode)insn.getNext())
+                                    	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((TypeInsnNode)insn.getNext()).desc))) {
+                                    	methodNode.instructions.remove(insn.getNext().getNext());
+                                    	methodNode.instructions.remove(insn.getNext());
+                                    }
                                     methodNode.instructions.remove(insn.getPrevious());
                                     methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETSTATIC, result.getClassName(), result.getName(), result.getDesc()));
                                     count.getAndIncrement();
@@ -288,6 +384,9 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                         methodNode.instructions.remove(insn.getPrevious().getPrevious());
                                         methodNode.instructions.remove(insn.getPrevious());
 
+                                        if (isValueOf(insn.getPrevious())
+                                        	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
+                                        	methodNode.instructions.remove(insn.getPrevious());
                                         methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTSTATIC, result.getClassName(), result.getName(), result.getDesc()));
                                         count.getAndIncrement();
                                     }
@@ -298,10 +397,11 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
                                     JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
 
-                                    if (isValueOf(insn.getPrevious().getPrevious())) {
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                    if (insn.getNext().getOpcode() == Opcodes.CHECKCAST && isUnboxingMethod((TypeInsnNode)insn.getNext())
+                                    	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((TypeInsnNode)insn.getNext()).desc))) {
+                                    	methodNode.instructions.remove(insn.getNext().getNext());
+                                    	methodNode.instructions.remove(insn.getNext());
                                     }
-
                                     methodNode.instructions.remove(insn.getPrevious());
                                     methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.GETFIELD, result.getClassName(), result.getName(), result.getDesc()));
                                     count.getAndIncrement();
@@ -317,6 +417,9 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                         methodNode.instructions.remove(insn.getPrevious().getPrevious());
                                         methodNode.instructions.remove(insn.getPrevious());
 
+                                        if (isValueOf(insn.getPrevious())
+                                        	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
+                                        	methodNode.instructions.remove(insn.getPrevious());
                                         methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTFIELD, result.getClassName(), result.getName(), result.getDesc()));
                                         count.getAndIncrement();
                                     }
@@ -337,172 +440,58 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
     }
 
     private void castFix(Context context) {
-        classNodes().forEach(classNode -> classNode.methods.forEach(methodNode -> {
-            InsnList copy = Utils.copyInsnList(methodNode.instructions);
-            for (int i = 0; i < copy.size(); i++) {
-                AbstractInsnNode insn = copy.get(i);
-
-                if (insn.getOpcode() == Opcodes.CHECKCAST) {
-                    TypeInsnNode checkcast = (TypeInsnNode) insn;
-                    AbstractInsnNode previous = checkcast.getPrevious();
-
-                    if (previous.getOpcode() == Opcodes.CHECKCAST) {
-                        methodNode.instructions.remove(checkcast);
-                    } else if (previous instanceof MethodInsnNode) {
-                        Type type1 = getReturnType(((MethodInsnNode) previous).desc);
-                        Type type2 = getReturnType(checkcast.desc);
-
-                        if (type1.getClassName().equals(type2.getClassName())) {
-                            methodNode.instructions.remove(checkcast);
-                        } else {
-                        	String class2 = type2.getClassName().replace(".", "/");
-	                        class2 = convertPrimitiveToClassArray(class2, 1);
-	                        String class1 = type1.getClassName().replace(".", "/");
-	                        class1 = convertPrimitiveToClassArray(class1, 0);
-	                        if(type1.getSort() == Type.ARRAY)
-	                        	class1 = class1.substring(0, class1.length() - 2);
-	                        if(type2.getSort() == Type.ARRAY)
-	                        	class2 = class2.substring(0, class2.length() - 2);
-	                        //Object[] to Object
-	                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
-	                        	&& type2.getSort() == Type.ARRAY
-	                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
-	                        	methodNode.instructions.remove(checkcast);
-	                        else if(!class1.equals("void") && !class1.equals("java/lang/Object")
-	                        	&& (type1.getSort() != Type.ARRAY ||
-	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
-	                        	JavaClass clazz = new JavaClass(class1, context);
-                                //Check if cast is a superclass/interface of the type
-                                while (clazz != null) {
-                                    if (isInterfaceOf(class2, clazz)) {
-                                        methodNode.instructions.remove(checkcast);
-                                        break;
-                                    }
-                                    clazz = clazz.getSuperclass();
-                                }
-                            }
-                            //Invokespecial
-                            if (((MethodInsnNode) previous).getOpcode() == Opcodes.INVOKESPECIAL) {
-                                if (((MethodInsnNode) previous).owner.equals(type2.getClassName().replace(".", "/")))
-                                    methodNode.instructions.remove(checkcast);
-                                else {
-                                    class1 = ((MethodInsnNode) previous).owner.replace(".", "/");
-                                    if(!class1.equals("void") && !class1.equals("java/lang/Object")
-	                        			&& (type1.getSort() != Type.ARRAY ||
-	    	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
-                                        JavaClass clazz = new JavaClass(class1, context);
-                                        //Check if cast is a superclass/interface of the type
-                                        while (clazz != null) {
-                                            if (isInterfaceOf(class2, clazz)) {
-                                                methodNode.instructions.remove(checkcast);
-                                                break;
-                                            }
-                                            clazz = clazz.getSuperclass();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else if (previous instanceof FieldInsnNode) {
-                        Type type1 = getReturnType(((FieldInsnNode) previous).desc);
-                        Type type2 = getReturnType(checkcast.desc);
-
-                        if (type1.getClassName().equals(type2.getClassName())) {
-                            methodNode.instructions.remove(checkcast);
-                        } else if (isPrimitive(type1.getClassName()) && isObjectType(type2.getClassName())) {
-                            AbstractInsnNode next = checkcast.getNext();
-
-                            if (next instanceof MethodInsnNode && ((MethodInsnNode) next).name.endsWith("Value") && ((MethodInsnNode) next).desc.startsWith("()"))
-                                methodNode.instructions.remove(next);
-
-                            methodNode.instructions.remove(checkcast);
-                        } else {
-                        	String class2 = type2.getClassName().replace(".", "/");
-	                        class2 = convertPrimitiveToClassArray(class2, 1);
-	                        String class1 = type1.getClassName().replace(".", "/");
-	                        class1 = convertPrimitiveToClassArray(class1, 0);
-	                        if(type1.getSort() == Type.ARRAY)
-	                        	class1 = class1.substring(0, class1.length() - 2);
-	                        if(type2.getSort() == Type.ARRAY)
-	                        	class2 = class2.substring(0, class2.length() - 2);
-	                        //Object[] to Object
-	                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
-	                        	&& type2.getSort() == Type.ARRAY
-	                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
-	                        	methodNode.instructions.remove(checkcast);
-	                        else if(!class1.equals("void") && !class1.equals("Z") && !class1.equals("java/lang/Object")
-	                        	&& (type1.getSort() != Type.ARRAY ||
-	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
-                                JavaClass clazz = new JavaClass(class1, context);
-                                //Check if cast is a superclass/interface of the type
-                                while (clazz != null) {
-                                    if (isInterfaceOf(class2, clazz)) {
-                                        methodNode.instructions.remove(checkcast);
-                                        break;
-                                    }
-                                    clazz = clazz.getSuperclass();
-                                }
-                            }
-                        }
-                    } else if (previous.getOpcode() >= Opcodes.IALOAD && previous.getOpcode() <= Opcodes.SALOAD
-                            && previous.getPrevious() != null && Utils.willPushToStack(previous.getPrevious().getOpcode())
-                            && previous.getPrevious().getPrevious() != null
-                            && (previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETSTATIC
-                            || previous.getPrevious().getPrevious().getOpcode() == Opcodes.GETFIELD)) {
-                        FieldInsnNode fieldNode = (FieldInsnNode) previous.getPrevious().getPrevious();
-                        Type type1 = getReturnType(fieldNode.desc);
-                        Type type2 = getReturnType(checkcast.desc);
-                        if (type1.getClassName().equals(type2.getClassName()))
-                            methodNode.instructions.remove(checkcast);
-                        String class2 = type2.getClassName().replace(".", "/");
-                        class2 = convertPrimitiveToClassArray(class2, 1);
-                        String class1 = type1.getClassName().replace(".", "/");
-                        class1 = convertPrimitiveToClassArray(class1, 0);
-                        if(type1.getSort() == Type.ARRAY)
-                        	class1 = class1.substring(0, class1.length() - 2);
-                        if(type2.getSort() == Type.ARRAY)
-                        	class2 = class2.substring(0, class2.length() - 2);
-                        //Object[] to Object
-                        if(type2.getClassName().replace(".", "/").equals("java/lang/Object")
-                        	&& type2.getSort() == Type.ARRAY
-                        	&& type2.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))
-                        	methodNode.instructions.remove(checkcast);
-                        else if(!class1.equals("void") && !class1.equals("java/lang/Object")
-                        	&& (type1.getSort() != Type.ARRAY ||
-	                        	!type1.getElementType().getClassName().replace(".", "/").equals("java/lang/Object"))) {
-                            JavaClass clazz = new JavaClass(class1, context);
-                            //Check if cast is a superclass/interface of the type
-                            while (clazz != null) {
-                                if (isInterfaceOf(class2, clazz)) {
-                                    methodNode.instructions.remove(checkcast);
-                                    break;
-                                }
-                                clazz = clazz.getSuperclass();
-                            }
-                        }
-                    }
-                }
-            }
-        }));
-
-        classNodes().forEach(classNode -> classNode.methods.forEach(methodNode -> {
-            InsnList copy = Utils.copyInsnList(methodNode.instructions);
-            for (int i = 0; i < copy.size(); i++) {
-                AbstractInsnNode insn = copy.get(i);
-                AbstractInsnNode previous = insn.getPrevious();
-                if (insn instanceof FieldInsnNode && isValueOf(previous)) {
-                    Type type1 = getReturnType(((MethodInsnNode) previous).desc);
-                    Type type2 = getReturnType(((FieldInsnNode) insn).desc);
-
-                    if (isObjectType(type1.getClassName()) && isPrimitive(type2.getClassName())) {
-                        methodNode.instructions.remove(previous);
-                    } /*else if (isPrimitive(type1.getClassName()) && isObjectType(type2.getClassName()) && isEqualType(type1.getClassName(), type2.getClassName())) {
-                        String[] unboxing = getUnboxingMethod(type2.getClassName()).split(" ");
-                        methodNode.instructions.insertBefore();
-                    }*/
-                }
-            }
-        }));
+        classNodes().forEach(classNode -> {
+        	for(MethodNode mn : classNode.methods)
+			{
+        		boolean modified;
+        		do
+        		{
+        			modified = false;
+					Set<AbstractInsnNode> set = new HashSet<>();
+					Frame<BasicValue>[] frames;
+	                try 
+	                {
+	                    frames = new Analyzer<>(new MyInterpreter()).analyze(classNode.name, mn);
+	                }catch(AnalyzerException e) 
+	                {
+	                    oops("unexpected analyzer exception", e);
+	                    continue;
+	                }
+	                for(int i = 0; i < mn.instructions.size(); i++)
+	                {
+	                	AbstractInsnNode ain = mn.instructions.get(i);
+	                	if(ain.getOpcode() == Opcodes.CHECKCAST)
+	                	{
+	                		Type typeBefore = frames[i].getStack(frames[i].getStackSize() - 1).getType();
+	                		Type typeNow = Type.getObjectType(((TypeInsnNode)ain).desc);
+	                		while(true)
+	                		{
+		                		if(typeBefore.equals(typeNow))
+		                			set.add(ain);
+		                		else if(typeBefore.getSort() == Type.OBJECT && typeBefore.getInternalName().equals("null"))
+		                			set.add(ain);
+		                		else if(typeNow.getSort() == Type.OBJECT && typeNow.getInternalName().equals("java/lang/Object")
+		                			&& typeBefore.getSort() == Type.ARRAY)
+		                			set.add(ain);
+		                		else if(typeNow.getSort() == Type.OBJECT && typeBefore.getSort() == Type.OBJECT
+		                			&& getDeobfuscator().isSubclass(typeNow.getInternalName(), typeBefore.getInternalName()))
+		                			set.add(ain);
+		                		else if(typeNow.getSort() == Type.ARRAY && typeBefore.getSort() == Type.ARRAY)
+		                		{
+		                			typeBefore = typeBefore.getElementType();
+		                			typeNow = typeNow.getElementType();
+		                			continue;
+		                		}
+		                		break;
+	                		}
+	                	}
+	                }
+	                for(AbstractInsnNode ain : set)
+	                	mn.instructions.remove(ain);
+	                modified = !set.isEmpty();
+        		}while(modified);
+			}
+        });
     }
 
     //XXX: Better detector
@@ -539,40 +528,28 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         return (((long) classCount) << 32) | (methodCount.get() & 0xFFFFFFFFL);
     }
 
-    private boolean isObjectType(String type) {
-        List<String> objectType = new ArrayList<String>() {{
-            add("java/lang/Byte");
-            add("java/lang/Short");
-            add("java/lang/Integer");
-            add("java/lang/Long");
-            add("java/lang/Float");
-            add("java/lang/Double");
-            add("java/lang/Character");
-            add("java/lang/Boolean");
-        }};
-        return objectType.contains(type.replace(".", "/"));
-    }
+    private boolean isValueOf(AbstractInsnNode insn) {
+        if (insn instanceof MethodInsnNode) {
+            MethodInsnNode cast = (MethodInsnNode) insn;
+            String[] objectType = {
+                    "java/lang/Byte",
+                    "java/lang/Short",
+                    "java/lang/Integer",
+                    "java/lang/Long",
+                    "java/lang/Float",
+                    "java/lang/Double",
+                    "java/lang/Character",
+                    "java/lang/Boolean"
+            };
 
-    private boolean isPrimitive(String type) {
-        List<String> primitiveType = new ArrayList<String>() {{
-            add("B");
-            add("S");
-            add("I");
-            add("J");
-            add("F");
-            add("D");
-            add("C");
-            add("Z");
-            add("boolean");
-            add("char");
-            add("byte");
-            add("short");
-            add("int");
-            add("float");
-            add("long");
-            add("double");
-        }};
-        return primitiveType.contains(type);
+            for (String type : objectType) {
+                if (cast.owner.equals(type) && cast.name.equals("valueOf") && cast.desc.endsWith(String.format(")L%s;", type))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private boolean isUnboxingMethod(TypeInsnNode checkcast) {
@@ -600,87 +577,6 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         return false;
     }
 
-    private String getUnboxingMethod(String type) {
-        String[][] objectType = {
-                {"java/lang/Byte", "byteValue", "()B"},
-                {"java/lang/Short", "shortValue", "()S"},
-                {"java/lang/Integer", "intValue", "()I"},
-                {"java/lang/Long", "longValue", "()J"},
-                {"java/lang/Float", "floatValue", "()F"},
-                {"java/lang/Double", "doubleValue", "()D"},
-                {"java/lang/Character", "charValue", "()C"},
-                {"java/lang/Boolean", "booleanValue", "()Z"}
-        };
-
-        for (String[] t : objectType) {
-            if (type.replace(".", "/").equals(t[0]))
-                return String.format("%s %s %s", t[0], t[1], t[2]);
-        }
-
-        return null;
-    }
-
-    private boolean isValueOf(AbstractInsnNode insn) {
-        if (insn instanceof MethodInsnNode) {
-            MethodInsnNode cast = (MethodInsnNode) insn;
-            String[] objectType = {
-                    "java/lang/Byte",
-                    "java/lang/Short",
-                    "java/lang/Integer",
-                    "java/lang/Long",
-                    "java/lang/Float",
-                    "java/lang/Double",
-                    "java/lang/Character",
-                    "java/lang/Boolean"
-            };
-
-            for (String type : objectType) {
-                if (cast.owner.equals(type) && cast.name.equals("valueOf") && cast.desc.endsWith(String.format(")L%s;", type))) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private Type getReturnType(String desc) {
-        if (desc.startsWith("(")) {
-            return Type.getReturnType(desc);
-        } else if (desc.startsWith("L")) {
-        	return Type.getReturnType("()" + desc);
-        } else if (desc.startsWith("[")) {
-            return Type.getReturnType("()[" + desc.substring(1, desc.length()));
-        } else {
-            return Type.getReturnType("()L" + desc + ";");
-        }
-    }
-
-    private boolean isEqualType(String type1, String type2) {
-        String[][] types = {
-                {"java/lang/Byte", "byte", "B"},
-                {"java/lang/Short", "short", "S"},
-                {"java/lang/Integer", "int", "I"},
-                {"java/lang/Long", "long", "J"},
-                {"java/lang/Float", "float", "F"},
-                {"java/lang/Double", "double", "D"},
-                {"java/lang/Character", "char", "C"},
-                {"java/lang/Boolean", "boolean", "Z"}
-        };
-
-        for (String[] type : types) {
-            boolean flag1 = false;
-            boolean flag2 = false;
-            for (String t : type) {
-                if (t.equals(type1.replace(".", "/"))) flag1 = true;
-                else if (t.equals(type2.replace(".", "/"))) flag2 = true;
-            }
-
-            if (flag1 && flag2) return true;
-        }
-        return false;
-    }
-
     private String getPrimitiveFromClass(String clazz) {
         for (String[] type : CLASS_TO_PRIMITIVE) {
             if (clazz.equals(type[0]))
@@ -689,59 +585,53 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         return null;
     }
 
-    private String convertPrimitiveToClassArray(String array, int mode) {
-        if (mode == 0) {
-            String[][] types = {
-                    {"byte[]", "java/lang/Byte[]"},
-                    {"short[]", "java/lang/Short[]"},
-                    {"int[]", "java/lang/Integer[]"},
-                    {"long[]", "java/lang/Long[]"},
-                    {"float[]", "java/lang/Float[]"},
-                    {"double[]", "java/lang/Double[]"},
-                    {"char[]", "java/lang/Character[]"},
-                    {"boolean[]", "java/lang/Boolean[]"}
-            };
-
-            for (String[] type : types) {
-                if (array.equals(type[0]))
-                    return type[1];
-            }
-            return array;
-        } else if (mode == 1) {
-            String[][] types = {
-                    {"[B", "java/lang/Byte[]"},
-                    {"[S", "java/lang/Short[]"},
-                    {"[I", "java/lang/Integer[]"},
-                    {"[L", "java/lang/Long[]"},
-                    {"[F", "java/lang/Float[]"},
-                    {"[D", "java/lang/Double[]"},
-                    {"[C", "java/lang/Character[]"},
-                    {"[Z", "java/lang/Boolean[]"}
-            };
-
-            for (String[] type : types) {
-                if (array.equals(type[0]))
-                    return type[1];
-            }
-            return array;
-        }
-        return array;
-    }
-
-    /**
-     * Determines if class1 is implemented at any point by class2.
-     * This means that casting class2 to class1 would be casting from
-     * more specific to less specific.
-     *
-     * @param class1 Should have slashes instead of dots
-     */
-    private boolean isInterfaceOf(String class1, JavaClass class2) {
-        if (class1.equals(class2.getName().replace(".", "/")))
-            return true;
-        if (class2.getInterfaces() != null && class2.getInterfaces().length > 0)
-            for (JavaClass clazz : class2.getInterfaces())
-                if (isInterfaceOf(class1, clazz))
-                    return true;
-        return false;
-    }
+    private class MyInterpreter extends BasicInterpreter
+	{
+		@Override
+	    public BasicValue newValue(final Type type)
+		{
+	        if(type == null)
+	            return new BasicValue(Type.getType("java/lang/Object"));
+	        switch(type.getSort())
+	        {
+	        	case Type.VOID:
+	        		return null;
+	        	case Type.BOOLEAN:
+	        	case Type.CHAR:
+	        	case Type.BYTE:
+	        	case Type.SHORT:
+	        	case Type.INT:
+	        		return BasicValue.INT_VALUE;
+	        	case Type.FLOAT:
+	        		return BasicValue.FLOAT_VALUE;
+	        	case Type.LONG:
+	        		return BasicValue.LONG_VALUE;
+	        	case Type.DOUBLE:
+	        		return BasicValue.DOUBLE_VALUE;
+	        	case Type.ARRAY:
+	        	case Type.OBJECT:
+	        		return new BasicValue(type);
+	        	default:
+	        		throw new Error("Internal error");
+	        }
+		}
+		
+		@Override
+	    public BasicValue binaryOperation(final AbstractInsnNode insn,
+	    	final BasicValue value1, final BasicValue value2)
+	    		throws AnalyzerException
+		{
+			if(insn.getOpcode() == Opcodes.AALOAD)
+				return new BasicValue(value1.getType().getElementType());
+			return super.binaryOperation(insn, value1, value2);
+		}
+		
+	    @Override
+	    public BasicValue merge(final BasicValue v, final BasicValue w)
+	    {
+	        if(!v.equals(w))
+	            return new BasicValue(Type.getType("java/lang/Object"));
+	        return v;
+	    }
+	}
 }

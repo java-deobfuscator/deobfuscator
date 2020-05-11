@@ -31,7 +31,7 @@ public class ConstantPropagatingSourceFinder extends SourceFinderConsumer {
     }
 
     @Override
-    public SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, AbstractInsnNode source, SourceValue want, AbstractInsnNode now) {
+    public SourceResult findSource(MethodNode methodNode, Frame<SourceValue>[] frames, List<AbstractInsnNode> instructions, AbstractInsnNode source, SourceValue want, AbstractInsnNode now) {
         Frame<SourceValue> sourceFrame = frames[methodNode.instructions.indexOf(source)];
         Frame<SourceValue> curFrame = frames[methodNode.instructions.indexOf(now)];
 
@@ -47,8 +47,9 @@ public class ConstantPropagatingSourceFinder extends SourceFinderConsumer {
             case ISHL:
             case ISHR:
             case IUSHR: {
-                SourceResult bres = SourceFinder.findSource(methodNode, frames, this, now, curFrame.getStack(curFrame.getStackSize() - 2));
-                SourceResult ares = SourceFinder.findSource(methodNode, frames, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
+            	instructions.add(now);
+                SourceResult bres = SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 2));
+                SourceResult ares = SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
                 if (bres.isUnknown() || ares.isUnknown()) return SourceResult.unknown();
                 if (!bres.getExceptions().isEmpty() || !ares.getExceptions().isEmpty())
                     return SourceResult.unknown(); // todo maybe we should merge this?
@@ -116,20 +117,24 @@ public class ConstantPropagatingSourceFinder extends SourceFinderConsumer {
                 }
                 return new SourceResult(values, exceptions);
             }
+            case DUP2: 
             case SWAP: {
+            	instructions.add(now);
                 if (getStackOffset(sourceFrame, want) == sourceFrame.getStackSize() - 1) {
-                    return SourceFinder.findSource(methodNode, frames, this, now, curFrame.getStack(curFrame.getStackSize() - 2));
+                    return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 2));
                 } else if (getStackOffset(sourceFrame, want) == sourceFrame.getStackSize() - 2) {
-                    return SourceFinder.findSource(methodNode, frames, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
+                    return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
                 }
                 throw new RuntimeException(String.valueOf(getStackOffset(sourceFrame, want)));
             }
-            case DUP: {
-                return SourceFinder.findSource(methodNode, frames, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
+            case DUP:
+            case DUP_X1: {
+            	instructions.add(now);
+                return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
             }
         }
 
-        return parent == null ? SourceResult.unknown() : parent.findSource(methodNode, frames, source, want, now);
+        return parent == null ? SourceResult.unknown() : parent.findSource(methodNode, frames, instructions, source, want, now);
     }
 
     private static int getStackOffset(Frame<SourceValue> frame, SourceValue want) {

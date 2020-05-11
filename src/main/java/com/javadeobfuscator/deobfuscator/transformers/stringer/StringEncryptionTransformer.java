@@ -22,11 +22,18 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
-import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.executor.values.*;
+import com.javadeobfuscator.deobfuscator.matcher.InstructionMatcher;
+import com.javadeobfuscator.deobfuscator.matcher.InstructionPattern;
+import com.javadeobfuscator.deobfuscator.matcher.InvocationStep;
+import com.javadeobfuscator.deobfuscator.matcher.LoadIntStep;
+import com.javadeobfuscator.deobfuscator.matcher.OpcodeStep;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
+import com.javadeobfuscator.deobfuscator.utils.TypeStore;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -34,11 +41,55 @@ import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @TransformerConfig.ConfigOptions(configClass = StringEncryptionTransformer.Config.class)
 public class StringEncryptionTransformer extends Transformer<StringEncryptionTransformer.Config> {
-
+    public static final InstructionPattern DECRYPT_PATTERN_LEGACY = new InstructionPattern(
+        new OpcodeStep(LDC),
+        new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/String;)Ljava/lang/String;", false)
+    );
+	public static final InstructionPattern DECRYPT_PATTERNV_3 = new InstructionPattern(
+        new OpcodeStep(LDC),
+        new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/Object;)Ljava/lang/String;", false)
+    );
+    public static final InstructionPattern DECRYPT_PATTERNV_31 = new InstructionPattern(
+        new OpcodeStep(LDC),
+        new InvocationStep(INVOKEVIRTUAL, "java/lang/String", "toCharArray", "()[C", false),
+        new OpcodeStep(DUP),
+        new OpcodeStep(DUP),
+        new LoadIntStep(),
+        new OpcodeStep(DUP_X1),
+        new OpcodeStep(CALOAD),
+        new LoadIntStep(),
+        new OpcodeStep(IXOR),
+        new OpcodeStep(I2C),
+        new OpcodeStep(CASTORE),
+        new LoadIntStep(),
+        new LoadIntStep(),
+        new OpcodeStep(ISHL),
+        new LoadIntStep(),
+        new OpcodeStep(IOR),
+        new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/Object;I)Ljava/lang/String;", false)
+    );
+    public static final InstructionPattern DECRYPT_PATTERNV_91 = new InstructionPattern(
+        new OpcodeStep(LDC),
+        new InvocationStep(INVOKEVIRTUAL, "java/lang/String", "toCharArray", "()[C", false),
+        new OpcodeStep(DUP),
+        new OpcodeStep(DUP),
+        new LoadIntStep(),
+        new OpcodeStep(DUP_X1),
+        new OpcodeStep(CALOAD),
+        new LoadIntStep(),
+        new OpcodeStep(IXOR),
+        new OpcodeStep(I2C),
+        new OpcodeStep(CASTORE),
+        new LoadIntStep(),
+        new LoadIntStep(),
+        new LoadIntStep(),
+        new InvocationStep(INVOKESTATIC, null, null, "(Ljava/lang/Object;III)Ljava/lang/Object;", true)
+    );
 	private List<ClassNode> decryptors = new ArrayList<>();
 	
     @Override
@@ -70,6 +121,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 	                    method = false;
 	                    break;
 	                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") || node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
+	                    method = true;
+	                } else if (TransformerHelper.basicType(node.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;") 
+	                	&& Type.getReturnType(node.desc).getDescriptor().equals("Ljava/lang/String;")) {
 	                    method = true;
 	                }
 	            }
@@ -112,9 +166,28 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                 for (int insnIndex = 0; insnIndex < methodInsns.size(); insnIndex++) {
                     AbstractInsnNode currentInsn = methodInsns.get(insnIndex);
                     if (currentInsn != null) {
-                        //Counts stringer 3.1.0+ encryption
-                        if (getStringerInsns(currentInsn) != null) {
-                            MethodInsnNode m = (MethodInsnNode) currentInsn;
+                    	//Stringer 9.1
+                        InstructionMatcher matcher91 = DECRYPT_PATTERNV_91.matcher(currentInsn);
+                        if (matcher91.find() && matcher91.getCapturedInstructions("all").get(0) == currentInsn) {
+                            MethodInsnNode m = (MethodInsnNode) matcher91.getCapturedInstructions("all").get(14);
+                            String strCl = m.owner;
+                            Type type = Type.getType(m.desc);
+                            if (type.getArgumentTypes().length == 4 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+                                ClassNode innerClassNode = classes.get(strCl);
+                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+                                if (signature != null) {
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+                                    if (decrypterNode != null) {
+                                        count.getAndIncrement();
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        //Stringer 3.1
+                        InstructionMatcher matcher31 = DECRYPT_PATTERNV_31.matcher(currentInsn);
+                        if (matcher31.find() && matcher31.getCapturedInstructions("all").get(0) == currentInsn) {
+                            MethodInsnNode m = (MethodInsnNode) matcher31.getCapturedInstructions("all").get(16);
                             String strCl = m.owner;
                             Type type = Type.getType(m.desc);
                             if (type.getArgumentTypes().length == 2 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
@@ -124,13 +197,21 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                     if (decrypterNode != null) {
                                         count.getAndIncrement();
+                                        continue;
                                     }
                                 }
                             }
                         }
-                        if (currentInsn instanceof LdcInsnNode && currentInsn.getNext() instanceof MethodInsnNode) {
-                            LdcInsnNode ldc = (LdcInsnNode) currentInsn;
-                            MethodInsnNode m = (MethodInsnNode) ldc.getNext();
+                        InstructionMatcher matcher1 = DECRYPT_PATTERNV_3.matcher(currentInsn);
+                        boolean switched = false;
+                        if(!matcher1.find())
+                        {
+                        	matcher1 = DECRYPT_PATTERN_LEGACY.matcher(currentInsn);
+                        	switched = true;
+                        }
+                        if ((!switched || matcher1.find()) && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
+                            LdcInsnNode ldc = (LdcInsnNode) matcher1.getCapturedInstructions("all").get(0);
+                            MethodInsnNode m = (MethodInsnNode) matcher1.getCapturedInstructions("all").get(1);
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
@@ -145,31 +226,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                     }
                                 }
                             }
-                        }else if (currentInsn.getOpcode() == Opcodes.GETSTATIC && currentInsn.getNext() instanceof MethodInsnNode) {
-                        	FieldInsnNode fieldNode = (FieldInsnNode) currentInsn;
-                        	boolean containsput = false;
-                        	MethodNode clinit = classNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                        	if (clinit != null) 
-                        		for (AbstractInsnNode ain : clinit.instructions.toArray())
-                        			if (ain.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) ain).name.equals(fieldNode.name) && ((FieldInsnNode) ain).desc.equals(fieldNode.desc) && ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.LDC) {
-                        				containsput = true;
-                        				break;
-                        			}
-                        	if(containsput) {
-	                        	MethodInsnNode m = (MethodInsnNode) currentInsn.getNext();
-	                        	String strCl = m.owner;
-	                            Type type = Type.getType(m.desc);
-	                            if (type.getArgumentTypes().length == 1 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
-	                                ClassNode innerClassNode = classes.get(strCl);
-	                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
-	                                if (signature != null) {
-	                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
-	                                    if (decrypterNode != null) {
-	                                        count.getAndIncrement();
-	                                    }
-	                                }
-	                            }
-                        	}
                         }
                     }
                 }
@@ -220,16 +276,133 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
         });
 
         Map<AbstractInsnNode, String> enhanced = new HashMap<>();
+        List<ClassNode> mapped = new ArrayList<>();
 
         for (ClassNode classNode : classNodes()) {
             for (MethodNode methodNode : classNode.methods) {
                 InsnList methodInsns = methodNode.instructions;
+                Map<LabelNode, LabelNode> cloneMap = Utils.generateCloneMap(methodNode.instructions);
                 for (int insnIndex = 0; insnIndex < methodInsns.size(); insnIndex++) {
                     AbstractInsnNode currentInsn = methodInsns.get(insnIndex);
                     if (currentInsn != null) {
-                        //Latest Stringer (3.1.0+)
-                    	if (getStringerInsns(currentInsn) != null) {
-                    		MethodInsnNode m = (MethodInsnNode) currentInsn;
+                    	//Stringer 9.1
+                    	InstructionMatcher matcher91 = DECRYPT_PATTERNV_91.matcher(currentInsn);
+                        if (matcher91.find() && matcher91.getCapturedInstructions("all").get(0) == currentInsn) {
+                    		MethodInsnNode m = (MethodInsnNode) matcher91.getCapturedInstructions("all").get(14);
+                            String strCl = m.owner;
+                            Type type = Type.getType(m.desc);
+                            if (type.getArgumentTypes().length == 4 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
+                            	ClassNode innerClassNode = classes.get(strCl);
+                                FieldNode signature = innerClassNode.fields.stream().filter(fn -> fn.desc.equals("[Ljava/lang/Object;")).findFirst().orElse(null);
+
+                                if (signature != null) {
+                                    MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
+                                    if (decrypterNode != null) {
+                                    	decryptors.add(innerClassNode);
+                                        Context context = new Context(provider);
+                                        context.dictionary = classpath;
+                                        context.constantPools = getDeobfuscator().getConstantPools();
+                                        context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
+                                        context.file = getDeobfuscator().getConfig().getInput();
+                                        MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                        if (clinitMethod != null) {
+                                            MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
+                                        }
+                                        // Map INDYs
+                                        if(!mapped.contains(innerClassNode)) {
+                                            for(MethodNode innerMethod : innerClassNode.methods)
+                                            	for(AbstractInsnNode innerInsn : innerMethod.instructions.toArray())
+                                            		if(innerInsn instanceof InvokeDynamicInsnNode)
+                                            		{
+                                            			InvokeDynamicInsnNode innerIndy = (InvokeDynamicInsnNode)innerInsn;
+                                            			MethodExecutor.customMethodFunc.put(innerIndy, (args, ctx) -> {
+                                            				MethodNode innerBootstrap = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerIndy.bsm.getName())
+                                            					&& mn.desc.equals(innerIndy.bsm.getDesc())).findFirst().orElse(null);
+                                            				//Execute bootstrap
+                                            				List<JavaValue> bootstrapArgs = new ArrayList<>();
+                                            				for(int i = 0 ; i < innerIndy.bsmArgs.length + 3; i++)
+                                            					bootstrapArgs.add(args.remove(0));
+                                            				JavaMethodHandle handle = MethodExecutor.execute(innerClassNode, innerBootstrap, bootstrapArgs,
+                                            					null, ctx);
+                                            				Object result = null;
+                                            				switch (handle.type) {
+                                            					case "virtual":
+                                            					case "static":
+                                            						JavaValue instanceArg = handle.type.equals("virtual") ? args.remove(0) : null;
+                                            						result = context.provider.invokeMethod(handle.clazz, handle.name,
+                                            							handle.desc, instanceArg, args, ctx);
+                                            						break;
+                                            					default:
+                                            						throw new IllegalStateException("Unexpected handle type " + handle.type);
+            				                                }
+                                            				Type returnType = Type.getReturnType(handle.desc);
+                                            				switch(returnType.getSort())
+                                            				{
+                                            					case Type.VOID:
+                                            						return null;
+                                            					case Type.BOOLEAN:
+                                                                    return new JavaBoolean((Boolean)result);
+                                                                case Type.CHAR:
+                                                                    return new JavaCharacter((Character)result);
+                                                                case Type.BYTE:
+                                                                    return new JavaByte((Byte)result);
+                                                                case Type.SHORT:
+                                                                    return new JavaShort((Short)result);
+                                                                case Type.INT:
+                                                                    return new JavaInteger((Integer)result);
+                                                                case Type.FLOAT:
+                                                                    return new JavaFloat((Float)result);
+                                                                case Type.LONG:
+                                                                    return new JavaLong((Long)result);
+                                                                case Type.DOUBLE:
+                                                                    return new JavaDouble((Double)result);
+                                                                case Type.ARRAY:
+                                                                case Type.OBJECT:
+                                                                	if(result != null && result.getClass().isArray())
+                                                                	{
+                                                                		if(TypeStore.getFieldFromStore(handle.clazz, handle.name, handle.desc, null) != null)
+                                                                		{
+                                                                			Entry<Object, String[]> entry = (Entry<Object, String[]>)
+                                                                				TypeStore.getFieldFromStore(handle.clazz, handle.name, handle.desc, null).getKey();
+                                                                			return new JavaArray(entry.getKey(), entry.getValue());
+                                                                		}else if(handle != null)
+                                                                			return new JavaArray(result);
+                                                                	}else if(TypeStore.getFieldFromStore(handle.clazz, handle.name, handle.desc, null) == null)
+                                                                		return JavaValue.valueOf(result);
+                                                                	else
+                                                                		return new JavaObject(result, TypeStore.getFieldFromStore(handle.clazz, handle.name, handle.desc, null).getValue());
+                                            					default:
+                                            						throw new IllegalStateException("Unexpected return type " + returnType.getSort());
+                                            				}
+                                            			});
+                                            		}
+                                            mapped.add(innerClassNode);
+                                        }
+                                        MethodNode decryptorMethod = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodNode.name, "()Ljava/lang/String;", null, null);
+                                        for (AbstractInsnNode matched : matcher91.getCapturedInstructions("all")) {
+                                            decryptorMethod.instructions.add(matched.clone(cloneMap));
+                                        }
+                                        decryptorMethod.instructions.add(new InsnNode(ARETURN));
+                                        String result = MethodExecutor.execute(classNode, decryptorMethod, Arrays.asList(), null, context);
+                                        for(int i = 0; i < matcher91.getCapturedInstructions("all").size() - 1; i++)
+                                        	methodNode.instructions.remove(matcher91.getCapturedInstructions("all").get(i));
+                                        methodNode.instructions.set(matcher91.getCapturedInstructions("all").get(
+                                        	matcher91.getCapturedInstructions("all").size() - 1), new LdcInsnNode(result));
+                                        total.incrementAndGet();
+                                        int x = (int) ((total.get() * 1.0d / expected) * 100);
+                                        if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                            System.out.println("[Stringer] [StringEncryptionTransformer] Done " + x + "%");
+                                            alerted[x - 1] = true;
+                                        }
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        //Stringer 3.1
+                    	InstructionMatcher matcher31 = DECRYPT_PATTERNV_31.matcher(currentInsn);
+                        if (matcher31.find() && matcher31.getCapturedInstructions("all").get(0) == currentInsn) {
+                    		MethodInsnNode m = (MethodInsnNode) matcher31.getCapturedInstructions("all").get(16);
                             String strCl = m.owner;
                             Type type = Type.getType(m.desc);
                             if (type.getArgumentTypes().length == 2 && type.getReturnType().getDescriptor().equals("Ljava/lang/String;") && classes.containsKey(strCl)) {
@@ -238,25 +411,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 
                                 if (signature != null) {
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
-                                    List<AbstractInsnNode> stringerInsns = getStringerInsns(currentInsn);
-                                    AbstractInsnNode ldcNode = stringerInsns.get(16);
-                                    //There are 17 instructions to keep before we get the result
-                                    //Remove everything before and after
-                                    List<AbstractInsnNode> before = new ArrayList<>();
-                                    List<AbstractInsnNode> after = new ArrayList<>();
-                                    //Added in reverse (both)
-                                    //Remove before
-                                    for (int i = methodInsns.indexOf(ldcNode) - 1; i >= 0; i--)
-                                        before.add(methodInsns.get(i));
-                                    //Remove after
-                                    for (int i = methodInsns.indexOf(stringerInsns.get(0)) + 1; i < methodInsns.size(); i++)
-                                        after.add(methodInsns.get(i));
-                                    for (AbstractInsnNode ain : before)
-                                        methodInsns.remove(ain);
-                                    for (AbstractInsnNode ain : after)
-                                        methodInsns.remove(ain);
-                                    Collections.reverse(before);
-                                    Collections.reverse(after);
                                     if (decrypterNode != null) {
                                     	decryptors.add(innerClassNode);
                                         Context context = new Context(provider);
@@ -271,36 +425,37 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                                 MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
                                             }
                                         }
-                                        //Works for all methods, even those who aren't supposed to return value
-                                        AbstractInsnNode returnNode;
-                                        methodInsns.add(returnNode = new InsnNode(Opcodes.ARETURN));
-                                        String result = MethodExecutor.execute(classNode, methodNode, Arrays.asList(), null, context);
-                                        //Add all the instructions back
-                                        for (AbstractInsnNode ain : before)
-                                            methodInsns.insertBefore(ldcNode, ain);
-                                        for (AbstractInsnNode ain : after)
-                                            methodInsns.insert(methodInsns.get(insnIndex), ain);
-                                        methodInsns.remove(returnNode);
-                                        //The result is added to the method (node with insnIndex is not removed, it is replaced)
-                                        for (int i = 0; i < stringerInsns.size() - 1; i++)
-                                            methodInsns.remove(stringerInsns.get(i));
-                                        LdcInsnNode resultNode;
-                                        methodInsns.set(ldcNode, resultNode = new LdcInsnNode(result));
-                                        //Sets it back
-                                        insnIndex = methodInsns.indexOf(resultNode);
+                                        MethodNode decryptorMethod = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodNode.name, "()Ljava/lang/String;", null, null);
+                                        for (AbstractInsnNode matched : matcher31.getCapturedInstructions("all")) {
+                                            decryptorMethod.instructions.add(matched.clone(cloneMap));
+                                        }
+                                        decryptorMethod.instructions.add(new InsnNode(ARETURN));
+                                        String result = MethodExecutor.execute(classNode, decryptorMethod, Arrays.asList(), null, context);
+                                        for(int i = 0; i < matcher31.getCapturedInstructions("all").size() - 1; i++)
+                                        	methodNode.instructions.remove(matcher31.getCapturedInstructions("all").get(i));
+                                        methodNode.instructions.set(matcher31.getCapturedInstructions("all").get(
+                                        	matcher31.getCapturedInstructions("all").size() - 1), new LdcInsnNode(result));
                                         total.incrementAndGet();
                                         int x = (int) ((total.get() * 1.0d / expected) * 100);
                                         if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
                                             System.out.println("[Stringer] [StringEncryptionTransformer] Done " + x + "%");
                                             alerted[x - 1] = true;
                                         }
+                                        continue;
                                     }
                                 }
                             }
                         }
-                    	if (getLegacyStringerInsns(currentInsn) != null) {
-                            LdcInsnNode ldc = (LdcInsnNode) currentInsn;
-                            MethodInsnNode m = (MethodInsnNode) getLegacyStringerInsns(currentInsn).get(1);
+                        InstructionMatcher matcher1 = DECRYPT_PATTERNV_3.matcher(currentInsn);
+                        boolean switched = false;
+                        if(!matcher1.find())
+                        {
+                        	matcher1 = DECRYPT_PATTERN_LEGACY.matcher(currentInsn);
+                        	switched = true;
+                        }
+                        if ((!switched || matcher1.find()) && matcher1.getCapturedInstructions("all").get(0) == currentInsn) {
+                            LdcInsnNode ldc = (LdcInsnNode) matcher1.getCapturedInstructions("all").get(0);
+                            MethodInsnNode m = (MethodInsnNode) matcher1.getCapturedInstructions("all").get(1);
                             if (ldc.cst instanceof String) {
                                 String strCl = m.owner;
                                 Type type = Type.getType(m.desc);
@@ -371,9 +526,16 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                 InsnList innerMethodInsns = targetMethodNode.instructions;
                                 for (int innerInsnIndex = 0; innerInsnIndex < innerMethodInsns.size(); innerInsnIndex++) {
                                     AbstractInsnNode innerCurrentInsn = innerMethodInsns.get(innerInsnIndex);
-                                    if (getLegacyStringerInsns(innerCurrentInsn) != null) {
-                                        LdcInsnNode innerLdc = (LdcInsnNode) innerCurrentInsn;
-                                        MethodInsnNode innerMethod = (MethodInsnNode) getLegacyStringerInsns(innerCurrentInsn).get(1);
+                                    InstructionMatcher matcher = DECRYPT_PATTERNV_3.matcher(innerCurrentInsn);
+                                    boolean switched = false;
+                                    if(!matcher.find())
+                                    {
+                                    	matcher = DECRYPT_PATTERN_LEGACY.matcher(innerCurrentInsn);
+                                    	switched = true;
+                                    }
+                                    if ((!switched || matcher.find()) && matcher.getCapturedInstructions("all").get(0) == innerCurrentInsn) {
+                                        LdcInsnNode innerLdc = (LdcInsnNode) matcher.getCapturedInstructions("all").get(0);
+                                        MethodInsnNode innerMethod = (MethodInsnNode) matcher.getCapturedInstructions("all").get(1);
                                         if (innerLdc.cst instanceof String) {
                                             String strCl = innerMethod.owner;
                                             if (innerMethod.desc.endsWith(")Ljava/lang/String;")) {
@@ -407,81 +569,6 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
             }
         }
         return total.get();
-    }
-    
-    private List<AbstractInsnNode> getStringerInsns(AbstractInsnNode now)
-    {
-    	List<AbstractInsnNode> insns = new ArrayList<>();
-    	if(now.getOpcode() != Opcodes.INVOKESTATIC)
-    		return null;
-    	AbstractInsnNode previous = now;
-    	while(previous != null)
-    	{
-    		if(Utils.isInstruction(previous))
-    		{
-    			if(previous.getOpcode() == Opcodes.GOTO
-    				&& ((JumpInsnNode)previous).label == previous.getNext())
-    			{
-    				previous = previous.getPrevious();
-    				continue;
-    			}
-    			insns.add(previous);
-    			if(insns.size() >= 17)
-    				break;
-    		}
-    		previous = previous.getPrevious();
-    	}
-    	if(insns.size() < 17)
-    		return null;
-    	if(insns.get(1).getOpcode() == Opcodes.IOR
-    		&& Utils.isInteger(insns.get(2))
-    		&& insns.get(3).getOpcode() == Opcodes.ISHL
-    		&& Utils.isInteger(insns.get(4))
-    		&& Utils.isInteger(insns.get(5))
-    		&& insns.get(6).getOpcode() == Opcodes.CASTORE
-    		&& insns.get(7).getOpcode() == Opcodes.I2C
-    		&& insns.get(8).getOpcode() == Opcodes.IXOR
-    		&& Utils.isInteger(insns.get(9))
-    		&& insns.get(10).getOpcode() == Opcodes.CALOAD
-    		&& insns.get(11).getOpcode() == Opcodes.DUP_X1
-    		&& Utils.isInteger(insns.get(12))
-    		&& insns.get(13).getOpcode() == Opcodes.DUP
-    		&& insns.get(14).getOpcode() == Opcodes.DUP
-    		&& insns.get(15).getOpcode() == Opcodes.INVOKEVIRTUAL
-    		&& ((MethodInsnNode)insns.get(15)).name.equals("toCharArray")
-    		&& ((MethodInsnNode)insns.get(15)).owner.equals("java/lang/String")
-    		&& insns.get(16).getOpcode() == Opcodes.LDC)
-    		return insns;
-    	return null;
-    }
-    
-    private List<AbstractInsnNode> getLegacyStringerInsns(AbstractInsnNode now)
-    {
-    	List<AbstractInsnNode> insns = new ArrayList<>();
-    	if(now.getOpcode() != Opcodes.LDC)
-    		return null;
-    	AbstractInsnNode next = now;
-    	while(next != null)
-    	{
-    		if(Utils.isInstruction(next))
-    		{
-    			if(next.getOpcode() == Opcodes.GOTO
-    				&& ((JumpInsnNode)next).label == next.getNext())
-    			{
-    				next = next.getNext();
-    				continue;
-    			}
-    			insns.add(next);
-    			if(insns.size() >= 2)
-    				break;
-    		}
-    		next = next.getNext();
-    	}
-    	if(insns.size() < 2)
-    		return null;
-    	if(insns.get(1).getOpcode() == Opcodes.INVOKESTATIC)
-    		return insns;
-    	return null;
     }
     
     public static class Config extends TransformerConfig 

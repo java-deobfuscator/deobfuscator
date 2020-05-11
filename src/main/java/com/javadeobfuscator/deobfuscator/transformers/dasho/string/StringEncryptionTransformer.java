@@ -72,7 +72,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
                     MethodNode decryptorMethod = new MethodNode(ACC_STATIC | ACC_PUBLIC, "decrypt" + decrypted, "()Ljava/lang/String;", null, null);
                     for (int i = 0, stackOffset = currentFrame.getStackSize() - argTypes.length; i < argTypes.length; i++) {
-                        Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(stackOffset)).consensus();
+                        Optional<Object> consensus = SourceFinder.findSource(methodNode, frames, new ArrayList<>(), new ConstantPropagatingSourceFinder(), methodInsnNode, currentFrame.getStack(stackOffset)).consensus();
                         if (!consensus.isPresent()) continue insns;
 
                         decryptorMethod.instructions.add(new LdcInsnNode(consensus.get()));

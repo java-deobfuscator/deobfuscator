@@ -453,6 +453,19 @@ public class TransformerHelper implements Opcodes {
         return Booleans.countTrue(found) == found.length;
     }
 
+    public static boolean hasArgumentTypesOtherThan(Type[] types, Type... want) {
+    	loop:
+        for (Type t : types) {
+            for (int i = 0; i < want.length; i++) {
+                if (t.equals(want[i])) {
+                	continue loop;
+                }
+            }
+            return true;
+        }
+    	return false;
+    }
+    
     public static boolean isConstantInt(AbstractInsnNode insn) {
         if (insn.getOpcode() >= ICONST_M1 && insn.getOpcode() <= ICONST_5) return true;
         if (insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH) return true;

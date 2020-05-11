@@ -27,8 +27,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.objectweb.asm.Opcodes.*;
-
 @TransformerConfig.ConfigOptions(configClass = ConstantFolder.Config.class)
 public class ConstantFolder extends Transformer<ConstantFolder.Config> {
 
@@ -98,7 +96,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 if (results.size() == 1) {
                                     InsnList replacement = new InsnList();
                                     replacement.add(new InsnNode(POP2)); // remove existing args from stack
-                                    replacement.add(new LdcInsnNode(results.iterator().next()));
+                                    replacement.add(Utils.getNumberInsn(results.iterator().next()));
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
                                 }
@@ -180,30 +178,6 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                         } else {
                                             throw new RuntimeException();
                                         }
-                                    } else if(frame.getComparators().get(0) instanceof LocalFrame
-                                    	&& frame.getComparators().size() == 1
-	                                	&& frame.getComparators().get(0).getChildren().size() == 2
-	                                	&& frame.getComparators().get(0).getChildren().get(0).getOpcode() == 
-	                                	frame.getComparators().get(0).getOpcode() - 33
-	                                	&& ((LocalFrame)frame.getComparators().get(0)).getValue() instanceof LdcFrame) {
-	                                	//ldc - store - load - if
-	                                	LdcFrame cst = (LdcFrame)((LocalFrame)frame.getComparators().get(0)).getValue();
-	                                	int value = ((Number)cst.getConstant()).intValue();
-	                                	if (ain.getOpcode() == IFGE) {
-	                                        results.add(value >= 0);
-	                                    } else if (ain.getOpcode() == IFGT) {
-	                                        results.add(value > 0);
-	                                    } else if (ain.getOpcode() == IFLE) {
-	                                        results.add(value <= 0);
-	                                    } else if (ain.getOpcode() == IFLT) {
-	                                        results.add(value < 0);
-	                                    } else if (ain.getOpcode() == IFNE) {
-	                                        results.add(value != 0);
-	                                    } else if (ain.getOpcode() == IFEQ) {
-	                                        results.add(value == 0);
-	                                    } else {
-	                                        throw new RuntimeException();
-	                                    }
                                     } else {
                                     	break opcodes;
 	                                }

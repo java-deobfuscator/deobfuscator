@@ -41,6 +41,7 @@ public class MethodExecutor {
     private static final boolean DEBUG_PRINT_EXCEPTIONS;
     private static final List<String> DEBUG_CLASSES;
     private static final List<String> DEBUG_METHODS_WITH_DESC;
+    public static final Map<AbstractInsnNode, BiFunction<List<JavaValue>, Context, JavaValue>> customMethodFunc;
 
     static {
         VERIFY = false;
@@ -48,6 +49,7 @@ public class MethodExecutor {
         DEBUG_PRINT_EXCEPTIONS = false;
         DEBUG_CLASSES = Arrays.asList();
         DEBUG_METHODS_WITH_DESC = Arrays.asList();
+        customMethodFunc = new HashMap<>();
     }
 
     public static <T> T execute(ClassNode classNode, MethodNode method, List<JavaValue> args, Object instance, Context context) {
@@ -175,8 +177,24 @@ public class MethodExecutor {
         		Array.set(array.value(), index.intValue(), (char)(value.longValue()));
         	else
         		Array.set(array.value(), index.intValue(), val);
+        } else if (array.value() instanceof byte[]) {
+        	//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaShort)
+        		Array.set(array.value(), index.intValue(), (byte)((JavaShort)value).shortValue());
+        	else if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (byte)value.intValue());
+        	else
+        		Array.set(array.value(), index.intValue(), val);
+        } else if (array.value() instanceof short[]) {
+        	//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaByte)
+        		Array.set(array.value(), index.intValue(), (short)((JavaByte)value).byteValue());
+        	else if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (short)value.intValue());
+        	else
+        		Array.set(array.value(), index.intValue(), val);
         } else
-    		Array.set(array.value(), index.intValue(), val);
+        	Array.set(array.value(), index.intValue(), val);
         if(value instanceof JavaObject)
         	((JavaArray)array).onValueStored(index.intValue(), value.type());
     }
@@ -226,6 +244,9 @@ public class MethodExecutor {
                 break;
             case "JavaInteger":
                 val = value.intValue();
+                break;
+            case "JavaBoolean":
+                val = value.booleanValue();
                 break;
             case "JavaLong":
                 val = value.longValue();
@@ -1131,6 +1152,16 @@ public class MethodExecutor {
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
+                        if(customMethodFunc.containsKey(now))
+                        {
+                        	JavaValue res = customMethodFunc.get(now).apply(args, context);
+                        	if(type.getSort() == Type.VOID)
+                        		break;
+                        	stack.add(0, res);
+                        	if(res instanceof JavaLong || res instanceof JavaDouble)
+                        		stack.add(0, new JavaTop());
+                        	break;
+                        }
                         String owner = args.get(args.size() - 1).type();
                         while(true) {
                             try {
@@ -1216,6 +1247,16 @@ public class MethodExecutor {
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
+                        if(customMethodFunc.containsKey(now))
+                        {
+                        	JavaValue res = customMethodFunc.get(now).apply(args, context);
+                        	if(type.getSort() == Type.VOID)
+                        		break;
+                        	stack.add(0, res);
+                        	if(res instanceof JavaLong || res instanceof JavaDouble)
+                        		stack.add(0, new JavaTop());
+                        	break;
+                        }
                         String owner = cast.owner;
                         while(true) {
                             try {
@@ -1302,6 +1343,16 @@ public class MethodExecutor {
                             args.add(0, stack.remove(0).copy());
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
+                        if(customMethodFunc.containsKey(now))
+                        {
+                        	JavaValue res = customMethodFunc.get(now).apply(args, context);
+                        	if(type.getSort() == Type.VOID)
+                        		break;
+                        	stack.add(0, res);
+                        	if(res instanceof JavaLong || res instanceof JavaDouble)
+                        		stack.add(0, new JavaTop());
+                        	break;
+                        }
                         if (context.provider.canInvokeMethod(cast.owner, cast.name, cast.desc, null, args, context)) {
                             Object provided = context.provider.invokeMethod(cast.owner, cast.name, cast.desc, null, args, context);
                             switch (type.getSort()) {
@@ -1372,6 +1423,16 @@ public class MethodExecutor {
                         }
                         convertArgs(args, Type.getArgumentTypes(cast.desc));
                         args.add(stack.remove(0));
+                        if(customMethodFunc.containsKey(now))
+                        {
+                        	JavaValue res = customMethodFunc.get(now).apply(args, context);
+                        	if(type.getSort() == Type.VOID)
+                        		break;
+                        	stack.add(0, res);
+                        	if(res instanceof JavaLong || res instanceof JavaDouble)
+                        		stack.add(0, new JavaTop());
+                        	break;
+                        }
                         if (context.provider.canInvokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context)) {
                         	Object provided = context.provider.invokeMethod(args.get(args.size() - 1).type(), cast.name, cast.desc, args.get(args.size() - 1), args.subList(0, args.size() - 1), context);
                             switch (type.getSort()) {
@@ -1478,6 +1539,61 @@ public class MethodExecutor {
                         break;
                     }
                     case INVOKEDYNAMIC: {
+                    	if(customMethodFunc.containsKey(now))
+                        {
+                    		InvokeDynamicInsnNode cast = (InvokeDynamicInsnNode)now;
+                    		List<JavaValue> args = new ArrayList<>();
+                    		//First we add bootstrap args, then normal pulled args
+                    		args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); // Lookup
+							args.add(JavaValue.valueOf(cast.name));
+							args.add(new JavaObject(cast.desc, "java/lang/invoke/MethodType")); // dyn methodtype
+							Type[] argumentTypes = Type.getArgumentTypes(cast.bsm.getDesc());
+							for(int i = 0; i < cast.bsmArgs.length; i++)
+							{
+								Object arg = cast.bsmArgs[i];
+								if(arg.getClass() == Type.class)
+								{
+									Type type = (Type)arg;
+									args.add(JavaValue.valueOf(new JavaClass(
+										type.getInternalName().replace('/', '.'), context)));
+								}else if(argumentTypes[i + 3].getSort() == Type.BOOLEAN)
+									args.add(new JavaBoolean((Boolean)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.CHAR)
+									args.add(new JavaCharacter((Character)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.BYTE)
+								args.add(new JavaByte((Byte)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.SHORT)
+									args.add(new JavaShort((Short)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.INT)
+									args.add(new JavaInteger((Integer)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.FLOAT)
+									args.add(new JavaFloat((Float)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.LONG)
+									args.add(new JavaLong((Long)arg));
+								else if(argumentTypes[i + 3].getSort() == Type.DOUBLE)
+									args.add(new JavaDouble((Double)arg));
+								else
+									args.add(JavaValue.valueOf(arg));
+							}
+							List<JavaValue> newArgs = new ArrayList<>();
+							for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+	                            if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
+	                                if (!(stack.get(0) instanceof JavaTop)) {
+	                                    throw new ExecutionException("Expected JavaTop");
+	                                }
+	                                stack.remove(0);
+	                            }
+	                            newArgs.add(0, stack.remove(0).copy());
+	                        }
+							args.addAll(newArgs);
+                        	JavaValue res = customMethodFunc.get(now).apply(args, context);
+                        	if(Type.getReturnType(cast.desc).getSort() == Type.VOID)
+                        		break;
+                        	stack.add(0, res);
+                        	if(res instanceof JavaLong || res instanceof JavaDouble)
+                        		stack.add(0, new JavaTop());
+                        	break;
+                        }
                         throw new ExecutionException(new UnsupportedOperationException());
                     }
                     case NEW: {

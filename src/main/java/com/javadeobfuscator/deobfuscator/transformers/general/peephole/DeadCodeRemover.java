@@ -16,16 +16,11 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.BasicInterpreter;
-import org.objectweb.asm.tree.analysis.BasicValue;
-import org.objectweb.asm.tree.analysis.Frame;
+import com.javadeobfuscator.deobfuscator.config.*;
+import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.utils.*;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.*;
 
 public class DeadCodeRemover extends Transformer<TransformerConfig> {
     @Override
@@ -37,18 +32,13 @@ public class DeadCodeRemover extends Transformer<TransformerConfig> {
 
                 InstructionModifier modifier = new InstructionModifier();
 
-                try {
-                    Frame<BasicValue>[] frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, methodNode);
-                    for (int i = 0; i < methodNode.instructions.size(); i++) {
-                        if (!Utils.isInstruction(methodNode.instructions.get(i))) continue;
-                        if (frames[i] != null) continue;
+                Frame<BasicValue>[] frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, methodNode);
+                for (int i = 0; i < methodNode.instructions.size(); i++) {
+                    if (!Utils.isInstruction(methodNode.instructions.get(i))) continue;
+                    if (frames[i] != null) continue;
 
-                        modifier.remove(methodNode.instructions.get(i));
-                        deadInstructions++;
-                    }
-                } catch (Exception x) {
-                    logger.error("Error analyzing frames for method ", x);
-                    continue;
+                    modifier.remove(methodNode.instructions.get(i));
+                    deadInstructions++;
                 }
 
                 modifier.apply(methodNode);
