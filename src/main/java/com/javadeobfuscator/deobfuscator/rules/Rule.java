@@ -27,5 +27,5 @@ public interface Rule extends Opcodes {
 
     String test(Deobfuscator deobfuscator);
 
-    Collection<Class<? extends Transformer>> getRecommendTransformers();
+    Collection<Class<? extends Transformer<?>>> getRecommendTransformers();
 }

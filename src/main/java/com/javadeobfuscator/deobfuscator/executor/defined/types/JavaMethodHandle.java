@@ -16,7 +16,7 @@
 
 package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
-public class JavaMethodHandle {
+public class JavaMethodHandle extends JavaHandle {
     public final String clazz;
     public final String name;
     public final String desc;

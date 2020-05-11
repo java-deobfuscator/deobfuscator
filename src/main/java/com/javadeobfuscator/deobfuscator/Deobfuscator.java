@@ -75,6 +75,13 @@ public class Deobfuscator {
      * Must enable for paramorphism obfuscated files.
      */
     private static final boolean PARAMORPHISM = false;
+    
+    public List<String> junkFiles = new ArrayList<>();
+    
+    /**
+     * Must enable for paramorphism v2 obfuscated files.
+     */
+    private static final boolean PARAMORPHISM_V2 = false;
 
     public ConstantPool getConstantPool(ClassNode classNode) {
         return this.constantPools.get(classNode);
@@ -168,7 +175,21 @@ public class Deobfuscator {
     }
 
     private void loadInput() throws IOException {
-    	if(PARAMORPHISM)
+    	if(PARAMORPHISM_V2)
+    	{
+    		//Load folder "classes"
+    		try(ZipFile zipIn = new ZipFile(configuration.getInput())) {
+	            Enumeration<? extends ZipEntry> e = zipIn.entries();
+	            while(e.hasMoreElements()) {
+	                ZipEntry next = e.nextElement();
+	                if(next.isDirectory() && next.getName().endsWith(".class/")) {
+	                	byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
+	                	loadInput(next.getName().substring(0, next.getName().length() - 1), data);
+	                }else if(!next.isDirectory() && next.getName().contains(".class/"))
+	                	junkFiles.add(next.getName());
+	            }
+    		}
+    	}else if(PARAMORPHISM)
     	{
     		Map<String, String> classNameToName = new HashMap<>();
     		Map<String, byte[]> entries = new HashMap<>();
@@ -255,13 +276,19 @@ public class Deobfuscator {
                     classpath.put(node.name, node);
                 }
             } catch (IllegalArgumentException x) {
-            	logger.error("Could not parse {} (is it a class file?)", name, x);
+            	if(PARAMORPHISM_V2)
+            		invaildClasses.put(name, data);
+            	else
+            		logger.error("Could not parse {} (is it a class file?)", name, x);
             } catch (ArrayIndexOutOfBoundsException x) {
-            	logger.error("Could not parse {} (is it a class file?)", name, x);
+            	if(PARAMORPHISM_V2)
+            		invaildClasses.put(name, data);
+            	else
+            		logger.error("Could not parse {} (is it a class file?)", name, x);
             }
         }
 
-        if (passthrough) {
+        if (passthrough && !junkFiles.contains(name)) {
             inputPassthrough.put(name, data);
         }
     }
@@ -316,11 +343,11 @@ public class Deobfuscator {
                 logger.info("\t{}", message);
                 logger.info("Recommend transformers:");
 
-                Collection<Class<? extends Transformer>> recommended = rule.getRecommendTransformers();
+                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
                 if (recommended == null) {
                     logger.info("\tNone");
                 } else {
-                    for (Class<? extends Transformer> transformer : recommended) {
+                    for (Class<? extends Transformer<?>> transformer : recommended) {
                         logger.info("\t{}", transformer.getName());
                     }
                 }

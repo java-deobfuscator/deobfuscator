@@ -49,7 +49,6 @@ public class PeepholeOptimizer extends Transformer<TransformerConfig> {
 //        PEEPHOLE_TRANSFORMERS.add(TrapHandlerMerger.class); // still experimental
         PEEPHOLE_TRANSFORMERS.add(GotoRearranger.class);
         PEEPHOLE_TRANSFORMERS.add(DeadCodeRemover.class);
-        PEEPHOLE_TRANSFORMERS.add(UnconditionalSwitchRemover.class);
         PEEPHOLE_TRANSFORMERS.add(LdcSwapInvokeSwapPopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(ConstantFolder.class);
     }

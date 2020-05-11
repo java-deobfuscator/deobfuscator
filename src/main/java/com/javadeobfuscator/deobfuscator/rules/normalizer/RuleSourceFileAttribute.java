@@ -66,7 +66,7 @@ public class RuleSourceFileAttribute implements Rule {
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return Collections.singletonList(SourceFileClassNormalizer.class);
     }
 }

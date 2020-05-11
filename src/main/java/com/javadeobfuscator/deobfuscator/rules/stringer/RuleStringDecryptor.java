@@ -59,7 +59,7 @@ public class RuleStringDecryptor implements Rule, Opcodes {
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return Collections.singletonList(StringEncryptionTransformer.class);
     }
 }

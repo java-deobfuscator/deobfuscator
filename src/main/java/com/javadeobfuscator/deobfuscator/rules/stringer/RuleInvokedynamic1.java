@@ -63,7 +63,7 @@ public class RuleInvokedynamic1 implements Rule, Opcodes {
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return Collections.singletonList(Invokedynamic1Transformer.class);
     }
 }

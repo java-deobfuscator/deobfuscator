@@ -20,19 +20,13 @@ import org.objectweb.asm.Type;
 
 import com.google.common.primitives.Primitives;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstantPool;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaConstructor;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
-import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaThread;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 
 public abstract class JavaValue {
-    
-    public boolean booleanValue() { 
-        throw new ExecutionException(new UnsupportedOperationException()); 
+
+    public boolean booleanValue() {
+        throw new ExecutionException(new UnsupportedOperationException());
     }
 
     public int intValue() {
@@ -56,6 +50,9 @@ public abstract class JavaValue {
     }
 
     public <T> T as(Class<T> clazz) {
+    	//TODO: Fix this
+    	if(value() instanceof JavaValue)
+    		return ((JavaValue)value()).as(clazz);
         if (Primitives.unwrap(clazz) != clazz) {
             throw new ExecutionException("Cannot call as(Class<T> clazz) with a primitive class");
         }
@@ -88,7 +85,7 @@ public abstract class JavaValue {
     		return new JavaObject(cst, "java/lang/Object");
     	else if(cst instanceof JavaThread)
     		return new JavaObject(cst, "java/lang/Thread");
-    	else if(cst instanceof JavaMethodHandle)
+    	else if(cst instanceof JavaHandle)
     		return new JavaObject(cst, "java/lang/invoke/MethodHandle");
     	else if(cst instanceof JavaMethod)
     		return new JavaObject(cst, "java/lang/reflect/Method");

@@ -72,7 +72,7 @@ public class RuleEnhancedStringEncryption implements Rule, Opcodes {
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return Collections.singletonList(EnhancedStringEncryptionTransformer.class);
     }
 }

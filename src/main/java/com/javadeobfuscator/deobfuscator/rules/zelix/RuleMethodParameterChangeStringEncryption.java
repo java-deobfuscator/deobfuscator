@@ -74,7 +74,7 @@ public class RuleMethodParameterChangeStringEncryption implements Rule, Opcodes 
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return null;
     }
 }

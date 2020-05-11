@@ -60,7 +60,7 @@ public class RuleStringDecryptorWithThread implements Rule {
     }
 
     @Override
-    public Collection<Class<? extends Transformer>> getRecommendTransformers() {
+    public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
         return Collections.singletonList(StringEncryptionTransformer.class);
     }
 }
