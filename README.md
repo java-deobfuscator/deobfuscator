@@ -4,6 +4,7 @@ This project aims to deobfuscate most commercially-available obfuscators for Jav
 
 ## Updates
 To download an updated version of Java Deobfuscator, go to https://github.com/ThisTestUser/deobfuscator/releases.
+
 If you would like to run this program with a GUI, go to https://github.com/java-deobfuscator/deobfuscator-gui and grab a download. Put the deobfuscator-gui.jar in the same folder as deobfuscator.jar.
 
 ## Quick Start
