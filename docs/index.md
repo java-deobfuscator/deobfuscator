@@ -1,10 +1,15 @@
 # Deobfuscator [![Build Status](https://ci.samczsun.com/buildStatus/icon?job=java-deobfuscator/Deobfuscator)](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator)
-
+ 
 This project aims to deobfuscate most commercially-available obfuscators for Java.
+
+## Updates
+To download an updated version of Java Deobfuscator, go to the [releases tab on the GitHub repo](https://github.com/java-deobfuscator/deobfuscator/releases).
+
+If you would like to run this program with a GUI, go to https://github.com/java-deobfuscator/deobfuscator-gui and grab a download. Put the deobfuscator-gui.jar in the same folder as deobfuscator.jar.
 
 ## Quick Start
 
-* [Download](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator/) the deobfuscator.
+* [Download](https://github.com/java-deobfuscator/deobfuscator/releases) the deobfuscator.
 * If you know what obfuscators were used, skip the next two steps
 * Create `detect.yml` with the following contents. Replace `input.jar` with the name of the input
 ```yaml
