@@ -328,30 +328,37 @@ public class Utils {
         return newInsnList;
     }
 
-    public static AbstractInsnNode getNumberInsn(int num) {
-        switch (num) {
-        	case -1:
-        		return new InsnNode(Opcodes.ICONST_M1);
-            case 0:
-                return new InsnNode(Opcodes.ICONST_0);
-            case 1:
-                return new InsnNode(Opcodes.ICONST_1);
-            case 2:
-                return new InsnNode(Opcodes.ICONST_2);
-            case 3:
-                return new InsnNode(Opcodes.ICONST_3);
-            case 4:
-                return new InsnNode(Opcodes.ICONST_4);
-            case 5:
-                return new InsnNode(Opcodes.ICONST_5);
-            default:
-            	if(num >= -128 && num <= 127)
-            		return new IntInsnNode(Opcodes.BIPUSH, num);
-            	else if(num >= -32768 && num <= 32767)
-            		return new IntInsnNode(Opcodes.SIPUSH, num);
-            	else
-            		return new LdcInsnNode(num);
+    public static AbstractInsnNode getNumberInsn(int number) {
+    	if (number >= -1 && number <= 5)
+    		return new InsnNode(number + 3);
+    	else if (number >= -128 && number <= 127)
+    		return new IntInsnNode(Opcodes.BIPUSH, number);
+    	else if (number >= -32768 && number <= 32767)
+    		return new IntInsnNode(Opcodes.SIPUSH, number);
+    	else
+    		return new LdcInsnNode(number);
+    }
+    
+    public static AbstractInsnNode getLongInsn(long number) {
+        if (number >= 0 && number <= 1)
+            return new InsnNode((int) (number + 9));
+        else
+            return new LdcInsnNode(number);
+    }
+
+    public static AbstractInsnNode getFloatInsn(float number) {
+        if (number >= 0 && number <= 2) {
+            return new InsnNode((int) (number + 11));
+        } else {
+            return new LdcInsnNode(number);
         }
+    }
+
+    public static AbstractInsnNode getDoubleInsn(double number) {
+        if (number >= 0 && number <= 1)
+            return new InsnNode((int) (number + 14));
+        else
+            return new LdcInsnNode(number);
     }
     
     public static void printClass(ClassNode classNode) { 

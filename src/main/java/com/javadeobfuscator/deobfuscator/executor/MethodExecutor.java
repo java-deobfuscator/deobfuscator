@@ -1007,6 +1007,18 @@ public class MethodExecutor {
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
                         Object provided = context.provider.getField(cast.owner, cast.name, cast.desc, null, context);
+                        if(provided == null && type.getSort() != Type.OBJECT && type.getSort() != Type.ARRAY)
+                    	{
+                    		ClassNode fieldClass = null;
+                    		for(ClassNode cn : context.dictionary.values())
+                    			if(cn.name.equals(cast.owner))
+                    			{
+                    				fieldClass = cn;
+                    				break;
+                    			}
+                    		provided = fieldClass.fields.stream().filter(f -> f.name.equals(cast.name) && f.desc.equals(cast.desc)).findFirst().orElse(null).value;
+                    		context.provider.setField(cast.owner, cast.name, cast.desc, null, provided, context);
+                    	}
 
                         switch (type.getSort()) {
                             case Type.BOOLEAN:
@@ -1075,6 +1087,19 @@ public class MethodExecutor {
                         Type type = Type.getType(cast.desc);
                         Class<?> clazz = PrimitiveUtils.getPrimitiveByName(type.getClassName());
                         Object provided = context.provider.getField(cast.owner, cast.name, cast.desc, obj, context);
+                        if(provided == null && type.getSort() != Type.OBJECT && type.getSort() != Type.ARRAY)
+                    	{
+                    		ClassNode fieldClass = null;
+                    		for(ClassNode cn : context.dictionary.values())
+                    			if(cn.name.equals(cast.owner))
+                    			{
+                    				fieldClass = cn;
+                    				break;
+                    			}
+                    		provided = fieldClass.fields.stream().filter(f -> f.name.equals(cast.name) && f.desc.equals(cast.desc)).findFirst().orElse(null).value;
+                    		context.provider.setField(cast.owner, cast.name, cast.desc, obj, provided, context);
+                    	}
+                        
                         switch (type.getSort()) {
                             case Type.BOOLEAN:
                                 stack.add(0, new JavaBoolean((Boolean) provided));
@@ -1216,10 +1241,13 @@ public class MethodExecutor {
                                         	break;
                                     }
                                 } else {
-                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
+                            	if(t instanceof NoSuchMethodHandlerException
+                            		&& !((NoSuchMethodHandlerException)t).isThrownFromInvoke())
+                            		throw t;
                                 ClassNode ownerClass = context.dictionary.get(owner);
                                 if (ownerClass != null) {
                                     if (ownerClass.superName != null) {
@@ -1311,10 +1339,13 @@ public class MethodExecutor {
                                             break;
                                     }
                                 } else {
-                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
+                            	if(t instanceof NoSuchMethodHandlerException
+                            		&& !((NoSuchMethodHandlerException)t).isThrownFromInvoke())
+                            		throw t;
                                 ClassNode ownerClass = context.dictionary.get(owner);
                                 if (ownerClass != null) {
                                     if (ownerClass.superName != null) {
@@ -1404,7 +1435,7 @@ public class MethodExecutor {
                                     break;
                             }
                         } else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc);
+                            throw new NoSuchMethodHandlerException("Could not find invoker for " + cast.owner + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                         }
                         break;
                     }
@@ -1534,7 +1565,7 @@ public class MethodExecutor {
                                     break;
                             }
                         }else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc);
+                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                         }
                         break;
                     }
@@ -1796,6 +1827,8 @@ public class MethodExecutor {
                     e.clazz = classNode.name;
                     e.method = method.name + method.desc;
                 }
+                if(e instanceof NoSuchMethodHandlerException)
+                	((NoSuchMethodHandlerException)e).setThrownFromInvoke(false);
                 throw e;
             } catch (Throwable t) {
                 if (DEBUG_PRINT_EXCEPTIONS) {

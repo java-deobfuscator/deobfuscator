@@ -22,6 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CustomRemapper extends Remapper {
+	/**
+	 * If this option is disabled, mapping "package/class" to "newclass" will result in "package/newclass".
+	 */
+	private boolean ignorePackages = false;
+	
     /**
      * Map method name to the new name. Subclasses can override.
      *
@@ -131,7 +136,7 @@ public class CustomRemapper extends Remapper {
     public String map(String in) {
         int lin = in.lastIndexOf('/');
         String className =  lin == -1 ? in : in.substring(lin + 1);
-        if (lin == -1) {
+        if (lin == -1 || ignorePackages) {
             return map.getOrDefault(in, in);
         } else {
             String newClassName = map.getOrDefault(in, className);
@@ -186,5 +191,10 @@ public class CustomRemapper extends Remapper {
 
     public String unmap(String ref) {
         return mapReversed.get(ref) == null ? ref : mapReversed.get(ref);
+    }
+    
+    public void setIgnorePackages(boolean ignorePackages)
+    {
+    	this.ignorePackages = ignorePackages;
     }
 }

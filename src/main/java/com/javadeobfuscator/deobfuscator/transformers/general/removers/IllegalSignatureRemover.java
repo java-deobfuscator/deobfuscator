@@ -27,7 +27,7 @@ public class IllegalSignatureRemover extends Transformer<TransformerConfig> {
             if (classNode.signature != null) {
                 try {
                     CheckClassAdapter.checkClassSignature(classNode.signature);
-                } catch (IllegalArgumentException ignored) {
+                } catch (IllegalArgumentException | StringIndexOutOfBoundsException ignored) {
                     classNode.signature = null;
                 }
             }
@@ -35,7 +35,7 @@ public class IllegalSignatureRemover extends Transformer<TransformerConfig> {
                 if (methodNode.signature != null) {
                     try {
                         CheckClassAdapter.checkMethodSignature(methodNode.signature);
-                    } catch (IllegalArgumentException ignored) {
+                    } catch (IllegalArgumentException | StringIndexOutOfBoundsException ignored) {
                         methodNode.signature = null;
                     }
                 }
@@ -44,7 +44,7 @@ public class IllegalSignatureRemover extends Transformer<TransformerConfig> {
                 if (fieldNode.signature != null) {
                     try {
                         CheckClassAdapter.checkFieldSignature(fieldNode.signature);
-                    } catch (IllegalArgumentException ignored) {
+                    } catch (IllegalArgumentException | StringIndexOutOfBoundsException ignored) {
                         fieldNode.signature = null;
                     }
                 }

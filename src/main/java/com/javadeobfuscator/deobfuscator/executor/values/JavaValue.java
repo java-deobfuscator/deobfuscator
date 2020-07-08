@@ -24,9 +24,9 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 
 public abstract class JavaValue {
-
-    public boolean booleanValue() {
-        throw new ExecutionException(new UnsupportedOperationException());
+    
+    public boolean booleanValue() { 
+        throw new ExecutionException(new UnsupportedOperationException()); 
     }
 
     public int intValue() {

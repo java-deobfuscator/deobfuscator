@@ -24,6 +24,7 @@ import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.CodeSource;
 import java.security.Key;
@@ -108,6 +109,10 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/nio/charset/Charset", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("availableCharsets()Ljava/util/SortedMap;", (targetObject, args, context) -> Charset.availableCharsets());
+        }});
+        put("java/nio/ByteBuffer", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("wrap([B)Ljava/nio/ByteBuffer;", (targetObject, args, context) -> ByteBuffer.wrap(args.get(0).as(byte[].class)));
+            put("getDouble()D", (targetObject, args, context) -> targetObject.as(ByteBuffer.class).getDouble());
         }});
         put("java/util/SortedMap", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("keySet()Ljava/util/Set;", (targetObject, args, context) -> targetObject.as(SortedMap.class).keySet());
@@ -239,6 +244,11 @@ public class JVMMethodProvider extends MethodProvider {
             put("<init>([BI)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/String");
                 targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).intValue()));
+                return null;
+            });
+            put("<init>([BII)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/String");
+                targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue()));
                 return null;
             });
             put("<init>([BLjava/lang/String;)V", (targetObject, args, context) -> {
@@ -636,6 +646,14 @@ public class JVMMethodProvider extends MethodProvider {
             put("getMethodName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getMethodName());
             put("getFileName()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(StackTraceElement.class).getFileName());
         }});
+        put("java/lang/Float", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("intBitsToFloat(I)F", (targetObject, args, context) -> Float.intBitsToFloat(args.get(0).intValue()));
+            put("valueOf(F)Ljava/lang/Float;", (targetObject, args, context) -> Float.valueOf(args.get(0).floatValue()));
+        }});
+        put("java/lang/Double", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("longBitsToDouble(J)D", (targetObject, args, context) -> Double.longBitsToDouble(args.get(0).longValue()));
+            put("valueOf(D)Ljava/lang/Double;", (targetObject, args, context) -> Double.valueOf(args.get(0).doubleValue()));
+        }});
         put("java/lang/Long", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("<init>(J)V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/Long");
@@ -672,6 +690,14 @@ public class JVMMethodProvider extends MethodProvider {
         put("java/util/regex/Pattern", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("compile(Ljava/lang/String;)Ljava/util/regex/Pattern;", (targetObject, args, context) -> Pattern.compile(args.get(0).as(String.class)));
         }});
+        put("java/util/Random", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>(J)V", (targetObject, args, context) -> {
+                expect(targetObject, "java/util/Random");
+                targetObject.initialize(new Random(args.get(0).longValue()));
+                return null;
+            });
+        	put("nextDouble()D", (targetObject, args, context) -> targetObject.as(Random.class).nextDouble());
+        }});
         put("java/lang/BootstrapMethodError", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/BootstrapMethodError");
@@ -697,7 +723,7 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(new HashMap<>(args.get(0).intValue()));
                 return null;
             });
-            put("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).put(args.get(0), args.get(1)));
+            put("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).put(args.get(0).value(), args.get(1).value()));
             put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).get(args.get(0).value()));
             put("containsKey(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(HashMap.class).containsKey(args.get(0).value()));
             put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(HashMap.class).isEmpty()); 
@@ -746,6 +772,7 @@ public class JVMMethodProvider extends MethodProvider {
         }}); 
         put("java/lang/Math", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("abs(J)J", (targetObject, args, context) -> Math.abs(args.get(0).longValue()));
+            put("round(D)J", (targetObject, args, context) -> Math.round(args.get(0).doubleValue()));
         }});
         put("java/math/BigInteger", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/lang/String;I)V", (targetObject, args, context) -> {

@@ -24,12 +24,12 @@ import java.util.regex.PatternSyntaxException;
 import com.javadeobfuscator.deobfuscator.config.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 
-public class InvaildClassRemover extends Transformer<TransformerConfig> 
+public class InvalidClassRemover extends Transformer<TransformerConfig> 
 {
     @Override
     public boolean transform()
     {
-    	System.out.println("[Special] [InvaildClassRemover] Starting");
+    	System.out.println("[Special] [InvalidClassRemover] Starting");
     	List<Pattern> patterns = new ArrayList<>();
     	if(getDeobfuscator().getConfig().getIgnoredClasses() != null)
     	for (String ignored : getDeobfuscator().getConfig().getIgnoredClasses()) {
@@ -46,7 +46,7 @@ public class InvaildClassRemover extends Transformer<TransformerConfig>
     	getDeobfuscator().getInputPassthrough().entrySet().removeIf(e -> e.getKey().endsWith(".class")
     		&& !hasClass(e.getKey(), patterns));
     	int after = getDeobfuscator().getInputPassthrough().size();
-    	System.out.println("[Special] [InvaildClassRemover] Removed " + (before - after) + " classes");
+    	System.out.println("[Special] [InvalidClassRemover] Removed " + (before - after) + " classes");
     	return before - after > 0;
     }
     

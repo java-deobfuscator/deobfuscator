@@ -460,7 +460,7 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 	                for(int i = 0; i < mn.instructions.size(); i++)
 	                {
 	                	AbstractInsnNode ain = mn.instructions.get(i);
-	                	if(ain.getOpcode() == Opcodes.CHECKCAST)
+	                	if(ain.getOpcode() == Opcodes.CHECKCAST && frames[i] != null)
 	                	{
 	                		Type typeBefore = frames[i].getStack(frames[i].getStackSize() - 1).getType();
 	                		Type typeNow = Type.getObjectType(((TypeInsnNode)ain).desc);
@@ -473,9 +473,12 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 		                		else if(typeNow.getSort() == Type.OBJECT && typeNow.getInternalName().equals("java/lang/Object")
 		                			&& typeBefore.getSort() == Type.ARRAY)
 		                			set.add(ain);
-		                		else if(typeNow.getSort() == Type.OBJECT && typeBefore.getSort() == Type.OBJECT
-		                			&& getDeobfuscator().isSubclass(typeNow.getInternalName(), typeBefore.getInternalName()))
-		                			set.add(ain);
+		                		else if(typeNow.getSort() == Type.OBJECT && typeBefore.getSort() == Type.OBJECT)
+		                			try
+		                			{
+		                				if(getDeobfuscator().isSubclass(typeNow.getInternalName(), typeBefore.getInternalName()))
+		                					set.add(ain);
+		                			}catch(Exception e) {}	
 		                		else if(typeNow.getSort() == Type.ARRAY && typeBefore.getSort() == Type.ARRAY)
 		                		{
 		                			typeBefore = typeBefore.getElementType();

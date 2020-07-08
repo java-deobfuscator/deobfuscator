@@ -95,6 +95,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
     @Override
     public boolean transform() {
         System.out.println("[Stringer] [StringEncryptionTransformer] Starting");
+        int concat = concatStrings();
+        if(concat > 0)
+        	System.out.println("[Stringer] [StringEncryptionTransformer] Concatted " + concat + " strings");
         int count = count();
         System.out.println("[Stringer] [StringEncryptionTransformer] Found " + count + " encrypted strings");
         if (count > 0) {
@@ -105,6 +108,31 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
         }
         System.out.println("[Stringer] [StringEncryptionTransformer] Done");
         return true;
+    }
+    
+    private int concatStrings()
+    {
+    	int count = 0;
+    	for(ClassNode classNode : classNodes())
+    	{
+    		for(MethodNode method : classNode.methods)
+    		for(AbstractInsnNode ain : method.instructions.toArray())
+    		{
+    			if(ain.getOpcode() == Opcodes.LDC && ain.getNext() != null && ain.getNext().getOpcode() == Opcodes.LDC
+    				&& ain.getNext().getNext() != null && ain.getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL
+    				&& ((MethodInsnNode)ain.getNext().getNext()).name.equals("concat"))
+    			{
+    				method.instructions.remove(ain.getNext().getNext());
+    				String first = (String)((LdcInsnNode)ain).cst;
+    				String sec = (String)((LdcInsnNode)ain.getNext()).cst;
+    				String res = first.concat(sec);
+    				method.instructions.remove(ain.getNext());
+    				((LdcInsnNode)ain).cst = res;
+    				count++;
+    			}
+    		}
+    	}
+    	return count;
     }
 
     private int cleanup() {
