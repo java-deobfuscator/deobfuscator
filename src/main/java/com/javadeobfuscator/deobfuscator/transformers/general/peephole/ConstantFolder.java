@@ -96,7 +96,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 if (results.size() == 1) {
                                     InsnList replacement = new InsnList();
                                     replacement.add(new InsnNode(POP2)); // remove existing args from stack
-                                    replacement.add(Utils.getNumberInsn(results.iterator().next()));
+                                    replacement.add(Utils.getIntInsn(results.iterator().next()));
                                     replacements.put(ain, replacement);
                                     folded.getAndIncrement();
                                 }

@@ -37,7 +37,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
         				((MethodInsnNode) ain).name.equals("length") &&
         				ain.getPrevious() instanceof LdcInsnNode && ((LdcInsnNode) ain.getPrevious()).cst instanceof String) {
         				AbstractInsnNode previous = ain.getPrevious();
-        				method.instructions.set(ain, Utils.getNumberInsn(((String)((LdcInsnNode)ain.getPrevious()).cst).length()));
+        				method.instructions.set(ain, Utils.getIntInsn(((String)((LdcInsnNode)ain.getPrevious()).cst).length()));
         				method.instructions.remove(previous);
         				count.getAndIncrement();
         			}
@@ -81,7 +81,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
     					{
 	    					Integer resultValue;
 	                        if((resultValue = doMath(Utils.getIntValue(a1), Utils.getIntValue(a2), ain.getOpcode())) != null) {
-	                        	AbstractInsnNode newValue = Utils.getNumberInsn(resultValue);
+	                        	AbstractInsnNode newValue = Utils.getIntInsn(resultValue);
 	                        	replace.put(ain, newValue);
 	                            method.instructions.set(ain, newValue);
 	                            method.instructions.remove(a1);
@@ -114,7 +114,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
         			if (ain.getOpcode() == Opcodes.INVOKESTATIC) {
         				Integer number = numberMethods.get(((MethodInsnNode)ain).owner + ((MethodInsnNode)ain).name + ((MethodInsnNode)ain).desc);
         				if (number != null) {
-        					method.instructions.set(ain, Utils.getNumberInsn(number));
+        					method.instructions.set(ain, Utils.getIntInsn(number));
         					count.getAndIncrement();
         				}
         			}

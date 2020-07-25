@@ -104,13 +104,14 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                 	{
                         MethodInsnNode m = (MethodInsnNode)ain;
                         String strCl = m.owner;
-                        if(m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) 
+                        if(m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")
+                        	|| m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) 
                         {
                         	Frame<SourceValue> f = frames[method.instructions.indexOf(m)];
                         	if(f.getStack(f.getStackSize() - 1).insns.size() != 1)
                         		continue;
 							AbstractInsnNode ldc = f.getStack(f.getStackSize() - 1).insns.iterator().next();
-							if(ldc.getOpcode() != Opcodes.LDC)
+							if(ldc.getOpcode() != Opcodes.LDC || !(((LdcInsnNode)ldc).cst instanceof String))
 								continue;
     						Context context = new Context(provider);
                             context.push(classNode.name, method.name, getDeobfuscator().getConstantPool(classNode).getSize());

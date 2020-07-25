@@ -244,7 +244,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	    					Integer resultValue;
 	                        if((resultValue = doMath(Utils.getIntValue(a1), Utils.getIntValue(a2), ain.getOpcode())) != null) 
 	                        {
-	                        	AbstractInsnNode newValue = Utils.getNumberInsn(resultValue);
+	                        	AbstractInsnNode newValue = Utils.getIntInsn(resultValue);
 	                        	replace.put(ain, newValue);
 	                            method.instructions.set(ain, newValue);
 	                            method.instructions.remove(a1);

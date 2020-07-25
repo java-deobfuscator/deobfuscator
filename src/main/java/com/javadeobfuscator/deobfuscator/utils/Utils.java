@@ -328,7 +328,7 @@ public class Utils {
         return newInsnList;
     }
 
-    public static AbstractInsnNode getNumberInsn(int number) {
+    public static AbstractInsnNode getIntInsn(int number) {
     	if (number >= -1 && number <= 5)
     		return new InsnNode(number + 3);
     	else if (number >= -128 && number <= 127)

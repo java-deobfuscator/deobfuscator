@@ -1166,7 +1166,9 @@ public class MethodExecutor {
                         MethodInsnNode cast = (MethodInsnNode) now;
                         Type type = Type.getReturnType(cast.desc);
                         List<JavaValue> args = new ArrayList<>();
-                        for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+                        List<Type> l = new ArrayList<>(Arrays.asList(Type.getArgumentTypes(cast.desc)));
+                        Collections.reverse(l);
+                        for (Type t1 : l) {
                             if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
                                 if (!(stack.get(0) instanceof JavaTop)) {
                                     throw new ExecutionException("Expected JavaTop");
@@ -1264,7 +1266,9 @@ public class MethodExecutor {
                         MethodInsnNode cast = (MethodInsnNode) now;
                         Type type = Type.getReturnType(cast.desc);
                         List<JavaValue> args = new ArrayList<>();
-                        for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+                        List<Type> l = new ArrayList<>(Arrays.asList(Type.getArgumentTypes(cast.desc)));
+                        Collections.reverse(l);
+                        for (Type t1 : l) {
                             if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
                                 if (!(stack.get(0) instanceof JavaTop)) {
                                     throw new ExecutionException("Expected JavaTop");
@@ -1443,7 +1447,9 @@ public class MethodExecutor {
                         MethodInsnNode cast = (MethodInsnNode) now;
                         Type type = Type.getReturnType(cast.desc);
                         List<JavaValue> args = new ArrayList<>();
-                        for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+                        List<Type> l = new ArrayList<>(Arrays.asList(Type.getArgumentTypes(cast.desc)));
+                        Collections.reverse(l);
+                        for (Type t1 : l) {
                             if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
                                 if (!(stack.get(0) instanceof JavaTop)) {
                                     throw new ExecutionException("Expected JavaTop");
@@ -1607,7 +1613,9 @@ public class MethodExecutor {
 									args.add(JavaValue.valueOf(arg));
 							}
 							List<JavaValue> newArgs = new ArrayList<>();
-							for (Type t1 : Type.getArgumentTypes(cast.desc)) {
+							List<Type> l = new ArrayList<>(Arrays.asList(Type.getArgumentTypes(cast.desc)));
+	                        Collections.reverse(l);
+	                        for (Type t1 : l) {
 	                            if (t1.getSort() == Type.LONG || t1.getSort() == Type.DOUBLE) {
 	                                if (!(stack.get(0) instanceof JavaTop)) {
 	                                    throw new ExecutionException("Expected JavaTop");
