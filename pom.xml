@@ -6,7 +6,7 @@
     <version>1.0.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.asm>6.0</version.asm>
+        <version.asm>8.0.1</version.asm>
     </properties>
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
@@ -142,11 +142,6 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.javadeobfuscator</groupId>
-            <artifactId>javavm</artifactId>
-            <version>3.0.0</version>
-        </dependency>
 
         <!-- ASM related dependencies -->
         <dependency>
@@ -173,6 +168,12 @@
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-analysis</artifactId>
             <version>${version.asm}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.javadeobfuscator</groupId>
+            <artifactId>javavm</artifactId>
+            <version>3.0.0</version>
         </dependency>
     </dependencies>
 </project>

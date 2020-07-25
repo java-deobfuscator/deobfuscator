@@ -594,7 +594,7 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 	    public BasicValue newValue(final Type type)
 		{
 	        if(type == null)
-	            return new BasicValue(Type.getType("java/lang/Object"));
+	            return new BasicValue(Type.getType("Ljava/lang/Object;"));
 	        switch(type.getSort())
 	        {
 	        	case Type.VOID:
@@ -633,7 +633,7 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 	    public BasicValue merge(final BasicValue v, final BasicValue w)
 	    {
 	        if(!v.equals(w))
-	            return new BasicValue(Type.getType("java/lang/Object"));
+	            return new BasicValue(Type.getType("Ljava/lang/Object;"));
 	        return v;
 	    }
 	}

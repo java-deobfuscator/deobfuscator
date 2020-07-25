@@ -62,7 +62,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
         provider.register(new ComparisonProvider() {
             @Override
             public boolean instanceOf(JavaValue target, Type type, Context context) {
-            	if(target.type().equals("java/lang/Class")
+            	if(target.type().equals("Ljava/lang/Class;")
             		&& type.getDescriptor().equals("Ljava/lang/Class;"))
             		return true;
                 return false;
@@ -85,7 +85,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 
             @Override
             public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
-            	if(type.getDescriptor().equals("java/lang/Class"))
+            	if(type.getDescriptor().equals("Ljava/lang/Class;"))
             		return true;
                 return false;
             }

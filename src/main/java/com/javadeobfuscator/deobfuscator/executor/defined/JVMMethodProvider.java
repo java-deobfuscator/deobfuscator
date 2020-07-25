@@ -256,6 +256,7 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).as(String.class)));
                 return null;
             });
+            put("getBytes()[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes());
             put("getBytes(Ljava/nio/charset/Charset;)[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes(args.get(0).as(Charset.class)));
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).toString());
             put("intern()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).intern());
@@ -674,6 +675,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
         	put("parseInt(Ljava/lang/String;)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class)));
+        	put("parseInt(Ljava/lang/String;I)I", (targetObject, args, context) -> Integer.parseInt(args.get(0).as(String.class), args.get(1).intValue()));
             put("valueOf(Ljava/lang/String;)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).as(String.class)));
             put("valueOf(Ljava/lang/String;I)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).as(String.class), args.get(1).intValue()));
             put("valueOf(I)Ljava/lang/Integer;", (targetObject, args, context) -> Integer.valueOf(args.get(0).intValue()));

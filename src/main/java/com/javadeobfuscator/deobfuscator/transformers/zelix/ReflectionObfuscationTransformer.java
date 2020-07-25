@@ -81,7 +81,7 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
         provider.register(new ComparisonProvider() {
             @Override
             public boolean instanceOf(JavaValue target, Type type, Context context) {
-                return type.getDescriptor().equals("java/lang/String") && target.value() instanceof String;
+                return type.getDescriptor().equals("Ljava/lang/String;") && target.value() instanceof String;
             }
 
             @Override
