@@ -589,52 +589,57 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
     }
 
     private class MyInterpreter extends BasicInterpreter
-	{
-		@Override
-	    public BasicValue newValue(final Type type)
-		{
-	        if(type == null)
-	            return new BasicValue(Type.getType("Ljava/lang/Object;"));
-	        switch(type.getSort())
-	        {
-	        	case Type.VOID:
-	        		return null;
-	        	case Type.BOOLEAN:
-	        	case Type.CHAR:
-	        	case Type.BYTE:
-	        	case Type.SHORT:
-	        	case Type.INT:
-	        		return BasicValue.INT_VALUE;
-	        	case Type.FLOAT:
-	        		return BasicValue.FLOAT_VALUE;
-	        	case Type.LONG:
-	        		return BasicValue.LONG_VALUE;
-	        	case Type.DOUBLE:
-	        		return BasicValue.DOUBLE_VALUE;
-	        	case Type.ARRAY:
-	        	case Type.OBJECT:
-	        		return new BasicValue(type);
-	        	default:
-	        		throw new Error("Internal error");
-	        }
-		}
-		
-		@Override
-	    public BasicValue binaryOperation(final AbstractInsnNode insn,
-	    	final BasicValue value1, final BasicValue value2)
-	    		throws AnalyzerException
-		{
-			if(insn.getOpcode() == Opcodes.AALOAD)
-				return new BasicValue(value1.getType().getElementType());
-			return super.binaryOperation(insn, value1, value2);
-		}
-		
-	    @Override
-	    public BasicValue merge(final BasicValue v, final BasicValue w)
-	    {
-	        if(!v.equals(w))
-	            return new BasicValue(Type.getType("Ljava/lang/Object;"));
-	        return v;
-	    }
-	}
+    {
+    	public MyInterpreter()
+    	{
+    		super(Opcodes.ASM8);
+    	}
+    	
+    	@Override
+    	public BasicValue newValue(final Type type)
+    	{
+    		if(type == null)
+    			return new BasicValue(Type.getType("Ljava/lang/Object;"));
+    		switch(type.getSort())
+    		{
+    			case Type.VOID:
+    				return null;
+    			case Type.BOOLEAN:
+    			case Type.CHAR:
+    			case Type.BYTE:
+    			case Type.SHORT:
+    			case Type.INT:
+    				return BasicValue.INT_VALUE;
+    			case Type.FLOAT:
+    				return BasicValue.FLOAT_VALUE;
+    			case Type.LONG:
+    				return BasicValue.LONG_VALUE;
+    			case Type.DOUBLE:
+    				return BasicValue.DOUBLE_VALUE;
+    			case Type.ARRAY:
+    			case Type.OBJECT:
+    				return new BasicValue(type);
+    			default:
+    				throw new Error("Internal error");
+    		}
+    	}
+    	
+    	@Override
+    	public BasicValue binaryOperation(final AbstractInsnNode insn,
+    		final BasicValue value1, final BasicValue value2)
+    			throws AnalyzerException
+    	{
+    		if(insn.getOpcode() == Opcodes.AALOAD)
+    			return new BasicValue(value1.getType().getElementType());
+    		return super.binaryOperation(insn, value1, value2);
+    	}
+    	
+    	@Override
+    	public BasicValue merge(final BasicValue v, final BasicValue w)
+    	{
+    		if(!v.equals(w))
+    			return new BasicValue(Type.getType("Ljava/lang/Object;"));
+    		return v;
+    	}
+    }
 }
