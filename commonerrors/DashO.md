@@ -1,0 +1,2 @@
+## String Encryption Transformer
+If you get an error relating to SourceResult, it is because DashO's flow obfuscation was applied, which messes with the string decryptor. Run dasho.FlowObfuscationTransformer first, and you will able to decrypt all the strings.
