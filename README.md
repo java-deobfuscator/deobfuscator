@@ -1,4 +1,4 @@
-# Deobfuscator [![Build Status](https://ci.samczsun.com/buildStatus/icon?job=java-deobfuscator/Deobfuscator)](https://ci.samczsun.com/job/java-deobfuscator/job/Deobfuscator)
+# Deobfuscator
  
 This project aims to deobfuscate most commercially-available obfuscators for Java.
 
@@ -35,6 +35,8 @@ Take a look at [USAGE.md](USAGE.md) for more information.
 ## It didn't work
 
 If you're trying to recover the names of classes or methods, tough luck. That information is typically stripped out and there's no way to recover it.
+
+If you are using one of our transformers, check out the commonerrors folder to check for tips.
 
 Otherwise, check out [this guide](CUSTOMTRANSFORMER.md) on how to implement your own transformer (also, open a issue/PR so I can add support for it)
 
