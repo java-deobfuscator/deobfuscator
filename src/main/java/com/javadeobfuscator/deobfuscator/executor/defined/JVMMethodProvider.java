@@ -359,6 +359,16 @@ public class JVMMethodProvider extends MethodProvider {
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.toString());
         }});
+        put("java/lang/LinkageError", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("<init>()V", (targetObject, args, context) -> {
+                expect(targetObject, "java/lang/LinkageError");
+                targetObject.initialize(null);
+            	System.out.println("Initializing java/lang/LinkagError");
+                return null;
+            });
+            put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
+            put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.toString());
+        }});
         put("java/lang/NullPointerException", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/NullPointerException");
