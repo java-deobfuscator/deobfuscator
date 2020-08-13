@@ -363,7 +363,6 @@ public class JVMMethodProvider extends MethodProvider {
             put("<init>()V", (targetObject, args, context) -> {
                 expect(targetObject, "java/lang/LinkageError");
                 targetObject.initialize(null);
-            	System.out.println("Initializing java/lang/LinkagError");
                 return null;
             });
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> context.getStackTrace());
