@@ -146,6 +146,28 @@ public class JVMMethodProvider extends MethodProvider {
                 }
                 return null;
             });
+            put("write([BII)V", (targetObject, args, context) -> {
+                try {
+                    targetObject.as(ByteArrayOutputStream.class).write(args.get(0).as(byte[].class), args.get(1).intValue(), args.get(2).intValue());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+        }});
+        put("java/io/ByteArrayInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("available()I", (targetObject, args, context) -> 
+            	targetObject.as(ByteArrayInputStream.class).available()
+              );
+            put("close()V", (targetObject, args, context) -> {
+                try {
+                    targetObject.as(ByteArrayInputStream.class).close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+            put("read([B)I", (targetObject, args, context) -> targetObject.as(ByteArrayInputStream.class).read(args.get(0).as(byte[].class)));
         }});
         put("java/io/PushbackInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>(Ljava/io/InputStream;I)V", (targetObject, args, context) -> {
