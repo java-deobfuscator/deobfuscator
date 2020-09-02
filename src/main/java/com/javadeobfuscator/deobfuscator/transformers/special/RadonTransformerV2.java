@@ -1,11 +1,19 @@
 package com.javadeobfuscator.deobfuscator.transformers.special;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.assertj.core.internal.asm.Opcodes;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -31,6 +39,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.PrimitiveFieldProvider
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaArray;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaInteger;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
@@ -38,9 +47,12 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.InstructionModifier;
 import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import com.javadeobfuscator.javavm.mirrors.JavaClass;
 
 public class RadonTransformerV2 extends Transformer<TransformerConfig>
 {
+	public static boolean ANTITAMPER = true;
 	public static boolean EJECTOR = true;
 	public static boolean ANTI_DEBUG = true;
 	public static boolean FLOW_OBF = true;
@@ -52,7 +64,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 	
 	@Override
 	public boolean transform() throws Throwable
-	{
+	{   
 		DelegatingProvider provider = new DelegatingProvider();
         provider.register(new PrimitiveFieldProvider());
         provider.register(new MappedFieldProvider());
@@ -110,6 +122,116 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 		AtomicInteger number = new AtomicInteger();
 		AtomicInteger indy = new AtomicInteger();
 		AtomicInteger str = new AtomicInteger();
+		AtomicInteger AntiTamper = new AtomicInteger();
+		MethodNode decr = null;
+		String ownerdecr = null;
+		
+		//If wo got AntiTamper. We need to remove this for first.
+		if (ANTITAMPER) {
+
+			// AntiTamper might just add one decr Class.So we just need to spec it out.
+			for (ClassNode classNode : classNodes()) {
+				for (MethodNode m : classNode.methods) {
+
+					Type STRING_TYPE = Type.getObjectType("java/lang/String");
+
+					Type[] argTypes = Type.getArgumentTypes(m.desc);
+					if (m.instructions.getFirst() == null || !Type.getReturnType(m.desc).equals(STRING_TYPE)
+							|| !TransformerHelper.hasArgumentTypes(argTypes, STRING_TYPE)
+							|| TransformerHelper.hasArgumentTypesOtherThan(argTypes, STRING_TYPE))
+						continue;
+
+					Map<Integer, AtomicInteger> insnCount = new HashMap<>();
+					Map<String, AtomicInteger> invokeCount = new HashMap<>();
+					for (AbstractInsnNode i = m.instructions.getFirst(); i != null; i = i.getNext()) {
+						int opcode = i.getOpcode();
+						insnCount.putIfAbsent(opcode, new AtomicInteger(0));
+						insnCount.get(opcode).getAndIncrement();
+						if (i instanceof MethodInsnNode) {
+							invokeCount.putIfAbsent(((MethodInsnNode) i).name, new AtomicInteger(0));
+							invokeCount.get(((MethodInsnNode) i).name).getAndIncrement();
+						}
+					}
+
+					if (insnCount.get(Opcodes.NEWARRAY) == null || insnCount.get(Opcodes.ISTORE) == null
+							|| insnCount.get(Opcodes.BALOAD) == null || insnCount.get(Opcodes.IOR) == null
+							|| invokeCount.get("toCharArray") == null || invokeCount.get("getResourceAsStream") == null
+							|| invokeCount.get("getMethodName") == null)
+						continue;
+
+					decr = m;
+					ownerdecr = classNode.name;
+				}
+			}
+
+			if (decr != null)
+				for (ClassNode classNode : classNodes()) {
+					for (MethodNode m : classNode.methods) {
+						InstructionModifier modifier = new InstructionModifier();
+						for (AbstractInsnNode ain : TransformerHelper.instructionIterator(m))
+							if (ain instanceof MethodInsnNode) {
+								MethodInsnNode mi = (MethodInsnNode) ain;
+
+								if (mi.owner.equals(ownerdecr) && mi.name.equals(decr.name)) {
+									AbstractInsnNode ldc = ain.getPrevious();
+									if (!(ldc instanceof LdcInsnNode) || !(((LdcInsnNode) ldc).cst instanceof String))
+										continue;
+									Context context = new Context(provider);
+									context.push(classNode.name, m.name,
+											getDeobfuscator().getConstantPool(classNode).getSize());
+									context.dictionary = classpath;
+
+									for (AbstractInsnNode i = decr.instructions.getFirst(); i != null; i = i
+											.getNext()) {
+										if (i.getOpcode() == Opcodes.INVOKEVIRTUAL
+												&& ((MethodInsnNode) i).owner.equals("java/lang/Class")
+												&& ((MethodInsnNode) i).name.equals("getResourceAsStream")
+												&& ((MethodInsnNode) i).desc
+														.equals("(Ljava/lang/String;)Ljava/io/InputStream;"))
+											MethodExecutor.customMethodFunc.put(i, (list, ctx) -> {
+
+												try {
+													ZipFile zipIn = new ZipFile(
+															getDeobfuscator().getConfig().getInput());
+													InputStream in = zipIn
+															.getInputStream(zipIn.getEntry(classNode.name + ".class"));
+
+													ByteArrayOutputStream baos = CloneInputStream(in);
+
+													InputStream stream1 = new ByteArrayInputStream(baos.toByteArray());
+													return JavaValue.valueOf(stream1);
+												} catch (IOException e1) {
+													e1.printStackTrace();
+												}
+
+												return null;
+											});
+										else if (i.getOpcode() == Opcodes.INVOKEVIRTUAL
+												&& ((MethodInsnNode) i).owner.equals("java/lang/Thread")
+												&& ((MethodInsnNode) i).name.equals("getStackTrace")
+												&& ((MethodInsnNode) i).desc.equals("()[Ljava/lang/StackTraceElement;"))
+											MethodExecutor.customMethodFunc.put(i, (list, ctx) -> {
+												StackTraceElement[] FakeStackTraceElements = new StackTraceElement[] {
+														new StackTraceElement("Java-deobfuscator", "decMothod", "YesTamper",
+																0),
+														new StackTraceElement(mi.owner.replace("/", "."), mi.name,
+																mi.owner + ".java", -1),
+														new StackTraceElement(classNode.name.replace("/", "."), m.name,
+																classNode.sourceFile, -1) };
+
+												return new JavaArray(FakeStackTraceElements);
+											});
+									}
+									((LdcInsnNode) ldc).cst = MethodExecutor.execute(classNode, decr,
+											Arrays.asList(JavaValue.valueOf(((LdcInsnNode) ldc).cst)), null, context);
+									modifier.remove(ain);
+									AntiTamper.getAndIncrement();
+								}
+							}
+						modifier.apply(m);
+					}
+				}
+		}
 		//Bad Annotations
 		for(ClassNode classNode : classNodes())
 			for(MethodNode method : classNode.methods)
@@ -477,6 +599,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 					//Dead code
 					InstructionModifier modifier = new InstructionModifier();
 
+					try {
 	                Frame<BasicValue>[] frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, method);
 	                for(int i = 0; i < method.instructions.size(); i++)
 	                {
@@ -488,6 +611,10 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 	                    modifier.remove(method.instructions.get(i));
 	                }
 	                modifier.apply(method);
+					}catch(Throwable c) {
+						c.printStackTrace();
+						continue;
+					}
 				}
 			fakeExceptionClasses.forEach(s -> {
 				classes.remove(s);
@@ -683,9 +810,9 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 	    					Frame<SourceValue> f = fr[i];
 	    					frames.put(method.instructions.get(i), f);
 	    				}
-	    			}catch(AnalyzerException e)
+	    			}catch(Exception e)
 	    			{
-	    				oops("unexpected analyzer exception", e);
+	    				//oops("unexpected analyzer exception", e);
 	                    continue;
 	    			}
 	    			for(AbstractInsnNode ain : method.instructions.toArray())
@@ -966,9 +1093,9 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 					try
 					{
 						frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
-					}catch(AnalyzerException e)
+					}catch(Exception e)
 					{
-						oops("unexpected analyzer exception", e);
+						//oops("unexpected analyzer exception", e);
 						continue;
 					}
 					insns:
@@ -1050,6 +1177,8 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 			classes.remove(e.name);
 			classpath.remove(e.name);
 		});
+		
+		System.out.println("[Special] [RadonTransformerV2] Decrypted " + AntiTamper + " AntiTamper Strings");
 		System.out.println("[Special] [RadonTransformerV2] Unejected " + eject + " methods");
 		System.out.println("[Special] [RadonTransformerV2] Removed " + antiDebug + " anti-debug injections");
 		System.out.println("[Special] [RadonTransformerV2] Removed " + tryCatch + " try-catch blocks");
@@ -1460,4 +1589,21 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
         }
         throw new RuntimeException();
     }
+    
+	private static ByteArrayOutputStream CloneInputStream(InputStream input) {
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int len;
+			while ((len = input.read(buffer)) > -1) {
+				baos.write(buffer, 0, len);
+			}
+			baos.flush();
+			return baos;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+ 
 }
