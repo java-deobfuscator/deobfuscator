@@ -100,14 +100,15 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
         	System.out.println("[Stringer] [StringEncryptionTransformer] Concatted " + concat + " strings");
         int count = count();
         System.out.println("[Stringer] [StringEncryptionTransformer] Found " + count + " encrypted strings");
+        int decrypted = 0;
         if (count > 0) {
-            int decrypted = decrypt(count);
+            decrypted = decrypt(count);
             System.out.println("[Stringer] [StringEncryptionTransformer] Decrypted " + decrypted + " encrypted strings");
             int cleanedup = cleanup();
             System.out.println("[Stringer] [StringEncryptionTransformer] Removed " + cleanedup + " decryption classes");
         }
         System.out.println("[Stringer] [StringEncryptionTransformer] Done");
-        return true;
+        return decrypted > 0;
     }
     
     private int concatStrings()

@@ -59,7 +59,7 @@ public class ResourceEncryptionTransformer extends Transformer<TransformerConfig
         int processed = process();
         System.out.println("[Stringer] [ResourceEncryptionTransformer] Processed " + processed + " resources");
         System.out.println("[Stringer] [ResourceEncryptionTransformer] Done");
-        return true;
+        return processed > 0;
     }
 
     private int process() {

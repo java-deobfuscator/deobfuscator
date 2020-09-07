@@ -52,7 +52,7 @@ public class LightFlowObfuscationTransformer extends Transformer<TransformerConf
         	}
         System.out.println("[Allatori] [LightFlowObfuscationTransformer] Removed " + fixed + " dead instructions");
         System.out.println("[Allatori] [LightFlowObfuscationTransformer] Done");
-        return true;
+        return fixed.get() > 0;
 	}
 	
 	private boolean willPush(AbstractInsnNode ain)

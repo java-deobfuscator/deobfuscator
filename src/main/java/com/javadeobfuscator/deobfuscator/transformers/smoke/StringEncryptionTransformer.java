@@ -101,7 +101,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         System.out.println("[Smoke] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
         System.out.println("[Smoke] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
         System.out.println("[Smoke] [StringEncryptionTransformer] Done");
-		return true;
+		return count.get() > 0;
     }
     
     private int cleanup(Set<MethodNode> methods)

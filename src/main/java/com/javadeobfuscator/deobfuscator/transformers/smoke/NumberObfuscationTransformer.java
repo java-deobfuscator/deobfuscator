@@ -124,7 +124,7 @@ public class NumberObfuscationTransformer extends Transformer<TransformerConfig>
         	classNode.methods = classNode.methods.stream().filter(methodNode -> !numberMethods.containsKey(classNode.name + methodNode.name + methodNode.desc)).collect(Collectors.toList()));
 	
         System.out.println("[Smoke] [NumberObfuscationTransformer] Removed " + count.get() + " instructions");
-        return true;
+        return count.get() > 0;
     }
 
     private Integer doMath(int value1, int value2, int opcode) {

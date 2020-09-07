@@ -436,7 +436,7 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + (int) cleanedup + " invokedynamic bootstrap methods");
 
         System.out.println("[Stringer] [HideAccessTransformer] Done");
-        return true;
+        return count.get() > 0;
     }
 
     private void castFix(Context context) {

@@ -143,6 +143,6 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         });
 
         System.out.println("[SkidSuite2] [StringEncryptionTransformer] Decrypted " + counter + " strings");
-        return true;
+        return counter.get() > 0;
     }
 }

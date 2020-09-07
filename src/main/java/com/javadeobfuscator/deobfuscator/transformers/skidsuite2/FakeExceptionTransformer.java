@@ -50,6 +50,6 @@ public class FakeExceptionTransformer extends Transformer<TransformerConfig>
 		System.out.println("[SkidSuite] [FakeExceptionTransformer] Removed "
 			+ counter.get() + " fake try-catch blocks");
 		System.out.println("[SkidSuite] [FakeExceptionTransformer] Done");
-		return true;
+		return counter.get() > 0;
 	}
 }

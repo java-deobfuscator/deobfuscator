@@ -1017,6 +1017,8 @@ public class MethodExecutor {
                     				break;
                     			}
                     		provided = fieldClass.fields.stream().filter(f -> f.name.equals(cast.name) && f.desc.equals(cast.desc)).findFirst().orElse(null).value;
+                    		if(type.getSort() == Type.BOOLEAN)
+                    			provided = (Integer)provided == 0 ? false : true;
                     		context.provider.setField(cast.owner, cast.name, cast.desc, null, provided, context);
                     	}
 
@@ -1097,6 +1099,8 @@ public class MethodExecutor {
                     				break;
                     			}
                     		provided = fieldClass.fields.stream().filter(f -> f.name.equals(cast.name) && f.desc.equals(cast.desc)).findFirst().orElse(null).value;
+                    		if(type.getSort() == Type.BOOLEAN)
+                    			provided = (Integer)provided == 0 ? false : true;
                     		context.provider.setField(cast.owner, cast.name, cast.desc, obj, provided, context);
                     	}
                         

@@ -53,14 +53,15 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Starting");
         int count = count();
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Found " + count + " reflection obfuscation calls");
+        int decrypted = 0;
         if (count > 0) {
-            int decrypted = decrypt(count);
+            decrypted = decrypt(count);
             System.out.println("[Stringer] [ReflectionObfuscationTransformer] Deobfuscated " + decrypted + " reflection obfuscation calls");
             int cleanedup = cleanup();
             System.out.println("[Stringer] [ReflectionObfuscationTransformer] Removed " + cleanedup + " reflection obfuscation classes");
         }
         System.out.println("[Stringer] [ReflectionObfuscationTransformer] Done");
-        return true;
+        return decrypted > 0;
     }
 
     private int count() {

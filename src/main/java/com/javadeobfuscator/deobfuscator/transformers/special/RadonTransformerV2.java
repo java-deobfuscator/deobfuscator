@@ -1,9 +1,14 @@
 package com.javadeobfuscator.deobfuscator.transformers.special;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.ZipFile;
 
 import org.assertj.core.internal.asm.Opcodes;
 import org.objectweb.asm.Handle;
@@ -28,6 +33,7 @@ import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.PrimitiveFieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
@@ -41,6 +47,7 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 public class RadonTransformerV2 extends Transformer<TransformerConfig>
 {
+	public static boolean ANTITAMPER = true;
 	public static boolean EJECTOR = true;
 	public static boolean ANTI_DEBUG = true;
 	public static boolean FLOW_OBF = true;
@@ -110,6 +117,87 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 		AtomicInteger number = new AtomicInteger();
 		AtomicInteger indy = new AtomicInteger();
 		AtomicInteger str = new AtomicInteger();
+		AtomicInteger antiTamper = new AtomicInteger();
+		if(ANTITAMPER)
+		{
+			MethodNode atDecr = null;
+			ClassNode atOwner = null;
+			finder:
+			for(ClassNode classNode : classNodes())
+				if(classNode.methods.size() == 1)
+				{
+					MethodNode method = classNode.methods.get(0);
+					if(!method.desc.equals("(Ljava/lang/String;)Ljava/lang/String;"))
+						continue;
+					Map<Integer, AtomicInteger> insnCount = new HashMap<>();
+					Map<String, AtomicInteger> invokeCount = new HashMap<>();
+					for(AbstractInsnNode i = method.instructions.getFirst(); i != null; i = i.getNext()) {
+						int opcode = i.getOpcode();
+						insnCount.putIfAbsent(opcode, new AtomicInteger(0));
+						insnCount.get(opcode).getAndIncrement();
+						if(i instanceof MethodInsnNode) {
+							invokeCount.putIfAbsent(((MethodInsnNode) i).name, new AtomicInteger(0));
+							invokeCount.get(((MethodInsnNode) i).name).getAndIncrement();
+						}
+					}
+					if(insnCount.get(Opcodes.NEWARRAY) == null || insnCount.get(Opcodes.ISTORE) == null
+						|| insnCount.get(Opcodes.BALOAD) == null || insnCount.get(Opcodes.IOR) == null
+						|| invokeCount.get("toCharArray") == null || invokeCount.get("getResourceAsStream") == null
+						|| invokeCount.get("getMethodName") == null)
+						continue;
+					atDecr = method;
+					atOwner = classNode;
+					break finder;
+				}
+			if(atDecr != null)
+			{
+				ZipFile zipIn = new ZipFile(getDeobfuscator().getConfig().getInput());
+				for(AbstractInsnNode ain : atDecr.instructions.toArray())
+				if (ain.getOpcode() == Opcodes.INVOKEVIRTUAL
+						&& ((MethodInsnNode)ain).owner.equals("java/lang/Class")
+						&& ((MethodInsnNode)ain).name.equals("getResourceAsStream")
+						&& ((MethodInsnNode)ain).desc.equals("(Ljava/lang/String;)Ljava/io/InputStream;"))
+					MethodExecutor.customMethodFunc.put(ain, (list, ctx) -> {
+						try {
+							String clazzName = list.remove(0).as(String.class);
+							list.remove(0).as(JavaClass.class);
+							clazzName = clazzName.substring(1);
+							InputStream in = zipIn.getInputStream(zipIn.getEntry(clazzName));
+							ByteArrayOutputStream baos = cloneInputStream(in);
+							InputStream input = new ByteArrayInputStream(baos.toByteArray());
+							return JavaValue.valueOf(input);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						return null;
+					});
+				for(ClassNode classNode : classNodes())
+					for(MethodNode m : classNode.methods) {
+						InstructionModifier modifier = new InstructionModifier();
+						for(AbstractInsnNode ain : TransformerHelper.instructionIterator(m))
+							if (ain instanceof MethodInsnNode) {
+								MethodInsnNode insn = (MethodInsnNode)ain;
+								if (insn.owner.equals(atOwner.name) && insn.name.equals(atDecr.name)
+									&& insn.desc.equals(atDecr.desc)) {
+									AbstractInsnNode ldc = ain.getPrevious();
+									if (!(ldc instanceof LdcInsnNode) || !(((LdcInsnNode)ldc).cst instanceof String))
+										continue;
+									Context context = new Context(provider);
+									context.push(classNode.name, m.name,
+											getDeobfuscator().getConstantPool(classNode).getSize());
+									context.dictionary = classpath;
+									((LdcInsnNode)ldc).cst = MethodExecutor.execute(atOwner, atDecr,
+											Arrays.asList(JavaValue.valueOf(((LdcInsnNode) ldc).cst)), null, context);
+									modifier.remove(ain);
+									antiTamper.getAndIncrement();
+								}
+							}
+						modifier.apply(m);
+					}
+			}
+			classes.remove(atOwner.name);
+			classpath.remove(atOwner.name);
+		}
 		//Bad Annotations
 		for(ClassNode classNode : classNodes())
 			for(MethodNode method : classNode.methods)
@@ -187,7 +275,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 											}else if(last.getOpcode() == Opcodes.PUTFIELD)
 											{
 												if(list.size() != 3)
-													throw new RuntimeException("Unexpected Ejector pattern (PS)");
+													throw new RuntimeException("Unexpected Ejector pattern (PF)");
 												AbstractInsnNode prev = list.get(1);
 												method.instructions.remove(ain.getPrevious());//number
 												method.instructions.insertBefore(ain, prev.clone(null));
@@ -1050,6 +1138,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 			classes.remove(e.name);
 			classpath.remove(e.name);
 		});
+		System.out.println("[Special] [RadonTransformerV2] Decrypted " + antiTamper + " strings with anti-tamper");
 		System.out.println("[Special] [RadonTransformerV2] Unejected " + eject + " methods");
 		System.out.println("[Special] [RadonTransformerV2] Removed " + antiDebug + " anti-debug injections");
 		System.out.println("[Special] [RadonTransformerV2] Removed " + tryCatch + " try-catch blocks");
@@ -1460,4 +1549,22 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
         }
         throw new RuntimeException();
     }
+    
+	private static ByteArrayOutputStream cloneInputStream(InputStream input)
+	{
+		try
+		{
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int len;
+			while((len = input.read(buffer)) > -1)
+				baos.write(buffer, 0, len);
+			baos.flush();
+			return baos;
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+			return null;
+		}
+	}
 }

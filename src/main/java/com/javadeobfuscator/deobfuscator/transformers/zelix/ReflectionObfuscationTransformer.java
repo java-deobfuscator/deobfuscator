@@ -16,28 +16,33 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.zelix;
 
-import com.javadeobfuscator.deobfuscator.analyzer.AnalyzerResult;
-import com.javadeobfuscator.deobfuscator.analyzer.MethodAnalyzer;
-import com.javadeobfuscator.deobfuscator.analyzer.frame.*;
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.*;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaFieldHandle;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaHandle;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
+import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
+import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ReflectionObfuscationTransformer extends Transformer<TransformerConfig> {
     static Map<String, String> PRIMITIVES = new HashMap<>();
@@ -59,12 +64,13 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Finding reflection obfuscation");
         int count = findReflectionObfuscation();
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Found " + count + " reflection obfuscation instructions");
+        int amount = 0;
         if (count > 0) {
-            int amount = inlineReflection(count);
+            amount = inlineReflection(count);
             System.out.println("[Zelix] [ReflectionObfuscationTransformer] Inlined " + amount + " reflection obfuscation instructions");
         }
         System.out.println("[Zelix] [ReflectionObfuscationTransformer] Done");
-        return true;
+        return amount > 0;
     }
 
     public int inlineReflection(int expected) throws Throwable {
@@ -129,494 +135,763 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
         });
 
         Set<ClassNode> initted = new HashSet<>();
-        classNodes().forEach(classNode -> {
-            classNode.methods.forEach(methodNode -> {
-                /*
-                NOTE: We can't remove reflection try/catch blocks until we remove the reflection, otherwise we may throw the wrong exceptions
-                For example:
-
-                try {
-                    new File("something").delete();
-                } catch (IOException e) {
-                }
-
-                is turned into
-
-                try {
-                    try {
-                        ReflectionObfuscation(5464891915L).invoke(new File("something"));
-                    } catch (InvocationTargetException e) {
-                        throw e.getTargetException();
-                    }
-                } catch (IOException e) {
-                }
-                 */
-                boolean found = false;
-                { //fixme for loop
-                    AbstractInsnNode current = methodNode.instructions.getFirst();
-                    int i = 0;
-                    while (i < methodNode.instructions.size()) {
-                        current = methodNode.instructions.get(i++);
-                        if (current == null) {
-                            continue;
+        Set<ClassNode> reflectionClasses = new HashSet<>();
+        Map<ClassNode, Set<MethodNode>> indyReflectionMethods = new HashMap<>();
+        Map<ClassNode, Set<MethodNode>> argsReflectionMethods = new HashMap<>();
+        Map<ClassNode, Set<MethodNode>> initReflectionMethod = new HashMap<>();
+        Map<ClassNode, MethodNode> fieldReflectionMethod = new HashMap<>();
+        Map<ClassNode, MethodNode> methodReflectionMethod = new HashMap<>();
+        for(ClassNode classNode : classNodes())
+        	for(MethodNode methodNode : classNode.methods)
+        		for(AbstractInsnNode current : methodNode.instructions.toArray())
+        		{
+        			if (current instanceof MethodInsnNode
+                    	&& !methodNode.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/invoke/MutableCallSite;"
+                    		+ "Ljava/lang/String;Ljava/lang/invoke/MethodType;J)Ljava/lang/invoke/MethodHandle;")
+                    	&& !methodNode.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/invoke/MutableCallSite;"
+                    		+ "Ljava/lang/String;Ljava/lang/invoke/MethodType;JJ)Ljava/lang/invoke/MethodHandle;")) {
+                        MethodInsnNode methodInsnNode = (MethodInsnNode) current;
+                        if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;")) {
+                            long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
+                            String strCl = methodInsnNode.owner;
+                            ClassNode innerClassNode = classpath.get(strCl);
+                            if (initted.add(innerClassNode)) {
+                            	try 
+    							{
+                                	List<MethodNode> init = new ArrayList<>();
+                                	MethodNode decryptorNode = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isInitMethod(innerClassNode, mn)).findFirst().orElse(null);
+                                	FieldInsnNode fieldInsn = null;
+                                	List<AbstractInsnNode> removed = new ArrayList<>();
+                                	if(decryptorNode != null)
+                                	{
+                                    	init.add(decryptorNode);
+                                    	fieldInsn = (FieldInsnNode)getObjectList(decryptorNode);
+                                	}else
+                                    {
+                                    	MethodNode clinit = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                    	for(AbstractInsnNode ain : clinit.instructions.toArray())
+                                    	{
+                                    		if(Utils.isInteger(ain) && ain.getNext() != null
+                                    			&& (ain.getNext().getOpcode() == Opcodes.NEWARRAY || 
+                                    			(ain.getNext().getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)ain.getNext()).desc.equals("java/lang/Object")))
+                                    			&& ain.getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)ain.getNext().getNext()).owner.equals(innerClassNode.name)
+                                        		&& ain.getNext().getNext().getNext() != null
+                                        		&& Utils.isInteger(ain.getNext().getNext().getNext()) 
+                                        		&& Utils.getIntValue(ain.getNext().getNext().getNext()) == Utils.getIntValue(ain)
+                                        		&& ain.getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ANEWARRAY 
+                                        		&& ((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc.equals("java/lang/String")
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext().getOpcode() == Opcodes.PUTSTATIC 
+                                        		&& ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).owner.equals(innerClassNode.name))
+                                    		{
+                                    			((TypeInsnNode)ain.getNext()).desc = "java/lang/String";
+                                    			((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc = "java/lang/Object";
+                                    			((FieldInsnNode)ain.getNext().getNext()).desc = "[Ljava/lang/String;";
+                                    			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).desc = "[Ljava/lang/Object;";
+                                       			String temp = ((FieldInsnNode)ain.getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext()).name = ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name = temp;
+                                    			fieldInsn = (FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext();
+                                               	while(ain.getNext() != fieldInsn)
+                                               	{
+                                               		removed.add(ain.getNext());
+                                            		clinit.instructions.remove(ain.getNext());
+                                               	}
+                                               	removed.add(fieldInsn);
+                                               	clinit.instructions.remove(fieldInsn);
+                                               	removed.add(0, ain);
+                                               	clinit.instructions.remove(ain);
+                                    			break;
+                                    		}
+                                    	}
+                                    }
+                                	FieldInsnNode fieldInsn1 = fieldInsn;
+                                    Object[] otherInit = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isOtherInitMethod(innerClassNode, mn, fieldInsn1)).toArray();
+                                    if(decryptorNode == null)
+                                    {
+                                    	MethodNode firstinit = (MethodNode)Arrays.stream(otherInit).filter(mn -> 
+                                    	Utils.isInteger(getFirstIndex((MethodNode)mn))
+                                    		&& Utils.getIntValue(getFirstIndex((MethodNode)mn)) == 0).findFirst().orElse(null);
+                                    	firstinit.instructions.remove(firstinit.instructions.getFirst());
+                                    	Collections.reverse(removed);
+                                    	boolean first = false;
+                                    	for(AbstractInsnNode ain : removed)
+                                    	{
+                                    		firstinit.instructions.insert(ain);
+                                    		if(!first)
+                                    		{
+                                    			firstinit.instructions.insert(new InsnNode(Opcodes.DUP));
+                                    			first = true;
+                                    		}
+                                    	}
+                                    }
+                                    for(Object o : otherInit)
+                                		init.add((MethodNode)o);
+                                    if(!innerClassNode.equals(classNode))
+                                    	reflectionClasses.add(innerClassNode);
+                                    else
+                                    {
+                                    	argsReflectionMethods.put(innerClassNode, new HashSet<>());
+                                    	initReflectionMethod.put(innerClassNode, new HashSet<>());
+                                    	for(MethodNode method : init)
+                                    		initReflectionMethod.get(innerClassNode).add(method);
+                                    }
+                                	Context context = new Context(provider);
+                                    context.dictionary = this.classpath;
+                                    for(MethodNode method1 : init)
+                                    	MethodExecutor.execute(innerClassNode, method1, Collections.emptyList(), null, context);
+                                }catch(Throwable t) 
+    							{
+                                    System.out.println("Error while fully initializing " + classNode.name);
+                                    t.printStackTrace(System.out);
+                                }
+                            }
+                            MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
+                            Context ctx = new Context(provider);
+                            ctx.dictionary = classpath;
+                            JavaMethod javaMethod = MethodExecutor.execute(innerClassNode, decrypterNode, Arrays.asList(new JavaLong(ldc)), null, ctx);
+                            if(!methodReflectionMethod.containsKey(innerClassNode))
+                            	methodReflectionMethod.put(innerClassNode, decrypterNode);
+                            MethodInsnNode methodInsn = null;
+                            if(current.getPrevious().getPrevious().getOpcode() == Opcodes.CHECKCAST)
+                            {
+                            	methodInsn = (MethodInsnNode)current.getPrevious().getPrevious().getPrevious();
+                            	methodNode.instructions.remove(current.getPrevious().getPrevious().getPrevious());
+                            }
+                            if(methodInsn == null)
+                            	methodInsn = (MethodInsnNode)current.getPrevious().getPrevious();
+                            methodNode.instructions.remove(current.getPrevious().getPrevious());
+                            if(argsReflectionMethods.containsKey(innerClassNode))
+                            {
+                            	MethodInsnNode finalMethodInsn = methodInsn;
+                            	MethodNode method = innerClassNode.methods.stream().filter(
+                            		m -> m.name.equals(finalMethodInsn.name) && m.desc.equals(finalMethodInsn.desc)).findFirst().orElse(null);
+                            	argsReflectionMethods.get(innerClassNode).add(method);
+                            }
+                            methodNode.instructions.remove(current.getPrevious());
+                            int opcode = -1;
+                            if(current.getNext().getNext().getOpcode() == Opcodes.ACONST_NULL)
+                            	opcode = Opcodes.INVOKESTATIC;
+                            else if((classpath.get(javaMethod.getOwner()).access & Opcodes.ACC_INTERFACE) != 0)
+                            	opcode = Opcodes.INVOKEINTERFACE;
+                            else
+                            	opcode = Opcodes.INVOKEVIRTUAL;
+                            LabelNode label = null;
+                            while(current.getNext() != null)
+                            {
+                            	if(current.getNext() instanceof LabelNode)
+                            	{
+                            		methodNode.instructions.remove(label = (LabelNode)current.getNext());
+                            		methodNode.instructions.remove(current.getNext());
+                            		break;
+                            	}
+                            	methodNode.instructions.remove(current.getNext());
+                            }
+                            while(!(current.getNext() instanceof LabelNode))
+                            	methodNode.instructions.remove(current.getNext());
+                            LabelNode nextLabel = (LabelNode)current.getNext();
+                            methodNode.instructions.set(current, new MethodInsnNode(opcode, javaMethod.getOwner(), javaMethod.getName(), javaMethod.getDesc(), opcode == Opcodes.INVOKEINTERFACE));
+                            //Remove exception thing
+                            List<TryCatchBlockNode> beginTryCatch = new ArrayList<>();
+                            List<TryCatchBlockNode> additionalRemove = new ArrayList<>();
+                            Iterator<TryCatchBlockNode> itr = methodNode.tryCatchBlocks.iterator();
+                            while(itr.hasNext())
+                            {
+                            	TryCatchBlockNode trycatch = itr.next();
+                            	if(trycatch.start.equals(label) && trycatch.end.equals(nextLabel))
+                            	{
+                            		LabelNode begin = trycatch.handler;
+        							while(begin.getNext() != null && !(begin.getNext() instanceof LabelNode))
+        								methodNode.instructions.remove(begin.getNext());
+        							//Find all trycatch nodes that begin with handler
+        							for(TryCatchBlockNode tc : methodNode.tryCatchBlocks)
+        								if(tc != trycatch && tc.end == begin)
+        								{
+        									beginTryCatch.add(tc);
+        									tc.end = (LabelNode)begin.getNext();
+        								}
+        							//Find all trycatch nodes that try-catch exception block
+        							for(TryCatchBlockNode tc : methodNode.tryCatchBlocks)
+        								if(tc.start == begin && tc.end == begin.getNext())
+        									additionalRemove.add(tc);
+        							//Find all trycatch nodes that is a continuation of beginTryCatch
+        							for(TryCatchBlockNode tc : methodNode.tryCatchBlocks)
+        								if(tc.start == begin.getNext())
+        								{
+        									TryCatchBlockNode before = null;
+        									for(TryCatchBlockNode tc2 : beginTryCatch)
+        										if(tc2.end == begin.getNext() && tc2.type.equals(tc.type))
+        										{
+        											before = tc2;
+        											break;
+        										}
+        									if(before != null)
+        									{
+        										additionalRemove.add(before);
+        										tc.start = before.start;
+        									}
+        								}
+        							methodNode.instructions.remove(begin);
+        							itr.remove();
+        							break;
+                            	}
+                            }
+                            for(TryCatchBlockNode trycatch : additionalRemove)
+                            	methodNode.tryCatchBlocks.remove(trycatch);
+                            count.incrementAndGet();
+                            int x = (int) ((count.get() * 1.0d / expected) * 100);
+                            if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                System.out.println("[Zelix] [ReflectionObfucationTransformer] Done " + x + "%");
+                                alerted[x - 1] = true;
+                            }
+                        } else if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Field;")) {
+                            long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
+                            String strCl = methodInsnNode.owner;
+                            ClassNode innerClassNode = classpath.get(strCl);
+                            if (initted.add(innerClassNode)) {
+                            	try 
+    							{
+                                	List<MethodNode> init = new ArrayList<>();
+                                	MethodNode decryptorNode = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isInitMethod(innerClassNode, mn)).findFirst().orElse(null);
+                                	FieldInsnNode fieldInsn = null;
+                                	List<AbstractInsnNode> removed = new ArrayList<>();
+                                	if(decryptorNode != null)
+                                	{
+                                    	init.add(decryptorNode);
+                                    	fieldInsn = (FieldInsnNode)getObjectList(decryptorNode);
+                                	}else
+                                    {
+                                    	MethodNode clinit = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                    	for(AbstractInsnNode ain : clinit.instructions.toArray())
+                                    	{
+                                    		if(Utils.isInteger(ain) && ain.getNext() != null
+                                    			&& (ain.getNext().getOpcode() == Opcodes.NEWARRAY || 
+                                    			(ain.getNext().getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)ain.getNext()).desc.equals("java/lang/Object")))
+                                    			&& ain.getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)ain.getNext().getNext()).owner.equals(innerClassNode.name)
+                                        		&& ain.getNext().getNext().getNext() != null
+                                        		&& Utils.isInteger(ain.getNext().getNext().getNext()) 
+                                        		&& Utils.getIntValue(ain.getNext().getNext().getNext()) == Utils.getIntValue(ain)
+                                        		&& ain.getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ANEWARRAY 
+                                        		&& ((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc.equals("java/lang/String")
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext().getOpcode() == Opcodes.PUTSTATIC 
+                                        		&& ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).owner.equals(innerClassNode.name))
+                                    		{
+                                    			((TypeInsnNode)ain.getNext()).desc = "java/lang/String";
+                                    			((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc = "java/lang/Object";
+                                    			((FieldInsnNode)ain.getNext().getNext()).desc = "[Ljava/lang/String;";
+                                    			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).desc = "[Ljava/lang/Object;";
+                                       			String temp = ((FieldInsnNode)ain.getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext()).name = ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name = temp;
+                                    			fieldInsn = (FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext();
+                                               	while(ain.getNext() != fieldInsn)
+                                               	{
+                                               		removed.add(ain.getNext());
+                                            		clinit.instructions.remove(ain.getNext());
+                                               	}
+                                               	removed.add(fieldInsn);
+                                               	clinit.instructions.remove(fieldInsn);
+                                               	removed.add(0, ain);
+                                               	clinit.instructions.remove(ain);
+                                    			break;
+                                    		}
+                                    	}
+                                    }
+                                	FieldInsnNode fieldInsn1 = fieldInsn;
+                                    Object[] otherInit = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isOtherInitMethod(innerClassNode, mn, fieldInsn1)).toArray();
+                                    if(decryptorNode == null)
+                                    {
+                                    	MethodNode firstinit = (MethodNode)Arrays.stream(otherInit).filter(mn -> 
+                                    	Utils.isInteger(getFirstIndex((MethodNode)mn))
+                                    		&& Utils.getIntValue(getFirstIndex((MethodNode)mn)) == 0).findFirst().orElse(null);
+                                    	firstinit.instructions.remove(firstinit.instructions.getFirst());
+                                    	Collections.reverse(removed);
+                                    	boolean first = false;
+                                    	for(AbstractInsnNode ain : removed)
+                                    	{
+                                    		firstinit.instructions.insert(ain);
+                                    		if(!first)
+                                    		{
+                                    			firstinit.instructions.insert(new InsnNode(Opcodes.DUP));
+                                    			first = true;
+                                    		}
+                                    	}
+                                    }
+                                    for(Object o : otherInit)
+                                		init.add((MethodNode)o);
+                                    if(!innerClassNode.equals(classNode))
+                                    	reflectionClasses.add(innerClassNode);
+                                    else
+                                    {
+                                    	argsReflectionMethods.put(innerClassNode, new HashSet<>());
+                                    	initReflectionMethod.put(innerClassNode, new HashSet<>());
+                                    	for(MethodNode method : init)
+                                    		initReflectionMethod.get(innerClassNode).add(method);
+                                    }
+                                	Context context = new Context(provider);
+                                    context.dictionary = this.classpath;
+                                    for(MethodNode method1 : init)
+                                    	MethodExecutor.execute(innerClassNode, method1, Collections.emptyList(), null, context);
+                                }catch(Throwable t) 
+    							{
+                                    System.out.println("Error while fully initializing " + classNode.name);
+                                    t.printStackTrace(System.out);
+                                }
+                            }
+                            MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
+                            Context ctx = new Context(provider);
+                            ctx.dictionary = classpath;
+                            JavaField javaField = MethodExecutor.execute(innerClassNode, decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, ctx);
+                            if(!fieldReflectionMethod.containsKey(innerClassNode))
+                            	fieldReflectionMethod.put(innerClassNode, decrypterNode);
+                            methodNode.instructions.remove(current.getPrevious());
+                            if(current.getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL)
+                            {
+                            	//Getstatic/field
+                            	int opcode = -1;
+                            	if(current.getNext().getOpcode() == Opcodes.SWAP)
+                            		opcode = Opcodes.GETFIELD;
+                            	else
+                            		opcode = Opcodes.GETSTATIC;
+                            	if(current.getNext().getNext().getNext() != null
+                            		&& current.getNext().getNext().getNext().getOpcode() == Opcodes.CHECKCAST)
+                            		methodNode.instructions.remove(current.getNext().getNext().getNext());
+                            	methodNode.instructions.remove(current.getNext().getNext());
+                            	methodNode.instructions.remove(current.getNext());
+                            	methodNode.instructions.set(current, new FieldInsnNode(
+                            		opcode, javaField.getClassName(), javaField.getName(), javaField.getDesc()));
+                            }else
+                            {
+                            	//Putstatic/field
+                            	int opcode = -1;
+                            	if(current.getNext().getOpcode() == Opcodes.ACONST_NULL)
+                            		opcode = Opcodes.PUTSTATIC;
+                            	else
+                            		opcode = Opcodes.PUTFIELD;
+                            	if(opcode == Opcodes.PUTSTATIC)
+                            		methodNode.instructions.remove(current.getNext());
+                            	else if(current.getNext().getOpcode() == Opcodes.SWAP)
+                            	{
+                            		//Long/Double
+                            		methodNode.instructions.remove(current.getNext());
+                            		methodNode.instructions.remove(current.getPrevious().getPrevious());
+                            		methodNode.instructions.remove(current.getPrevious());
+                            	}
+                            	methodNode.instructions.remove(current.getNext().getNext().getNext());
+                        		methodNode.instructions.remove(current.getNext().getNext());
+                        		methodNode.instructions.remove(current.getNext());
+                            	methodNode.instructions.set(current, new FieldInsnNode(
+                            		opcode, javaField.getClassName(), javaField.getName(), javaField.getDesc()));
+                            }
+                            count.incrementAndGet();
+                            int x = (int) ((count.get() * 1.0d / expected) * 100);
+                            if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                System.out.println("[Zelix] [ReflectionObfucationTransformer] Done " + x + "%");
+                                alerted[x - 1] = true;
+                            }
                         }
-                        if (current instanceof MethodInsnNode) {
-
-                            MethodInsnNode methodInsnNode = (MethodInsnNode) current;
-                            if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;")) {
-                                long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
-                                String strCl = methodInsnNode.owner;
-                                ClassNode innerClassNode = classpath.get(strCl);
-                                if (initted.add(innerClassNode)) {
-                                    try {
-                                        MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                                        Context context = new Context(provider);
-                                        context.dictionary = this.classpath;
-                                        MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Collections.emptyList(), null, context);
-                                    } catch (Throwable t) {
-                                        System.out.println("Error while fully initializing  " + strCl);
-                                        t.printStackTrace(System.out);
+                    }else if (current instanceof InvokeDynamicInsnNode) {
+                    	InvokeDynamicInsnNode invokeDynamicInsnNode = (InvokeDynamicInsnNode) current;
+                    	if (invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;")) {
+                    		long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
+                            String strCl = invokeDynamicInsnNode.bsm.getOwner();
+                            ClassNode innerClassNode = classpath.get(strCl);
+                            if (initted.add(innerClassNode)) {
+                            	try 
+    							{
+                                	List<MethodNode> init = new ArrayList<>();
+                                	MethodNode decryptorNode = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isInitMethod(innerClassNode, mn)).findFirst().orElse(null);
+                                	FieldInsnNode fieldInsn = null;
+                                	List<AbstractInsnNode> removed = new ArrayList<>();
+                                	if(decryptorNode != null)
+                                	{
+                                    	init.add(decryptorNode);
+                                    	fieldInsn = (FieldInsnNode)getObjectList(decryptorNode);
+                                	}else
+                                    {
+                                    	MethodNode clinit = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
+                                    	for(AbstractInsnNode ain : clinit.instructions.toArray())
+                                    	{
+                                    		if(Utils.isInteger(ain) && ain.getNext() != null
+                                    			&& (ain.getNext().getOpcode() == Opcodes.NEWARRAY || 
+                                    			(ain.getNext().getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)ain.getNext()).desc.equals("java/lang/Object")))
+                                    			&& ain.getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)ain.getNext().getNext()).owner.equals(innerClassNode.name)
+                                        		&& ain.getNext().getNext().getNext() != null
+                                        		&& Utils.isInteger(ain.getNext().getNext().getNext()) 
+                                        		&& Utils.getIntValue(ain.getNext().getNext().getNext()) == Utils.getIntValue(ain)
+                                        		&& ain.getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ANEWARRAY 
+                                        		&& ((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc.equals("java/lang/String")
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext() != null
+                                        		&& ain.getNext().getNext().getNext().getNext().getNext().getOpcode() == Opcodes.PUTSTATIC 
+                                        		&& ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).owner.equals(innerClassNode.name))
+                                    		{
+                                    			((TypeInsnNode)ain.getNext()).desc = "java/lang/String";
+                                    			((TypeInsnNode)ain.getNext().getNext().getNext().getNext()).desc = "java/lang/Object";
+                                    			((FieldInsnNode)ain.getNext().getNext()).desc = "[Ljava/lang/String;";
+                                    			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).desc = "[Ljava/lang/Object;";
+                                       			String temp = ((FieldInsnNode)ain.getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext()).name = ((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name;
+                                       			((FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext()).name = temp;
+                                    			fieldInsn = (FieldInsnNode)ain.getNext().getNext().getNext().getNext().getNext();
+                                               	while(ain.getNext() != fieldInsn)
+                                               	{
+                                               		removed.add(ain.getNext());
+                                            		clinit.instructions.remove(ain.getNext());
+                                               	}
+                                               	removed.add(fieldInsn);
+                                               	clinit.instructions.remove(fieldInsn);
+                                               	removed.add(0, ain);
+                                               	clinit.instructions.remove(ain);
+                                    			break;
+                                    		}
+                                    	}
                                     }
-                                }
-
-                                MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
-                                Context ctx = new Context(provider);
-                                ctx.dictionary = classpath;
-                                JavaMethod javaMethod = MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode, Arrays.asList(new JavaLong(ldc)), null, ctx);
-
-                                InsnList replacement = new InsnList();
-                                String str = javaMethod.getDeclaringClass().getName().replace('.', '/');
-
-                                Type t = Type.getObjectType(str);
-                                replacement.add(new LdcInsnNode(t));
-                                replacement.add(new LdcInsnNode(javaMethod.getName()));
-                                replacement.add(new LdcInsnNode(javaMethod.getParameterTypes().length));
-                                replacement.add(new TypeInsnNode(Opcodes.ANEWARRAY, "java/lang/Class"));
-                                for (int x = 0; x < javaMethod.getParameterTypes().length; x++) {
-                                    JavaClass param = javaMethod.getParameterTypes()[x];
-                                    replacement.add(new InsnNode(Opcodes.DUP));
-                                    replacement.add(new LdcInsnNode(x));
-                                    if (param.isPrimitive()) {
-                                        replacement.add(new FieldInsnNode(Opcodes.GETSTATIC, PRIMITIVES.get(param.getName()), "TYPE", "Ljava/lang/Class;"));
-                                    } else {
-                                        String pp = param.getName().replace('.', '/');
-                                        Type t1 = Type.getObjectType(pp);
-                                        replacement.add(new LdcInsnNode(t1));
+                                	FieldInsnNode fieldInsn1 = fieldInsn;
+                                    Object[] otherInit = innerClassNode.methods.stream().filter(mn -> mn.desc.equals("()V") && isOtherInitMethod(innerClassNode, mn, fieldInsn1)).toArray();
+                                    if(decryptorNode == null)
+                                    {
+                                    	MethodNode firstinit = (MethodNode)Arrays.stream(otherInit).filter(mn -> 
+                                    	Utils.isInteger(getFirstIndex((MethodNode)mn))
+                                    		&& Utils.getIntValue(getFirstIndex((MethodNode)mn)) == 0).findFirst().orElse(null);
+                                    	firstinit.instructions.remove(firstinit.instructions.getFirst());
+                                    	Collections.reverse(removed);
+                                    	boolean first = false;
+                                    	for(AbstractInsnNode ain : removed)
+                                    	{
+                                    		firstinit.instructions.insert(ain);
+                                    		if(!first)
+                                    		{
+                                    			firstinit.instructions.insert(new InsnNode(Opcodes.DUP));
+                                    			first = true;
+                                    		}
+                                    	}
                                     }
-                                    replacement.add(new InsnNode(Opcodes.AASTORE));
+                                    for(Object o : otherInit)
+                                		init.add((MethodNode)o);
+                                    if(!innerClassNode.equals(classNode))
+                                    	reflectionClasses.add(innerClassNode);
+                                    else
+                                    {
+                                    	indyReflectionMethods.put(innerClassNode, new HashSet<>());
+                                    	initReflectionMethod.put(innerClassNode, new HashSet<>());
+                                    	for(MethodNode method : init)
+                                    		initReflectionMethod.get(innerClassNode).add(method);
+                                    }
+                                	Context context = new Context(provider);
+                                    context.dictionary = this.classpath;
+                                    for(MethodNode method1 : init)
+                                    	MethodExecutor.execute(innerClassNode, method1, Collections.emptyList(), null, context);
+                                }catch(Throwable t) 
+    							{
+                                    System.out.println("Error while fully initializing " + classNode.name);
+                                    t.printStackTrace(System.out);
                                 }
-                                replacement.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getDeclaredMethod", "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", false));
-                                methodNode.instructions.insert(current.getPrevious().getPrevious(), replacement);
-                                methodNode.instructions.remove(current.getPrevious());
-                                methodNode.instructions.remove(current);
-                                count.incrementAndGet();
-                                found = true;
-                                int x = (int) ((count.get() * 1.0d / expected) * 100);
-                                if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
-                                    System.out.println("[Zelix] [ReflectionObfucationTransformer] Done " + x + "%");
-                                    alerted[x - 1] = true;
+                            }
+                            MethodNode indyNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(invokeDynamicInsnNode.bsm.getName()) 
+                            	&& mn.desc.equals(invokeDynamicInsnNode.bsm.getDesc())).findFirst().orElse(null);
+                            MethodNode indyNode2 = null;
+                            for(AbstractInsnNode ain : indyNode.instructions.toArray())
+                            	if(ain.getOpcode() == Opcodes.LDC && ((LdcInsnNode)ain).cst instanceof Handle)
+                            	{
+                            		Handle handle = (Handle)((LdcInsnNode)ain).cst;
+                            		indyNode2 = innerClassNode.methods.stream().filter(mn -> mn.name.equals(handle.getName()) 
+                            			&& mn.desc.equals(handle.getDesc())).findFirst().orElse(null);
+                            		break;
+                            	}
+                            MethodNode indyNode3 = null;
+                            for(AbstractInsnNode ain : indyNode2.instructions.toArray())
+                            	if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(innerClassNode.name))
+                            	{
+                            		indyNode3 = innerClassNode.methods.stream().filter(mn -> mn.name.equals(((MethodInsnNode)ain).name) 
+                            			&& mn.desc.equals(((MethodInsnNode)ain).desc)).findFirst().orElse(null);
+                            		break;
+                            	}
+                            List<JavaValue> args = new ArrayList<>();
+                            args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); //Lookup
+                            args.add(new JavaObject(null, "java/lang/invoke/MutableCallSite")); //CallSite
+                            args.add(JavaValue.valueOf(invokeDynamicInsnNode.name)); //dyn method name
+                            args.add(new JavaObject(invokeDynamicInsnNode.desc, "java/lang/invoke/MethodType")); //dyn method type
+                            args.add(new JavaLong(ldc));
+                            Context ctx = new Context(provider);
+                            ctx.dictionary = classpath;
+                            JavaHandle handle = MethodExecutor.execute(innerClassNode, indyNode3, args, null, ctx);
+                            if(indyReflectionMethods.containsKey(innerClassNode))
+                            {
+                            	indyReflectionMethods.get(innerClassNode).add(indyNode);
+                            	indyReflectionMethods.get(innerClassNode).add(indyNode2);
+                            	indyReflectionMethods.get(innerClassNode).add(indyNode3);
+                            	if(!fieldReflectionMethod.containsKey(innerClassNode))
+                            		for(AbstractInsnNode ain : indyNode3.instructions.toArray())
+                            			if(ain instanceof MethodInsnNode && ((MethodInsnNode)ain).desc.equals("(J)Ljava/lang/reflect/Field;"))
+                            			{
+                            				MethodNode refMethod = innerClassNode.methods.stream().filter(m -> m.name.equals(((MethodInsnNode)ain).name)
+                            					&& m.desc.equals(((MethodInsnNode)ain).desc)).findFirst().orElse(null);
+                            				fieldReflectionMethod.put(innerClassNode, refMethod);
+                            			}
+                            	if(!methodReflectionMethod.containsKey(innerClassNode))
+                            		for(AbstractInsnNode ain : indyNode3.instructions.toArray())
+                            			if(ain instanceof MethodInsnNode && ((MethodInsnNode)ain).desc.equals("(J)Ljava/lang/reflect/Method;"))
+                            			{
+                            				MethodNode refMethod = innerClassNode.methods.stream().filter(m -> m.name.equals(((MethodInsnNode)ain).name)
+                            					&& m.desc.equals(((MethodInsnNode)ain).desc)).findFirst().orElse(null);
+                            				methodReflectionMethod.put(innerClassNode, refMethod);
+                            			}
+                            }
+                            methodNode.instructions.remove(current.getPrevious());
+                            AbstractInsnNode replacement = null;
+                            if(handle instanceof JavaMethodHandle)
+                            {
+                            	JavaMethodHandle jmh = (JavaMethodHandle)handle;
+                                String clazz = jmh.clazz.replace('.', '/');
+                                switch (jmh.type) {
+                                    case "virtual":
+                                        replacement = new MethodInsnNode((classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0 ? 
+                                        	 Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL, clazz, jmh.name, jmh.desc,
+                                        	 (classpath.get(clazz).access & Opcodes.ACC_INTERFACE) != 0);
+                                        break;
+                                    case "static":
+                                        replacement = new MethodInsnNode(Opcodes.INVOKESTATIC, clazz, jmh.name, jmh.desc, false);
+                                        break;
+                                    case "special":
+                                        replacement = new MethodInsnNode(Opcodes.INVOKESPECIAL, clazz, jmh.name, jmh.desc, false);
+                                        break;
                                 }
-                            } else if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Field;")) {
-                                long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
-                                String strCl = methodInsnNode.owner;
-                                ClassNode innerClassNode = classpath.get(strCl);
-                                if (initted.add(innerClassNode)) {
-                                    MethodNode decrypterNode1 = innerClassNode.methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
-                                    MethodExecutor.execute(classpath.get(innerClassNode.name), decrypterNode1, Collections.singletonList(new JavaLong(ldc)), null, new Context(provider));
+                            }else
+                            {
+                            	JavaFieldHandle jfh = (JavaFieldHandle)handle;
+                                String clazz = jfh.clazz.replace('.', '/');
+                                switch (jfh.type) {
+                                    case "virtual":
+                                        replacement = new FieldInsnNode(jfh.setter ? 
+                                        	 Opcodes.PUTFIELD : Opcodes.GETFIELD, clazz, jfh.name, jfh.desc);
+                                        break;
+                                    case "static":
+                                        replacement = new FieldInsnNode(jfh.setter ? 
+                                        	Opcodes.PUTSTATIC : Opcodes.GETSTATIC, clazz, jfh.name, jfh.desc);
+                                        break;
                                 }
-                                MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
-                                Context ctx = new Context(provider);
-                                ctx.dictionary = classpath;
-                                JavaField javaField = MethodExecutor.execute(classpath.get(classNode.name), decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, ctx);
-                                InsnList replacement = new InsnList();
-                                Type t = Type.getObjectType(javaField.getDeclaringClass().getName().replace('.', '/'));
-                                replacement.add(new LdcInsnNode(t));
-                                replacement.add(new LdcInsnNode(javaField.getName()));
-                                replacement.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getDeclaredField", "(Ljava/lang/String;)Ljava/lang/reflect/Field;", false));
-                                methodNode.instructions.insertBefore(current.getPrevious(), replacement);
-                                methodNode.instructions.remove(current.getPrevious());
-                                methodNode.instructions.remove(current);
-                                count.incrementAndGet();
-                                found = true;
-                                int x = (int) ((count.get() * 1.0d / expected) * 100);
-                                if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
-                                    System.out.println("[Zelix] [ReflectionObfucationTransformer] Done " + x + "%");
-                                    alerted[x - 1] = true;
-                                }
+                            }
+                            methodNode.instructions.set(current, replacement);
+                            count.incrementAndGet();
+                            int x = (int) ((count.get() * 1.0d / expected) * 100);
+                            if (x != 0 && x % 10 == 0 && !alerted[x - 1]) {
+                                System.out.println("[Zelix] [ReflectionObfucationTransformer] Done " + x + "%");
+                                alerted[x - 1] = true;
                             }
                         }
                     }
-                }
-
-                if (found && false) {
-                    int maxLocals = -1;
-
-                    boolean modified = false;
-                    outer:
-                    do {
-                        AnalyzerResult result = MethodAnalyzer.analyze(classes.get(classNode.name), methodNode);
-                        Map<AbstractInsnNode, List<Frame>> analysis = result.getFrames();
-                        Map<Frame, AbstractInsnNode> reverseMapping = new HashMap<>();
-                        analysis.entrySet().forEach(ent -> ent.getValue().forEach(frame -> reverseMapping.put(frame, ent.getKey())));
-                        modified = false;
-                        for (int i = 0; i < methodNode.instructions.size(); i++) {
-                            AbstractInsnNode node = methodNode.instructions.get(i);
-                            if (node instanceof MethodInsnNode) {
-                                MethodInsnNode cast = (MethodInsnNode) node;
-                                if (cast.owner.equals("java/lang/reflect/Method") && cast.name.equals("invoke")) {
-                                    List<Frame> frames = analysis.get(cast);
-                                    if (frames != null) {
-                                        Map<AbstractInsnNode, Frame> tmp = new HashMap<>();
-                                        for (Frame frame : frames) {
-                                            tmp.put(reverseMapping.get(frame), frame);
-                                        }
-                                        frames = new ArrayList<>(tmp.values());
-                                        if (frames.size() != 1) {
-                                            throw new IllegalArgumentException("Expected only one frame, but got " + frames.size());
-                                        }
-                                        MethodFrame methodFrame = (MethodFrame) frames.get(0);
-                                        if (methodFrame.getInstance() instanceof MethodFrame) {
-                                            MethodFrame instance = (MethodFrame) methodFrame.getInstance();
-                                            LdcFrame targetClazz = (LdcFrame) instance.getInstance();
-                                            LdcFrame targetMethod = (LdcFrame) instance.getArgs().get(0);
-                                            NewArrayFrame targetArgs = (NewArrayFrame) instance.getArgs().get(1);
-
-                                            String findClass = ((Type) targetClazz.getConstant()).getInternalName();
-                                            String findMethod = (String) targetMethod.getConstant();
-                                            String findDesc = frameToDesc(targetArgs);
-
-                                            Frame invokeInstance = methodFrame.getArgs().get(0);
-                                            MethodFrame invokeArgs = (MethodFrame) methodFrame.getArgs().get(1);
-                                            MethodInsnNode toArray = (MethodInsnNode) reverseMapping.get(invokeArgs);
-
-                                            InsnList store = new InsnList();
-                                            int index = (maxLocals == -1 ? result.getMaxLocals() : maxLocals);
-                                            maxLocals = index;
-                                            List<Type> types = Arrays.asList(Type.getArgumentTypes(toArray.desc));
-                                            Collections.reverse(types);
-                                            List<Integer> indices = new ArrayList<>();
-
-                                            AbstractInsnNode first = null;
-
-                                            for (Type type : types) {
-                                                int opcode, size;
-                                                switch (type.getSort()) {
-                                                    case Type.BOOLEAN:
-                                                        opcode = Opcodes.ISTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.CHAR:
-                                                        opcode = Opcodes.ISTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.BYTE:
-                                                        opcode = Opcodes.ISTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.SHORT:
-                                                        opcode = Opcodes.ISTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.INT:
-                                                        opcode = Opcodes.ISTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.FLOAT:
-                                                        opcode = Opcodes.FSTORE;
-                                                        size = 1;
-                                                        break;
-                                                    case Type.LONG:
-                                                        opcode = Opcodes.LSTORE;
-                                                        size = 2;
-                                                        break;
-                                                    case Type.DOUBLE:
-                                                        opcode = Opcodes.DSTORE;
-                                                        size = 2;
-                                                        break;
-                                                    case Type.OBJECT:
-                                                        opcode = Opcodes.ASTORE;
-                                                        size = 1;
-                                                        break;
-                                                    default:
-                                                        throw new IllegalArgumentException("Unknown type");
-                                                }
-                                                VarInsnNode vin = new VarInsnNode(opcode, index);
-                                                store.add(vin);
-                                                if (first == null) {
-                                                    first = vin;
-                                                }
-                                                indices.add(0, index);
-                                                index += size;
-                                            }
-                                            store.add(new InsnNode(Opcodes.ACONST_NULL));
-
-                                            if (toArray.getNext().getOpcode() == Opcodes.CHECKCAST) {
-                                                methodNode.instructions.remove(toArray.getNext());
-                                            }
-                                            methodNode.instructions.insert(toArray, store);
-                                            methodNode.instructions.remove(toArray);
-
-                                            MethodNode target = null;
-                                            ClassNode startingNode = classpath.get(findClass);
-                                            if (startingNode == null) {
-                                                throw new IllegalArgumentException(findClass);
-                                            }
-                                            ClassNode currentNode = startingNode;
-                                            LinkedList<ClassNode> candidates = new LinkedList<>();
-                                            candidates.add(currentNode);
-                                            loop:
-                                            while (!candidates.isEmpty()) {
-                                                currentNode = candidates.pop();
-                                                for (MethodNode possible : currentNode.methods) {
-                                                    if (possible.name.equals(findMethod) && possible.desc.startsWith(findDesc)) {
-                                                        target = possible;
-                                                        break loop;
-                                                    }
-                                                }
-                                                if (!currentNode.name.equals("java/lang/Object")) {
-                                                    ClassNode newCurrent = classpath.get(currentNode.superName);
-                                                    if (newCurrent == null) {
-                                                        throw new IllegalArgumentException(currentNode.name + " " + findMethod + findDesc);
-                                                    }
-                                                    candidates.add(newCurrent);
-                                                }
-                                                for (String intf : currentNode.interfaces) {
-                                                    ClassNode newCurrent = classpath.get(intf);
-                                                    if (newCurrent == null) {
-                                                        throw new IllegalArgumentException(intf + " " + findMethod + findDesc);
-                                                    }
-                                                    candidates.add(newCurrent);
-                                                }
-                                            }
-
-                                            if (target != null) {
-                                                InsnList replacement = new InsnList();
-                                                replacement.add(new InsnNode(Opcodes.POP));
-                                                if (!Modifier.isStatic(target.access)) {
-                                                    replacement.add(new InsnNode(Opcodes.SWAP));
-                                                } else {
-                                                    replacement.add(new InsnNode(Opcodes.POP));
-                                                }
-                                                replacement.add(new InsnNode(Opcodes.POP));
-                                                Collections.reverse(types);
-                                                int ind = 0;
-                                                for (Type type : types) {
-                                                    int opcode;
-                                                    switch (type.getSort()) {
-                                                        case Type.BOOLEAN:
-                                                            opcode = Opcodes.ILOAD;
-                                                            break;
-                                                        case Type.CHAR:
-                                                            opcode = Opcodes.ILOAD;
-                                                            break;
-                                                        case Type.BYTE:
-                                                            opcode = Opcodes.ILOAD;
-                                                            break;
-                                                        case Type.SHORT:
-                                                            opcode = Opcodes.ILOAD;
-                                                            break;
-                                                        case Type.INT:
-                                                            opcode = Opcodes.ILOAD;
-                                                            break;
-                                                        case Type.FLOAT:
-                                                            opcode = Opcodes.FLOAD;
-                                                            break;
-                                                        case Type.LONG:
-                                                            opcode = Opcodes.LLOAD;
-                                                            break;
-                                                        case Type.DOUBLE:
-                                                            opcode = Opcodes.DLOAD;
-                                                            break;
-                                                        case Type.OBJECT:
-                                                            opcode = Opcodes.ALOAD;
-                                                            break;
-                                                        default:
-                                                            throw new IllegalArgumentException("Unknown type");
-                                                    }
-                                                    replacement.add(new VarInsnNode(opcode, indices.get(ind++)));
-                                                }
-
-                                                MethodInsnNode methodinsnnode = new MethodInsnNode(Modifier.isStatic(target.access) ? Opcodes.INVOKESTATIC : Modifier.isInterface(target.access) ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL, findClass, target.name, target.desc, Modifier.isInterface(target.access));
-                                                replacement.add(methodinsnnode);
-                                                int returnType = Type.getReturnType(target.desc).getSort();
-                                                if (returnType == Type.VOID) {
-                                                    replacement.add(new InsnNode(Opcodes.ACONST_NULL));
-                                                } else if (returnType != Type.OBJECT && returnType != Type.ARRAY) {
-                                                    if (cast.getNext().getOpcode() == Opcodes.CHECKCAST) {
-                                                        methodNode.instructions.remove(cast.getNext());
-                                                    }
-                                                    if (cast.getNext().getOpcode() == Opcodes.INVOKEVIRTUAL) {
-                                                        methodNode.instructions.remove(cast.getNext());
-                                                    }
-                                                }
-
-                                                methodNode.instructions.insert(cast, replacement);
-                                                methodNode.instructions.remove(cast);
-
-                                                replacement = new InsnList();
-                                                replacement.add(new InsnNode(Opcodes.ACONST_NULL));
-
-                                                AbstractInsnNode ldcClass = reverseMapping.get(instance.getInstance());
-                                                AbstractInsnNode ldcName = reverseMapping.get(instance.getArgs().get(0));
-
-                                                methodNode.instructions.remove(ldcClass);
-                                                methodNode.instructions.remove(ldcName);
-
-                                                methodNode.instructions.insert(reverseMapping.get(instance), replacement);
-                                                methodNode.instructions.remove(reverseMapping.get(instance));
-
-                                                methodNode.instructions.remove(reverseMapping.get(targetArgs));
-                                                methodNode.instructions.remove(reverseMapping.get(targetArgs.getLength()));
-                                                targetArgs.getChildren().forEach(fr -> {
-                                                    if (fr instanceof ArrayStoreFrame) {
-                                                        ArrayStoreFrame asf = (ArrayStoreFrame) fr;
-                                                        methodNode.instructions.remove(reverseMapping.get(asf.getIndex()));
-                                                        methodNode.instructions.remove(reverseMapping.get(asf.getObject()));
-                                                        methodNode.instructions.remove(reverseMapping.get(fr));
-                                                    } else if (fr instanceof DupFrame) {
-                                                        methodNode.instructions.remove(reverseMapping.get(fr));
-                                                    } else if (fr != instance) {
-                                                        throw new IllegalArgumentException(fr.toString());
-                                                    }
-                                                });
-//
-//                                            List<AbstractInsnNode> toRemove = new ArrayList<>();
-//                                            int aconstnull = 0;
-//                                            AbstractInsnNode cur = methodinsnnode.getPrevious();
-//                                            if (methodinsnnode.getPrevious().getOpcode() == Opcodes.POP) {
-//                                                while (true) {
-//                                                    if (!(cur instanceof LabelNode)) {
-//                                                        toRemove.add(cur);
-//                                                    }
-//                                                    if (cur.getOpcode() == Opcodes.ACONST_NULL) {
-//                                                        aconstnull++;
-//                                                    }
-//                                                    if (aconstnull == 2) {
-//                                                        break;
-//                                                    }
-//                                                    cur = cur.getPrevious();
-//                                                }
-//                                            } else {
-//                                                VarInsnNode vin = (VarInsnNode) methodinsnnode.getPrevious();
-//                                                toRemove.add(vin);
-//                                                cur = vin.getPrevious();
-//                                                while (true) {
-//                                                    if (!(cur instanceof LabelNode)) {
-//                                                        toRemove.add(cur);
-//                                                    }
-//                                                    if (cur instanceof VarInsnNode) {
-//                                                        VarInsnNode vin1 = (VarInsnNode) cur;
-//                                                        if (vin1.var == vin.var) {
-//                                                            break;
-//                                                        }
-//                                                    }
-//                                                    cur = cur.getPrevious();
-//                                                }
-//                                            }
-//                                            toRemove.forEach(methodNode.instructions::remove);
-                                            } else {
-                                                System.out.println("Could not find " + findMethod + findDesc + " in " + findClass);
-                                            }
-                                            modified = true;
-                                            continue outer;
-                                        }
-                                    } else {
-                                        System.out.println("Null frame?");
-                                    }
-                                } else if (cast.owner.equals("java/lang/reflect/Field")) {
-
-                                }
-                            }
-                        }
-                    } while (modified);
-                    if (methodNode.tryCatchBlocks != null) {
-                        Iterator<TryCatchBlockNode> it = methodNode.tryCatchBlocks.iterator();
-                        while (it.hasNext()) {
-                            TryCatchBlockNode next = it.next();
-                            if (next.type != null && next.type.startsWith("java/lang/reflect")) {
-                                it.remove();
-                            }
-                        }
-                    }
-                }
-            });
-        });
-        classNodes().stream().filter(initted::contains).forEach(node -> {
-            node.fields.add(0, new FieldNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, "REFLECTION_OBFUSCATION_CLASS", "Z", null, true));
-        });
-
+        		}
+        //Remove all decryption class/methods
+        Set<ClassNode> remove = classNodes().stream().filter(classNode -> reflectionClasses.contains(classNode)).collect(Collectors.toSet());
+        classNodes().removeAll(remove);
+        for(Entry<ClassNode, Set<MethodNode>> entry : argsReflectionMethods.entrySet())
+        	for(MethodNode method : entry.getValue())
+        		entry.getKey().methods.remove(method);
+        for(Entry<ClassNode, Set<MethodNode>> entry : indyReflectionMethods.entrySet())
+        	for(MethodNode method : entry.getValue())
+        		entry.getKey().methods.remove(method);
+        for(Entry<ClassNode, Set<MethodNode>> entry : initReflectionMethod.entrySet())
+        {
+        	List<MethodNode> list = new ArrayList<>(entry.getValue());
+        	for(MethodNode method : list)
+        	{
+	        	int fieldCount = 0;
+	        	if(list.indexOf(method) == 0)
+		        	for(AbstractInsnNode ain : method.instructions.toArray())
+		        	{
+		        		if(ain.getOpcode() == Opcodes.PUTSTATIC)
+		        		{
+		        			FieldInsnNode fieldInsn = (FieldInsnNode)ain;
+		        			FieldNode field = entry.getKey().fields.stream().filter(f -> 
+		        			f.name.equals(fieldInsn.name) && f.desc.equals(fieldInsn.desc)).findFirst().orElse(null);
+		        			entry.getKey().fields.remove(field);
+		        		}
+		        		if(fieldCount >= 2)
+		        			break;
+		        	}
+	        	MethodNode clinit = entry.getKey().methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
+	        	if(clinit != null)
+		        	for(AbstractInsnNode ain : clinit.instructions.toArray())
+		        		if(ain.getOpcode() == Opcodes.INVOKESTATIC)
+		        		{
+		        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
+		        			if(methodInsn.desc.equals(method.desc) && methodInsn.name.equals(method.name))
+		        			{
+		        				clinit.instructions.remove(methodInsn);
+		        				break;
+		        			}
+		        		}
+	        	entry.getKey().methods.remove(method);
+        	}
+        }
+        for(Entry<ClassNode, MethodNode> entry : methodReflectionMethod.entrySet())
+        {
+        	List<MethodNode> reflectionReferences = new ArrayList<>();
+        	for(AbstractInsnNode ain : entry.getValue().instructions.toArray())
+        	{
+        		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
+        		{
+        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
+        			MethodNode method = entry.getKey().methods.stream().filter(
+        				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+        			if(!reflectionReferences.contains(method))
+        				reflectionReferences.add(method);
+        		}
+        		if(reflectionReferences.size() >= 4)
+        			break;
+        	}
+        	for(int i = 0; i < reflectionReferences.size(); i++)
+        	{
+        		MethodNode method = reflectionReferences.get(i);
+        		if(i == 2)
+        			for(AbstractInsnNode ain : method.instructions.toArray())
+                		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
+                		{
+                			MethodInsnNode methodInsn = (MethodInsnNode)ain;
+                			MethodNode method1 = entry.getKey().methods.stream().filter(
+                				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+                			if(method1 != null)
+                				entry.getKey().methods.remove(method1);
+                		}
+        		entry.getKey().methods.remove(method);
+        	}
+        	entry.getKey().methods.remove(entry.getValue());
+        }
+        for(Entry<ClassNode, MethodNode> entry : fieldReflectionMethod.entrySet())
+        {
+        	List<MethodNode> reflectionReferences = new ArrayList<>();
+        	for(AbstractInsnNode ain : entry.getValue().instructions.toArray())
+        	{
+        		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
+        		{
+        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
+        			MethodNode method = entry.getKey().methods.stream().filter(
+        				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+        			if(method != null && !reflectionReferences.contains(method))
+        				reflectionReferences.add(method);
+        		}
+        		if(reflectionReferences.size() >= 4)
+        			break;
+        	}
+        	for(MethodNode method : reflectionReferences)
+        		entry.getKey().methods.remove(method);
+        	entry.getKey().methods.remove(entry.getValue());
+        }
         return count.get();
     }
 
-    private String frameToDesc(NewArrayFrame frame) {
-        StringBuilder builder = new StringBuilder("(");
-        int index = 0;
-        for (Frame child : frame.getChildren()) {
-            if (child instanceof ArrayStoreFrame) {
-                ArrayStoreFrame arrayStore = (ArrayStoreFrame) child;
-                int nowIndex = (int) ((LdcFrame) arrayStore.getIndex()).getConstant();
-                if (nowIndex != index) {
-                    throw new IllegalArgumentException("Index mismatch");
-                }
+	public static boolean isInitMethod(ClassNode classNode, MethodNode method)
+	{
+    	List<AbstractInsnNode> instrs = new ArrayList<>();
+    	for(AbstractInsnNode ain : method.instructions.toArray())
+    	{
+    		if(ain.getOpcode() == -1)
+    			continue;
+    		instrs.add(ain);
+    		if(instrs.size() >= 7)
+    			break;
+    	}
+    	if(instrs.size() < 7)
+    		return false;
+    	int firstNum =  -1;
+    	if(Utils.isInteger(instrs.get(0)))
+    		firstNum = Utils.getIntValue(instrs.get(0));
+    	if(firstNum == -1)
+    		return false;
+    	if(instrs.get(1).getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)instrs.get(1)).desc.equals("java/lang/String")
+    		&& instrs.get(2).getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)instrs.get(2)).owner.equals(classNode.name)
+    		&& Utils.isInteger(instrs.get(3)) && Utils.getIntValue(instrs.get(3)) == firstNum
+    		&& instrs.get(4).getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)instrs.get(4)).desc.equals("java/lang/Object")
+    		&& instrs.get(5).getOpcode() == Opcodes.DUP
+    		&& instrs.get(6).getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)instrs.get(6)).owner.equals(classNode.name))
+    		return true;
+    	if(instrs.get(1).getOpcode() == Opcodes.NEWARRAY
+    		&& instrs.get(2).getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)instrs.get(2)).owner.equals(classNode.name)
+    		&& Utils.isInteger(instrs.get(3)) && Utils.getIntValue(instrs.get(3)) == firstNum
+    		&& instrs.get(4).getOpcode() == Opcodes.ANEWARRAY && ((TypeInsnNode)instrs.get(4)).desc.equals("java/lang/Object")
+    		&& instrs.get(5).getOpcode() == Opcodes.DUP
+    		&& instrs.get(6).getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode)instrs.get(6)).owner.equals(classNode.name))
+    		return true;
+    	return false;
+	}
+    
+    public static AbstractInsnNode getObjectList(MethodNode method)
+	{
+    	List<AbstractInsnNode> instrs = new ArrayList<>();
+    	for(AbstractInsnNode ain : method.instructions.toArray())
+    	{
+    		if(ain.getOpcode() == -1)
+    			continue;
+    		instrs.add(ain);
+    		if(instrs.size() >= 7)
+    			break;
+    	}
+    	return instrs.get(6);
+	}
+    
+    public static boolean isOtherInitMethod(ClassNode classNode, MethodNode method, FieldInsnNode fieldInsn)
+	{
+    	List<AbstractInsnNode> instrs = new ArrayList<>();
+    	for(AbstractInsnNode ain : method.instructions.toArray())
+    	{
+    		if(ain.getOpcode() == -1)
+    			continue;
+    		instrs.add(ain);
+    		if(instrs.size() >= 3)
+    			break;
+    	}
+    	if(instrs.size() < 3)
+    		return false;
+    	if(instrs.get(0).getOpcode() == Opcodes.GETSTATIC && ((FieldInsnNode)instrs.get(0)).desc.equals(fieldInsn.desc)
+    		 && ((FieldInsnNode)instrs.get(0)).name.equals(fieldInsn.name) 
+    		 && ((FieldInsnNode)instrs.get(0)).owner.equals(fieldInsn.owner)
+    		 && instrs.get(1).getOpcode() == Opcodes.DUP
+    		 && Utils.isInteger(instrs.get(2)))
+    		return true;
+    	return false;
+	}
 
-                Frame value = arrayStore.getObject();
-                if (value instanceof LdcFrame) {
-                    builder.append(((Type) ((LdcFrame) value).getConstant()).getDescriptor());
-                } else if (value instanceof FieldFrame) {
-                    FieldFrame fieldFrame = (FieldFrame) value;
-                    String desc = null;
-                    switch (fieldFrame.getOwner()) {
-                        case "java/lang/Integer":
-                            desc = "I";
-                            break;
-                        case "java/lang/Byte":
-                            desc = "B";
-                            break;
-                        case "java/lang/Short":
-                            desc = "S";
-                            break;
-                        case "java/lang/Float":
-                            desc = "F";
-                            break;
-                        case "java/lang/Boolean":
-                            desc = "Z";
-                            break;
-                        case "java/lang/Character":
-                            desc = "C";
-                            break;
-                        case "java/lang/Double":
-                            desc = "D";
-                            break;
-                        case "java/lang/Long":
-                            desc = "J";
-                            break;
-                        default:
-                            throw new IllegalStateException(fieldFrame.getOwner());
-                    }
-                    builder.append(desc);
-                } else {
-                    throw new IllegalArgumentException("Unexpected frame " + value);
-                }
-
-                index++;
-            }
-        }
-
-        builder.append(")");
-        return builder.toString();
-    }
-
-    public int findReflectionObfuscation() throws Throwable {
+    public static AbstractInsnNode getFirstIndex(MethodNode method)
+	{
+    	List<AbstractInsnNode> instrs = new ArrayList<>();
+    	for(AbstractInsnNode ain : method.instructions.toArray())
+    	{
+    		if(ain.getOpcode() == -1)
+    			continue;
+    		instrs.add(ain);
+    		if(instrs.size() >= 3)
+    			break;
+    	}
+    	return instrs.get(2);
+	}
+    
+	private int findReflectionObfuscation() throws Throwable {
         AtomicInteger count = new AtomicInteger(0);
-        classNodes().forEach(classNode -> {
+        classNodes().stream().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     AbstractInsnNode current = methodNode.instructions.get(i);
-                    if (current instanceof MethodInsnNode) {
+                    if (current instanceof MethodInsnNode 
+                    	&& !methodNode.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/invoke/MutableCallSite;"
+                    		+ "Ljava/lang/String;Ljava/lang/invoke/MethodType;J)Ljava/lang/invoke/MethodHandle;")
+                    	&& !methodNode.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/invoke/MutableCallSite;"
+                    		+ "Ljava/lang/String;Ljava/lang/invoke/MethodType;JJ)Ljava/lang/invoke/MethodHandle;")) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) current;
                         if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;") || methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Field;")) {
                             count.incrementAndGet();
                         }
+                    }else if (current instanceof InvokeDynamicInsnNode) {
+                    	InvokeDynamicInsnNode invokeDynamicInsnNode = (InvokeDynamicInsnNode) current;
+                    	if (invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;")) {
+                    		count.incrementAndGet();
+                    	}
                     }
                 }
             });

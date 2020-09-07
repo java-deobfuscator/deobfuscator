@@ -1111,7 +1111,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
         		}
         System.out.println("[Allatori] [FlowObfuscationTransformer] Fixed " + fixed + " instructions");
         System.out.println("[Allatori] [FlowObfuscationTransformer] Done");
-		return true;
+		return fixed.get() > 0;
     }
     
     private boolean hasJump(AbstractInsnNode ain, MethodNode method)

@@ -51,10 +51,11 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
         System.out.println("[Stringer] [InvokedynamicTransformer] Finding invokedynamic instructions");
         int amount = findInvokeDynamic();
         System.out.println("[Stringer] [InvokedynamicTransformer] Found " + amount + " invokedynamic instructions");
+        int inlined = 0;
         if (amount > 0) {
             System.out.println("[Stringer] [InvokedynamicTransformer] Inlining invokedynamic");
             long start = System.currentTimeMillis();
-            int inlined = inlineInvokeDynamic(amount);
+            inlined = inlineInvokeDynamic(amount);
             long end = System.currentTimeMillis();
             System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + inlined + " invokedynamic instructions, took " + TimeUnit.MILLISECONDS.toSeconds(end - start) + "s");
             System.out.println("[Stringer] [InvokedynamicTransformer] Cleaning up bootstrap methods");
@@ -62,7 +63,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig> {
             System.out.println("[Stringer] [InvokedynamicTransformer] Removed " + cleanedup + " bootstrap methods");
         }
         System.out.println("[Stringer] [InvokedynamicTransformer] Done");
-        return true;
+        return inlined > 0;
     }
 
     private int findInvokeDynamic() {
