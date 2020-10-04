@@ -35,7 +35,7 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
-public class JObfTransformer extends Transformer<TransformerConfig>
+public class SuperblaubeereTransformer extends Transformer<TransformerConfig>
 {
 	public static boolean FAST_INDY = true;
 	public static boolean CLASS_ENCRYPTION = false;
@@ -96,7 +96,7 @@ public class JObfTransformer extends Transformer<TransformerConfig>
 			}
 		});
 
-		System.out.println("[Special] [JObfTransformer] Starting");
+		System.out.println("[Special] [SuperblaubeereTransformer] Starting");
 		AtomicInteger num = new AtomicInteger();
 		AtomicInteger unpoolNum = new AtomicInteger();
 		AtomicInteger unpoolString = new AtomicInteger();
@@ -565,7 +565,7 @@ public class JObfTransformer extends Transformer<TransformerConfig>
 			}
 		}
 		AtomicInteger decrypted = new AtomicInteger();
-		//Warning: No checks will be done to verify if classloader is from JObf
+		//Warning: No checks will be done to verify if classloader is from Superblaubeere obf
 		if(CLASS_ENCRYPTION)
 		{
 			String[] lines = null;
@@ -638,14 +638,14 @@ public class JObfTransformer extends Transformer<TransformerConfig>
 				}
 			}
 		}
-		System.out.println("[Special] [JObfTransformer] Removed " + num + " number obfuscation instructions");
-		System.out.println("[Special] [JObfTransformer] Inlined " + unpoolNum + " numbers");
-		System.out.println("[Special] [JObfTransformer] Unpooled " + unpoolString + " strings");
-		System.out.println("[Special] [JObfTransformer] Inlined " + inlinedIfs + " if statements");
-		System.out.println("[Special] [JObfTransformer] Removed " + indy + " invokedynamics");
+		System.out.println("[Special] [SuperblaubeereTransformer] Removed " + num + " number obfuscation instructions");
+		System.out.println("[Special] [SuperblaubeereTransformer] Inlined " + unpoolNum + " numbers");
+		System.out.println("[Special] [SuperblaubeereTransformer] Unpooled " + unpoolString + " strings");
+		System.out.println("[Special] [SuperblaubeereTransformer] Inlined " + inlinedIfs + " if statements");
+		System.out.println("[Special] [SuperblaubeereTransformer] Removed " + indy + " invokedynamics");
 		if(CLASS_ENCRYPTION)
-			System.out.println("[Special] [JObfTransformer] Decrypted " + decrypted + " classes");
-		System.out.println("[Special] [JObfTransformer] Done");
+			System.out.println("[Special] [SuperblaubeereTransformer] Decrypted " + decrypted + " classes");
+		System.out.println("[Special] [SuperblaubeereTransformer] Done");
 		return num.get() > 0 || unpoolNum.get() > 0 || unpoolString.get() > 0 || inlinedIfs.get() > 0 || indy.get() > 0;
 	}
 	
