@@ -167,12 +167,10 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {
         //XXX: Better detector
     	if(insnCount.get(Opcodes.IXOR) == null ||
-    		insnCount.get(Opcodes.ISHL) == null ||
     		insnCount.get(Opcodes.NEWARRAY) == null ||
     		invokeCount.get("charAt") == null || invokeCount.get("length") == null)
     			return false;
         return insnCount.get(Opcodes.IXOR).get() >= 3 &&
-               insnCount.get(Opcodes.ISHL).get() >= 1 &&
                insnCount.get(Opcodes.NEWARRAY).get() >= 1 &&
                invokeCount.get("charAt").get() >= 2 &&
                invokeCount.get("length").get() >= 1;

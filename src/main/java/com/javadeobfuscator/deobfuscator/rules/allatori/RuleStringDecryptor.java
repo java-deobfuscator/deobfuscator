@@ -68,7 +68,6 @@ public class RuleStringDecryptor implements Rule {
 
                             isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decrypterNode, "java/lang/String", "charAt", "(I)C");
                             isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decrypterNode, "java/lang/String", "length", "()I");
-                            isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decrypterNode, ISHL) > 0;
                             isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decrypterNode, IXOR) > 2;
                             isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decrypterNode, NEWARRAY) > 0;
                             
