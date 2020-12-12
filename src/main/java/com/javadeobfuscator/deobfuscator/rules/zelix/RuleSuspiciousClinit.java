@@ -19,7 +19,6 @@ package com.javadeobfuscator.deobfuscator.rules.zelix;
 import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.zelix.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
@@ -50,6 +49,20 @@ public class RuleSuspiciousClinit implements Rule, Opcodes {
 
             if (isZKM) {
                 return "Found suspicious <clinit> in " + classNode.name;
+            }
+            
+            boolean isZKMDES = true;
+            
+            isZKMDES = isZKMDES && TransformerHelper.containsInvokeVirtual(clinit, "java/lang/String", "intern", "()Ljava/lang/String;");
+            isZKMDES = isZKMDES && TransformerHelper.containsInvokeVirtual(clinit, "javax/crypto/SecretKeyFactory", "generateSecret", "(Ljava/security/spec/KeySpec;)Ljavax/crypto/SecretKey;");
+            isZKMDES = isZKMDES && TransformerHelper.containsInvokeVirtual(clinit, "javax/crypto/Cipher", "init", "(ILjava/security/Key;Ljava/security/spec/AlgorithmParameterSpec;)V");
+            isZKMDES = isZKMDES && TransformerHelper.countOccurencesOf(clinit, AASTORE) > 0;
+            isZKMDES = isZKMDES && TransformerHelper.countOccurencesOf(clinit, LSHL) > 0;
+            isZKMDES = isZKMDES && TransformerHelper.countOccurencesOf(clinit, DUP_X1) > 0;
+            isZKMDES = isZKMDES && TransformerHelper.countOccurencesOf(clinit, LUSHR) > 0;
+            
+            if (isZKMDES) {
+                return "Found suspicious <clinit> in " + classNode.name + " (DES cipher encryption detected)";
             }
         }
 

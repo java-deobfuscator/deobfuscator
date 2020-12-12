@@ -41,18 +41,17 @@ public class IntermediaryToYarnTransformer extends AbstractNormalizer<Intermedia
     	{
     		System.out.println("[IntermediaryToYarnTransformer] Obfuscated Minecraft jar not detected, put it as a library for best results!");
     	}
-    	File dir = new File(System.getProperty("user.dir"));
-    	File mappings = new File(dir, "mappings");
+    	File mappings = new File("mappings");
     	if(!mappings.exists())
     	{
-    		System.out.println("[NotchToIntermediaryTransformer] You must put the mappings folder in the same directory as deobfuscator.jar!");
+    		System.out.println("[NotchToIntermediaryTransformer] You must put the mappings folder next to deobfuscator.jar!");
     		return;
     	}
     	
-    	File tiny = new File(dir, "mappings.tiny");
+    	File tiny = new File("mappings.tiny");
     	if(!tiny.exists())
     	{
-    		System.out.println("[NotchToIntermediaryTransformer] You must put mappings.tiny in the same folder as deobfuscator.jar!");
+    		System.out.println("[NotchToIntermediaryTransformer] You must put mappings.tiny next to deobfuscator.jar!");
     		return;
     	}
     	

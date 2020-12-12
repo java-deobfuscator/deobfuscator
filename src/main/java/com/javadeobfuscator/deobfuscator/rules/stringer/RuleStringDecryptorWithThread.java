@@ -19,7 +19,7 @@ package com.javadeobfuscator.deobfuscator.rules.stringer;
 import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.transformers.stringer.v3.*;
+import com.javadeobfuscator.deobfuscator.transformers.stringer.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.tree.*;
 
@@ -61,6 +61,7 @@ public class RuleStringDecryptorWithThread implements Rule {
 
     @Override
     public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
-        return Collections.singletonList(StringEncryptionTransformer.class);
+        return Arrays.asList(StringEncryptionTransformer.class,
+        	com.javadeobfuscator.deobfuscator.transformers.stringer.v3.StringEncryptionTransformer.class);
     }
 }

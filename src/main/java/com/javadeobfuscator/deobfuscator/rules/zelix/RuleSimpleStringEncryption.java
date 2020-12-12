@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator.rules.zelix;
 import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer;
 import com.javadeobfuscator.deobfuscator.transformers.zelix.string.*;
 
 import java.util.*;
@@ -43,6 +44,6 @@ public class RuleSimpleStringEncryption implements Rule {
 
     @Override
     public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
-        return Collections.singletonList(SimpleStringEncryptionTransformer.class);
+        return Arrays.asList(StringEncryptionTransformer.class, SimpleStringEncryptionTransformer.class);
     }
 }

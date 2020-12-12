@@ -38,17 +38,16 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
     	{
     		System.out.println("[NotchToSrgTransformer] Obfuscated Minecraft jar not detected, put it as a library for best results!");
     	}
-    	File dir = new File(System.getProperty("user.dir"));
     	boolean tsrg = true;
-    	File srg = new File(dir, "joined.tsrg");
+    	File srg = new File("joined.tsrg");
     	if(!srg.exists())
     	{
-    		srg = new File(dir, "joined.srg");
+    		srg = new File("joined.srg");
     		tsrg = false;
     	}
     	if(!srg.exists())
     	{
-    		System.out.println("[NotchToSrgTransformer] You must put joined.srg or joined.tsrg in the same folder as deobfuscator.jar!");
+    		System.out.println("[NotchToSrgTransformer] You must put joined.srg or joined.tsrg next to deobfuscator.jar!");
     		return;
     	}
     	

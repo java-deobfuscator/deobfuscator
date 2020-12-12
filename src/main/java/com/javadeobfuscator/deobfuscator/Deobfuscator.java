@@ -342,6 +342,7 @@ public class Deobfuscator {
                 logger.info("{}: {}", rule.getClass().getSimpleName(), rule.getDescription());
                 logger.info("\t{}", message);
                 logger.info("Recommend transformers:");
+                logger.info("(Choose one transformer. If there are multiple, it's recommended to try the transformer listed first)");
 
                 Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
                 if (recommended == null) {

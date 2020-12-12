@@ -435,6 +435,9 @@ public class JVMMethodProvider extends MethodProvider {
             put("getInstance(Ljava/lang/String;)Ljava/security/MessageDigest;", (targetObject, args, context) -> MessageDigest.getInstance(args.get(0).as(String.class)));
             put("digest([B)[B", (targetObject, args, context) -> targetObject.as(MessageDigest.class).digest(args.get(0).as(byte[].class)));
         }});
+        put("java/security/MessageDigest$Delegate", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+            put("digest([B)[B", (targetObject, args, context) -> ((MessageDigest)targetObject.as(Class.forName("java.security.MessageDigest$Delegate"))).digest(args.get(0).as(byte[].class)));
+        }});
         put("java/net/URL", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("toURI()Ljava/net/URI;", (targetObject, args, context) -> targetObject.as(URL.class).toURI());
             // Probably not an issue because you can't construct URLs yet

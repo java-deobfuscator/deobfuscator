@@ -40,9 +40,10 @@ public class Rules {
             // Stringer
             new RuleStringDecryptor(),
             new RuleStringDecryptorWithThread(),
+            new RuleStringDecryptorV3(),
+            new RuleHideAccess(),
             new RuleInvokedynamic1(),
             new RuleInvokedynamic2(),
-            new RuleStringDecryptorV3(),
 
             // Zelix
             new RuleSuspiciousClinit(),
@@ -52,6 +53,9 @@ public class Rules {
             new RuleMethodParameterChangeStringEncryption(),
 
             // Dash-O
-            new com.javadeobfuscator.deobfuscator.rules.dasho.RuleStringDecryptor()
+            new com.javadeobfuscator.deobfuscator.rules.dasho.RuleStringDecryptor(),
+            
+            // Allatori
+            new com.javadeobfuscator.deobfuscator.rules.allatori.RuleStringDecryptor()
     );
 }

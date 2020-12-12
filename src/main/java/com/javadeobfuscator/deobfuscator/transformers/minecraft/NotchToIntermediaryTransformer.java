@@ -37,11 +37,10 @@ public class NotchToIntermediaryTransformer extends AbstractNormalizer<NotchToIn
     	{
     		System.out.println("[NotchToIntermediaryTransformer] Obfuscated Minecraft jar not detected, put it as a library for best results!");
     	}
-    	File dir = new File(System.getProperty("user.dir"));
-    	File tiny = new File(dir, "mappings.tiny");
+    	File tiny = new File("mappings.tiny");
     	if(!tiny.exists())
     	{
-    		System.out.println("[NotchToIntermediaryTransformer] You must put mappings.tiny in the same folder as deobfuscator.jar!");
+    		System.out.println("[NotchToIntermediaryTransformer] You must put mappings.tiny next to deobfuscator.jar!");
     		return;
     	}
     	

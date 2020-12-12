@@ -1,0 +1,5 @@
+## Finding Obfuscators
+If the "detect" option did not show any obfuscators, be sure to try running most of the transformers (excluding the general category) first. If none of them are able to deobfuscate the file, check if the file doesn't just have name obfuscation (which is not reversible, but you can rename them to generic names using normalizers). It is recommended to decompile the file to try to find the type of obfuscation, as the detect feature is not perfect. Scroll to the bottom of this repo to get some examples of code to look for: https://github.com/GraxCode/threadtear
+
+## A Note on the Detect Feature
+The detect feature mainly searches for string encryption and sometimes reflection obfuscation methods. This means that if a file is only obfuscated with flow obfuscation, the detect feature will not be able to find the type of obfuscation used. Also, obfuscators that are rarely seen (like SkidSuite) or have too many variations (like Radon) will not be detected.

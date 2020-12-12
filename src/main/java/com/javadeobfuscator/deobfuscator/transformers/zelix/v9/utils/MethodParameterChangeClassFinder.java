@@ -67,11 +67,14 @@ public class MethodParameterChangeClassFinder implements ClassFinder {
             if (Modifier.isStatic(intArr.access) || !Modifier.isAbstract(intArr.access)) {
                 continue;
             }
-            MethodNode boolRet = TransformerHelper.findMethodNode(classNode, null, "(Ljava/lang/Object;)I", true);
-            if (boolRet == null) {
+            MethodNode method = TransformerHelper.findMethodNode(classNode, null, "(III[I[I)I", true);
+            if (method == null) {
+                method = TransformerHelper.findMethodNode(classNode, null, "(JII[I[J)J", true);
+            }
+            if (method == null) {
                 continue;
             }
-            if (Modifier.isStatic(boolRet.access) || !Modifier.isAbstract(boolRet.access)) {
+            if (Modifier.isStatic(method.access) || !Modifier.isAbstract(method.access)) {
                 continue;
             }
             result.add(classNode);

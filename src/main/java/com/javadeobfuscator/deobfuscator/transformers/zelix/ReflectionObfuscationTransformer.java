@@ -43,6 +43,10 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
 
 public class ReflectionObfuscationTransformer extends Transformer<TransformerConfig> {
     static Map<String, String> PRIMITIVES = new HashMap<>();
@@ -497,7 +501,29 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                         }
                     }else if (current instanceof InvokeDynamicInsnNode) {
                     	InvokeDynamicInsnNode invokeDynamicInsnNode = (InvokeDynamicInsnNode) current;
-                    	if (invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;")) {
+                    	boolean isRightDesc = invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;");
+                    	String lastArgs = invokeDynamicInsnNode.desc.substring(0, invokeDynamicInsnNode.desc.lastIndexOf(")"));
+                    	boolean isMPC = ((lastArgs.endsWith("IJ") && Utils.getPrevious(current).getOpcode() == Opcodes.LXOR)
+                    		|| (lastArgs.endsWith("JJ") && current.getPrevious().getOpcode() == Opcodes.LLOAD));
+                    	if(!isMPC && lastArgs.endsWith("IJ"))
+                    	{
+                    		org.objectweb.asm.tree.analysis.Frame<SourceValue>[] frames;
+							try
+							{
+								frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+							}catch(AnalyzerException e)
+							{
+								throw new RuntimeException(e);
+							}
+							org.objectweb.asm.tree.analysis.Frame<SourceValue> f = frames[methodNode.instructions.indexOf(current)];
+							if(f.getStack(f.getStackSize() - 1).insns.size() == 1)
+							{
+								AbstractInsnNode a1 = f.getStack(f.getStackSize() - 1).insns.iterator().next();
+								if(a1.getOpcode() == Opcodes.LXOR)
+									isMPC = true;
+							}
+                    	}
+                    	if (isRightDesc && !isMPC) {
                     		long ldc = (long) ((LdcInsnNode) current.getPrevious()).cst;
                             String strCl = invokeDynamicInsnNode.bsm.getOwner();
                             ClassNode innerClassNode = classpath.get(strCl);
@@ -885,11 +911,33 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                     		+ "Ljava/lang/String;Ljava/lang/invoke/MethodType;JJ)Ljava/lang/invoke/MethodHandle;")) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) current;
                         if (methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Method;") || methodInsnNode.desc.equals("(J)Ljava/lang/reflect/Field;")) {
-                            count.incrementAndGet();
+                        	count.incrementAndGet();
                         }
                     }else if (current instanceof InvokeDynamicInsnNode) {
                     	InvokeDynamicInsnNode invokeDynamicInsnNode = (InvokeDynamicInsnNode) current;
-                    	if (invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;")) {
+                    	boolean isRightDesc = invokeDynamicInsnNode.bsm.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;");
+                    	String lastArgs = invokeDynamicInsnNode.desc.substring(0, invokeDynamicInsnNode.desc.lastIndexOf(")"));
+                    	boolean isMPC = ((lastArgs.endsWith("IJ") && Utils.getPrevious(current).getOpcode() == Opcodes.LXOR)
+                    		|| (lastArgs.endsWith("JJ") && current.getPrevious().getOpcode() == Opcodes.LLOAD));
+                    	if(!isMPC && lastArgs.endsWith("IJ"))
+                    	{
+                    		org.objectweb.asm.tree.analysis.Frame<SourceValue>[] frames;
+							try
+							{
+								frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, methodNode);
+							}catch(AnalyzerException e)
+							{
+								throw new RuntimeException(e);
+							}
+							org.objectweb.asm.tree.analysis.Frame<SourceValue> f = frames[methodNode.instructions.indexOf(current)];
+							if(f.getStack(f.getStackSize() - 1).insns.size() == 1)
+							{
+								AbstractInsnNode a1 = f.getStack(f.getStackSize() - 1).insns.iterator().next();
+								if(a1.getOpcode() == Opcodes.LXOR)
+									isMPC = true;
+							}
+                    	}
+                    	if (isRightDesc && !isMPC) {
                     		count.incrementAndGet();
                     	}
                     }

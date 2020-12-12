@@ -1,2 +1,2 @@
 ## RadonTransformer(V2)
-RadonTransformer was meant to work on the earlier versions of Radon, while RadonTransformerV2 works on the later versions. Use RadonTransformer first, and if it doesn't work, use RadonTransformerV2. Note that there are some settings in the transformer that you cannot configure without forking the project.
+RadonTransformer was meant to work on the earlier versions of Radon, while RadonTransformerV2 works on the later versions. Use RadonTransformer first, and if it doesn't work, use RadonTransformerV2. Note that there are some settings in the transformer that you cannot configure without forking the project. Also, if your file has invokedynamic obfuscation, you should add all required libraries.

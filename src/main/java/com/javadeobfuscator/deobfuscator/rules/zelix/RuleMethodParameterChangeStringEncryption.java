@@ -33,7 +33,8 @@ public class RuleMethodParameterChangeStringEncryption implements Rule, Opcodes 
         return "Zelix Klassmaster has several modes of string encryption. " +
                 "This mode is currently not supported. In this mode, a magic number is passed through method calls " +
                 "in order to make deobfuscation more difficult. It can be identified by an additional int parameter in method calls" +
-                "and a call to (III)Ljava/lang/String;, where the first two numbers are constant, and the third is the magic number";
+                "and a call to (III)Ljava/lang/String;, where the first two numbers are constant, and the third is the magic number. " +
+                "Newer versions of ZKM may use the DES cipher and call (IJ)Ljava/lang/String; instead";
     }
 
     @Override
@@ -42,9 +43,7 @@ public class RuleMethodParameterChangeStringEncryption implements Rule, Opcodes 
             return null;
         }
 
-        if (new MethodParameterChangeClassFinder().find(deobfuscator.getClasses().values()).isEmpty()) {
-            return null;
-        }
+        boolean containsLookup = new MethodParameterChangeClassFinder().find(deobfuscator.getClasses().values()).isEmpty();
 
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             MethodNode enhanced = TransformerHelper.findMethodNode(classNode, null, "(III)Ljava/lang/String;");
@@ -66,7 +65,33 @@ public class RuleMethodParameterChangeStringEncryption implements Rule, Opcodes 
             isMPC = isMPC && TransformerHelper.countOccurencesOf(enhanced, IREM) > 0;
 
             if (isMPC) {
-                return "Found potential method parameter changed string encrypted class " + classNode.name;
+                return "Found potential method parameter changed string encrypted class " + classNode.name + " without DES cipher"
+                	+ (containsLookup ? " (lookup found)" : " (lookup not found)");
+            }
+        }
+        
+        for (ClassNode classNode : deobfuscator.getClasses().values()) {
+            MethodNode des = TransformerHelper.findMethodNode(classNode, null, "(IJ)Ljava/lang/String;");
+            if (des == null) {
+                continue;
+            }
+            if (!Modifier.isStatic(des.access)) {
+                continue;
+            }
+
+            boolean isMPC = true;
+
+            isMPC = isMPC && TransformerHelper.containsInvokeVirtual(des, "javax/crypto/SecretKeyFactory", "generateSecret", "(Ljava/security/spec/KeySpec;)Ljavax/crypto/SecretKey;");
+            isMPC = isMPC && TransformerHelper.containsInvokeVirtual(des, "javax/crypto/Cipher", "doFinal", "([B)[B");
+            isMPC = isMPC && TransformerHelper.countOccurencesOf(des, AALOAD) > 0;
+            isMPC = isMPC && TransformerHelper.countOccurencesOf(des, AASTORE) > 0;
+            isMPC = isMPC && TransformerHelper.countOccurencesOf(des, IXOR) > 0;
+            isMPC = isMPC && TransformerHelper.countOccurencesOf(des, LSHL) > 0;
+            isMPC = isMPC && TransformerHelper.countOccurencesOf(des, LUSHR) > 0;
+
+            if (isMPC) {
+                return "Found potential method parameter changed string encrypted class " + classNode.name + " using DES cipher"
+                	+ (containsLookup ? " (lookup found)" : " (lookup not found)");
             }
         }
 

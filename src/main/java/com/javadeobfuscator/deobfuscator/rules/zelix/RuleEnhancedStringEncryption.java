@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator.rules.zelix;
 import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
+import com.javadeobfuscator.deobfuscator.transformers.zelix.StringEncryptionTransformer;
 import com.javadeobfuscator.deobfuscator.transformers.zelix.string.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.*;
@@ -73,6 +74,6 @@ public class RuleEnhancedStringEncryption implements Rule, Opcodes {
 
     @Override
     public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
-        return Collections.singletonList(EnhancedStringEncryptionTransformer.class);
+        return Arrays.asList(StringEncryptionTransformer.class, EnhancedStringEncryptionTransformer.class);
     }
 }

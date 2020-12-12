@@ -1615,6 +1615,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 					if(!(backwards instanceof ArgsAnalyzer.FailedResult) && backwards.getFirstArgInsn() != null
 						&& willPush(backwards.getFirstArgInsn()))
 					{
+						//ZKM AutoReflect
+						if(backwards.getSwap() != null)
+							return false;
 						if(backwards.getFirstArgInsn().getOpcode() == Opcodes.NEW)
 						{
 							if(isFailedInline(method, ain, backwards.getFirstArgInsn()))

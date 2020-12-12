@@ -60,6 +60,7 @@ public class RuleStringDecryptor implements Rule {
 
     @Override
     public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
-        return Collections.singleton(StringEncryptionTransformer.class);
+        return Arrays.asList(com.javadeobfuscator.deobfuscator.transformers.dasho.StringEncryptionTransformer.class,
+        	StringEncryptionTransformer.class);
     }
 }
