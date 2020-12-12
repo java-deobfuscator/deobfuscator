@@ -39,7 +39,7 @@ public class RuleInvokedynamic1 implements Rule, Opcodes {
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             MethodNode bsm = TransformerHelper.findMethodNode(classNode, null, Invokedynamic1Transformer.BSM_DESC);
-            if (bsm == null) {
+            if (bsm == null || bsm.instructions == null) {
                 continue;
             }
             if (!Modifier.isStatic(bsm.access)) {

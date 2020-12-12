@@ -24,6 +24,7 @@ import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 public class RuleReflectionDecryptor implements Rule, Opcodes {
@@ -35,32 +36,35 @@ public class RuleReflectionDecryptor implements Rule, Opcodes {
     @Override
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
-            boolean isZKM = true;
-
-            isZKM = isZKM && TransformerHelper.findFieldNodes(classNode, null, "[Ljava/lang/Object;").size() >= 1;
-            isZKM = isZKM && TransformerHelper.findFieldNodes(classNode, null, "[Ljava/lang/String;").size() >= 3;
-            
-            MethodNode deobfuscateMethod = TransformerHelper.findMethodNode(classNode, null, "(J)Ljava/lang/reflect/Method;");
-            MethodNode deobfuscateMethod2 = TransformerHelper.findMethodNode(classNode, null, "(JJ)Ljava/lang/reflect/Method;");
-            
-            boolean mpc = false;
-            if (deobfuscateMethod == null) {
-            	if (deobfuscateMethod2 != null) {
-            		deobfuscateMethod = deobfuscateMethod2;
-            		mpc = true;
-            	} else
-            		continue;
-            }
-
-            isZKM = isZKM && TransformerHelper.containsInvokeStatic(deobfuscateMethod, "java/lang/Long", "parseLong", "(Ljava/lang/String;I)J");
-            isZKM = isZKM && TransformerHelper.containsInvokeVirtual(deobfuscateMethod, "java/lang/Class", "getSuperclass", "()Ljava/lang/Class;");
-            isZKM = isZKM && TransformerHelper.containsInvokeVirtual(deobfuscateMethod, "java/lang/Class", "getInterfaces", "()[Ljava/lang/Class;");
-
-            if (isZKM) {
-                return "Found possible reflection deobfuscation class: " + classNode.name + (mpc ? " (most likely contains method parameter changes)" : "");
-            }
+        	boolean isZKM = true;
+        	
+        	isZKM = isZKM && TransformerHelper.findFieldNodes(classNode, null, "[Ljava/lang/Object;").size() >= 1;
+        	isZKM = isZKM && TransformerHelper.findFieldNodes(classNode, null, "[Ljava/lang/String;").size() >= 3;
+        	
+        	MethodNode deobfuscateMethod = TransformerHelper.findMethodNode(classNode, null, "(J)Ljava/lang/reflect/Method;");
+        	MethodNode deobfuscateMethod2 = TransformerHelper.findMethodNode(classNode, null, "(JJ)Ljava/lang/reflect/Method;");
+        	
+        	boolean mpc = false;
+        	if (deobfuscateMethod == null) {
+        		if (deobfuscateMethod2 != null) {
+        			deobfuscateMethod = deobfuscateMethod2;
+        			mpc = true;
+        		} else
+        			continue;
+        	}
+        	
+        	if(!Modifier.isStatic(deobfuscateMethod.access) || deobfuscateMethod.instructions == null)
+        		continue;
+        	
+        	isZKM = isZKM && TransformerHelper.containsInvokeStatic(deobfuscateMethod, "java/lang/Long", "parseLong", "(Ljava/lang/String;I)J");
+        	isZKM = isZKM && TransformerHelper.containsInvokeVirtual(deobfuscateMethod, "java/lang/Class", "getSuperclass", "()Ljava/lang/Class;");
+        	isZKM = isZKM && TransformerHelper.containsInvokeVirtual(deobfuscateMethod, "java/lang/Class", "getInterfaces", "()[Ljava/lang/Class;");
+        	
+        	if (isZKM) {
+        		return "Found possible reflection deobfuscation class: " + classNode.name + (mpc ? " (most likely contains method parameter changes)" : "");
+        	}
         }
-
+        
         return null;
     }
 

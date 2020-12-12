@@ -51,38 +51,35 @@ public class RuleStringDecryptor implements Rule {
                     continue;
                 }
             	for(AbstractInsnNode ain : TransformerHelper.instructionIterator(methodNode))
-                	if(ain instanceof MethodInsnNode) {
-                        MethodInsnNode m = (MethodInsnNode)ain;
-                        String strCl = m.owner;
-                        if((m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")
-                        	|| m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;"))
-                        	&& deobfuscator.getClasses().containsKey(strCl)) {
-                            Frame<SourceValue> f = frames[methodNode.instructions.indexOf(m)];
-                        	if(f.getStack(f.getStackSize() - 1).insns.size() != 1
-                        		|| f.getStack(f.getStackSize() - 1).insns.iterator().next().getOpcode() != Opcodes.LDC)
-                        		continue;
-                        	ClassNode innerClassNode = deobfuscator.getClasses().get(strCl);
-                        	if(innerClassNode == null) {
-                        		continue;
-                        	}
-                        	MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) 
-                        		&& mn.desc.equals(m.desc)).findFirst().orElse(null);
-                        	if(decrypterNode == null) {
-                        		continue;
-                        	}
-                        	boolean isAllatori = true;
-
-                            isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decrypterNode, "java/lang/String", "charAt", "(I)C");
-                            isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decrypterNode, "java/lang/String", "length", "()I");
-                            isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decrypterNode, IXOR) > 2;
-                            isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decrypterNode, NEWARRAY) > 0;
-                            
-                            if (!isAllatori) {
-                                continue;
-                            }
-
-                            return "Found possible string decryption class " + innerClassNode.name;
-                        }
+                	if(ain.getOpcode() == Opcodes.INVOKESTATIC) {
+                		MethodInsnNode m = (MethodInsnNode)ain;
+                		String strCl = m.owner;
+                		if((m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")
+                			|| m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;"))
+                			&& deobfuscator.getClasses().containsKey(strCl)) {
+                			Frame<SourceValue> f = frames[methodNode.instructions.indexOf(m)];
+                			if(f.getStack(f.getStackSize() - 1).insns.size() != 1
+                				|| f.getStack(f.getStackSize() - 1).insns.iterator().next().getOpcode() != Opcodes.LDC)
+                				continue;
+                			ClassNode innerClassNode = deobfuscator.getClasses().get(strCl);
+                			MethodNode decryptorNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) 
+                				&& mn.desc.equals(m.desc)).findFirst().orElse(null);
+                			if(decryptorNode == null || decryptorNode.instructions == null) {
+                				continue;
+                			}
+                			boolean isAllatori = true;
+                			
+                			isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "charAt", "(I)C");
+                			isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "length", "()I");
+                			isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, IXOR) > 2;
+                			isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, NEWARRAY) > 0;
+                			
+                			if (!isAllatori) {
+                				continue;
+                			}
+                			
+                			return "Found possible string decryption class " + innerClassNode.name;
+           	    		}
                 	}
             }
         }

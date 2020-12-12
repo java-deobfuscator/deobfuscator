@@ -100,7 +100,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                 }
 
                 for(AbstractInsnNode ain : TransformerHelper.instructionIterator(method))
-                	if(ain instanceof MethodInsnNode) 
+                	if(ain.getOpcode() == Opcodes.INVOKESTATIC) 
                 	{
                         MethodInsnNode m = (MethodInsnNode)ain;
                         String strCl = m.owner;

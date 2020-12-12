@@ -35,7 +35,7 @@ public class RuleSuspiciousClinit implements Rule, Opcodes {
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             MethodNode clinit = TransformerHelper.findClinit(classNode);
-            if (clinit == null) {
+            if (clinit == null || clinit.instructions == null) {
                 continue;
             }
 

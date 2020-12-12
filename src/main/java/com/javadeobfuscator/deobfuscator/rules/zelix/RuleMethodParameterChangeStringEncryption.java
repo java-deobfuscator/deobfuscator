@@ -47,7 +47,7 @@ public class RuleMethodParameterChangeStringEncryption implements Rule, Opcodes 
 
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             MethodNode enhanced = TransformerHelper.findMethodNode(classNode, null, "(III)Ljava/lang/String;");
-            if (enhanced == null) {
+            if (enhanced == null || enhanced.instructions == null) {
                 continue;
             }
             if (!Modifier.isStatic(enhanced.access)) {

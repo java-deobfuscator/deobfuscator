@@ -24,6 +24,7 @@ import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 public class RuleStringDecryptor implements Rule, Opcodes {
@@ -34,32 +35,34 @@ public class RuleStringDecryptor implements Rule, Opcodes {
 
     @Override
     public String test(Deobfuscator deobfuscator) {
-        for (ClassNode classNode : deobfuscator.getClasses().values()) {
-            for (MethodNode methodNode : classNode.methods) {
-                if (!methodNode.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) continue;
-
-                boolean isStringer = true;
-
-                isStringer = isStringer && TransformerHelper.containsInvokeStatic(methodNode, "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;");
-                isStringer = isStringer && TransformerHelper.containsInvokeVirtual(methodNode, "java/lang/Thread", "getStackTrace", "()[Ljava/lang/StackTraceElement;");
-                isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IAND) > 20;
-                isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IXOR) > 20;
-                isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IUSHR) > 10;
-                isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, ISHL) > 10;
-
-                if (!isStringer) {
-                    continue;
-                }
-
-                return "Found possible string decryption class " + classNode.name;
-            }
-        }
-
-        return null;
+    	for (ClassNode classNode : deobfuscator.getClasses().values()) {
+    		for (MethodNode methodNode : classNode.methods) {
+    			if (!methodNode.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")
+    				|| !Modifier.isStatic(methodNode.access) || methodNode.instructions == null)
+    				continue;
+    			
+    			boolean isStringer = true;
+    			
+    			isStringer = isStringer && TransformerHelper.containsInvokeStatic(methodNode, "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;");
+    			isStringer = isStringer && TransformerHelper.containsInvokeVirtual(methodNode, "java/lang/Thread", "getStackTrace", "()[Ljava/lang/StackTraceElement;");
+    			isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IAND) > 20;
+    			isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IXOR) > 20;
+    			isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, IUSHR) > 10;
+    			isStringer = isStringer && TransformerHelper.countOccurencesOf(methodNode, ISHL) > 10;
+    			
+    			if (!isStringer) {
+    				continue;
+    			}
+    			
+    			return "Found possible string decryption class " + classNode.name;
+    		}
+    	}
+    	
+    	return null;
     }
 
     @Override
     public Collection<Class<? extends Transformer<?>>> getRecommendTransformers() {
-        return Collections.singletonList(StringEncryptionTransformer.class);
+    	return Collections.singletonList(StringEncryptionTransformer.class);
     }
 }

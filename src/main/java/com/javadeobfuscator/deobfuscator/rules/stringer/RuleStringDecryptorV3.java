@@ -23,6 +23,7 @@ import com.javadeobfuscator.deobfuscator.transformers.stringer.StringEncryptionT
 import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.tree.*;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 public class RuleStringDecryptorV3 implements Rule {
@@ -35,7 +36,8 @@ public class RuleStringDecryptorV3 implements Rule {
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             for (MethodNode methodNode : classNode.methods) {
-                if (!TransformerHelper.basicType(methodNode.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;")) {
+                if (!TransformerHelper.basicType(methodNode.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;")
+                	|| !Modifier.isStatic(methodNode.access) || methodNode.instructions == null) {
                     continue;
                 }
 
