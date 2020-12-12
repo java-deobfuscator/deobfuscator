@@ -62,8 +62,14 @@ public class RuleStringDecryptor implements Rule {
                         		|| f.getStack(f.getStackSize() - 1).insns.iterator().next().getOpcode() != Opcodes.LDC)
                         		continue;
                         	ClassNode innerClassNode = deobfuscator.getClasses().get(strCl);
+                        	if(innerClassNode == null) {
+                        		continue;
+                        	}
                         	MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) 
                         		&& mn.desc.equals(m.desc)).findFirst().orElse(null);
+                        	if(decrypterNode == null) {
+                        		continue;
+                        	}
                         	boolean isAllatori = true;
 
                             isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decrypterNode, "java/lang/String", "charAt", "(I)C");
