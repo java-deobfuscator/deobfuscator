@@ -30,13 +30,13 @@ transformers:
 * Run `java -jar deobfuscator.jar`
 * Re-run the detection if the JAR was not fully deobfuscated - it's possible to layer obfuscations
 
-Take a look at [USAGE.md](USAGE.md) or [wiki](./wiki) for more information.
+Take a look at [USAGE.md](USAGE.md) or [wiki](https://github.com/java-deobfuscator/deobfuscator/wiki) for more information.
 
 ## It didn't work
 
 If you're trying to recover the names of classes or methods, tough luck. That information is typically stripped out and there's no way to recover it.
 
-If you are using one of our transformers, check out the [commonerrors](https://github.com/java-deobfuscator/deobfuscator/tree/master/commonerrors) folder to check for tips.
+If you are using one of our transformers, check out the [commonerrors](commonerrors) folder to check for tips.
 
 Otherwise, check out [this guide](CUSTOMTRANSFORMER.md) on how to implement your own transformer (also, open a issue/PR so I can add support for it)
 
@@ -53,7 +53,7 @@ SkidSuite2 (dead, some forks are listed [here](https://github.com/tetratec/SkidS
 
 ## List of Transformers
 
-The automagic detection should be able to recommend the transformers you'll need to use. However, it may not be up to date. If you're familiar with Java reverse engineering, feel free to [take a look around](https://github.com/java-deobfuscator/deobfuscator/tree/master/src/main/java/com/javadeobfuscator/deobfuscator/transformers) and use what you need. 
+The automagic detection should be able to recommend the transformers you'll need to use. However, it may not be up to date. If you're familiar with Java reverse engineering, feel free to [take a look around](src/main/java/com/javadeobfuscator/deobfuscator/transformers) and use what you need. 
 
 ## FAQs
 
