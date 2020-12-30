@@ -1,6 +1,6 @@
 # Deobfuscator
  
-Java-Deobfuscator is a program that deobfuscates obfuscated Java bytecodes, makes it much clear and readable (and easier to decompile). This project aims to deobfuscate most commercially-available obfuscators for Java.
+This project aims to deobfuscate most commercially-available obfuscators for Java.
 
 ## Updates
 To download an updated version of Java Deobfuscator, go to the releases tab.
