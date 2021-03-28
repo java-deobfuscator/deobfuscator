@@ -243,6 +243,9 @@ public class Deobfuscator {
             Enumeration<? extends ZipEntry> e = zipIn.entries();
             while (e.hasMoreElements()) {
                 ZipEntry next = e.nextElement();
+
+                // Some obfuscators can screw with the ZIP format and store data
+                // in directory entries, and yes, the JVM is cool with that.
                 if (next.isDirectory() || next.getName().endsWith(".class/")) {
                     continue;
                 }
@@ -257,6 +260,8 @@ public class Deobfuscator {
         boolean passthrough = true;
         
         if (name.endsWith(".class") || name.endsWith(".class/")) {
+            // These 'classes' are likely red-herrings using the '.class/' trick.
+            // So we will toss them since they're not real classes.
             if (data.length <= 30)
                 return;
 
@@ -275,7 +280,8 @@ public class Deobfuscator {
                     ClassFile cf = cfr.read(data);
                     ClassFileWriter cfw = new ClassFileWriter();
                     byte[] fixedData = cfw.write(cf);
-                    //
+                    // Should be compliant now unless a new crash is discovered.
+                    // Check for updates or open an issue on the CAFED00D project if this occurs
                     reader = new ClassReader(fixedData);
                     node = new ClassNode();
                     reader.accept(node, ClassReader.SKIP_FRAMES);
@@ -571,7 +577,7 @@ public class Deobfuscator {
                 }
             });
         }
-        ClassWriter writer = new CustomClassWriter(0);
+        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
         try {
             node.accept(writer);
         } catch (Throwable e) {
