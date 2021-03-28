@@ -439,7 +439,7 @@ public class Deobfuscator {
     }
 
     public ClassNode assureLoaded(String ref) {
-        ClassNode clazz = classpath.get(ref.replace('/', '.'));
+        ClassNode clazz = classpath.get(ref);
         if (clazz == null) {
             throw new NoClassInPathException(ref);
         }
@@ -447,7 +447,7 @@ public class Deobfuscator {
     }
 
     public ClassNode assureLoadedElseRemove(String referencer, String ref) {
-        ClassNode clazz = classpath.get(ref.replace('/', '.'));
+        ClassNode clazz = classpath.get(ref);
         if (clazz == null) {
             classes.remove(referencer);
             classpath.remove(referencer);
