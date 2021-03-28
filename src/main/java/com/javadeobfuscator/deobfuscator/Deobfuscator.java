@@ -22,6 +22,10 @@ import com.javadeobfuscator.deobfuscator.exceptions.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
+import me.coley.cafedude.ClassFile;
+import me.coley.cafedude.InvalidClassException;
+import me.coley.cafedude.io.ClassFileReader;
+import me.coley.cafedude.io.ClassFileWriter;
 import org.apache.commons.io.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
@@ -30,6 +34,7 @@ import org.objectweb.asm.util.*;
 import org.slf4j.*;
 
 import java.io.*;
+import java.lang.instrument.IllegalClassFormatException;
 import java.lang.reflect.*;
 import java.util.AbstractMap.*;
 import java.util.*;
@@ -238,7 +243,7 @@ public class Deobfuscator {
             Enumeration<? extends ZipEntry> e = zipIn.entries();
             while (e.hasMoreElements()) {
                 ZipEntry next = e.nextElement();
-                if (next.isDirectory()) {
+                if (next.isDirectory() || next.getName().endsWith(".class/")) {
                     continue;
                 }
 
@@ -250,12 +255,31 @@ public class Deobfuscator {
 
     public void loadInput(String name, byte[] data) {
         boolean passthrough = true;
+        
+        if (name.endsWith(".class") || name.endsWith(".class/")) {
+            if (data.length <= 30)
+                return;
 
-        if (name.endsWith(".class")) {
             try {
-                ClassReader reader = new ClassReader(data);
-                ClassNode node = new ClassNode();
-                reader.accept(node, ClassReader.SKIP_FRAMES);
+
+                ClassReader reader;
+                ClassNode node;
+                try {
+                    reader = new ClassReader(data);
+                    node = new ClassNode();
+                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                } catch (Throwable t) {
+                    // Check and see if Cafedood can patch out ASM crashing data
+                    ClassFileReader cfr = new ClassFileReader();
+                    cfr.setDropForwardVersioned(true);
+                    ClassFile cf = cfr.read(data);
+                    ClassFileWriter cfw = new ClassFileWriter();
+                    byte[] fixedData = cfw.write(cf);
+                    //
+                    reader = new ClassReader(fixedData);
+                    node = new ClassNode();
+                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                }
 
                 readers.put(node, reader);
                 setConstantPool(node, new ConstantPool(reader));
@@ -275,13 +299,8 @@ public class Deobfuscator {
                 } else {
                     classpath.put(node.name, node);
                 }
-            } catch (IllegalArgumentException x) {
-            	if(PARAMORPHISM_V2)
-            		invaildClasses.put(name, data);
-            	else
-            		logger.error("Could not parse {} (is it a class file?)", name, x);
-            } catch (ArrayIndexOutOfBoundsException x) {
-            	if(PARAMORPHISM_V2)
+            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException | InvalidClassException x) {
+            	if(PARAMORPHISM_V2 || this != null)
             		invaildClasses.put(name, data);
             	else
             		logger.error("Could not parse {} (is it a class file?)", name, x);
@@ -414,7 +433,7 @@ public class Deobfuscator {
     }
 
     public ClassNode assureLoaded(String ref) {
-        ClassNode clazz = classpath.get(ref);
+        ClassNode clazz = classpath.get(ref.replace('/', '.'));
         if (clazz == null) {
             throw new NoClassInPathException(ref);
         }
@@ -422,7 +441,7 @@ public class Deobfuscator {
     }
 
     public ClassNode assureLoadedElseRemove(String referencer, String ref) {
-        ClassNode clazz = classpath.get(ref);
+        ClassNode clazz = classpath.get(ref.replace('/', '.'));
         if (clazz == null) {
             classes.remove(referencer);
             classpath.remove(referencer);
@@ -552,7 +571,7 @@ public class Deobfuscator {
                 }
             });
         }
-        ClassWriter writer = new CustomClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassWriter writer = new CustomClassWriter(0);
         try {
             node.accept(writer);
         } catch (Throwable e) {
