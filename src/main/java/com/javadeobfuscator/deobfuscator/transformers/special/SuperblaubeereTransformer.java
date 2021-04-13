@@ -673,8 +673,8 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig>
 				return null;
 		}
 	}
-	
-	private boolean isBootstrap(ClassNode classNode, FieldNode[] fields, MethodNode method)
+
+	public static boolean isBootstrap(ClassNode classNode, FieldNode[] fields, MethodNode method)
 	{
 		if(!method.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"))
 			return false;
@@ -693,10 +693,10 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig>
 		return false;
 	}
 	
-	private FieldNode[] isIndyMethod(ClassNode classNode, MethodNode method)
+	public static FieldNode[] isIndyMethod(ClassNode classNode, MethodNode method)
 	{
 		FieldNode[] arrs = new FieldNode[2];
-		if(method.instructions.getFirst() != null && Utils.isInteger(method.instructions.getFirst())
+		if(Utils.isInteger(method.instructions.getFirst())
 			&& method.instructions.getFirst().getNext() != null && method.instructions.getFirst().getNext().getOpcode() == Opcodes.ANEWARRAY
 			&& ((TypeInsnNode)method.instructions.getFirst().getNext()).desc.equals("java/lang/String")
 			&& method.instructions.getFirst().getNext().getNext() != null

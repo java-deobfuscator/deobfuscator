@@ -16,16 +16,32 @@
 
 package com.javadeobfuscator.deobfuscator.rules;
 
-import com.google.common.collect.*;
-import com.javadeobfuscator.deobfuscator.rules.classguard.*;
-import com.javadeobfuscator.deobfuscator.rules.generic.*;
-import com.javadeobfuscator.deobfuscator.rules.normalizer.*;
-import com.javadeobfuscator.deobfuscator.rules.stringer.*;
-import com.javadeobfuscator.deobfuscator.rules.zelix.*;
+import java.util.List;
 
-import java.util.*;
+import com.google.common.collect.ImmutableList;
+import com.javadeobfuscator.deobfuscator.rules.antireleak.RuleInvokeDynamic;
+import com.javadeobfuscator.deobfuscator.rules.classguard.RuleClassGuardPackage;
+import com.javadeobfuscator.deobfuscator.rules.classguard.RuleEncryptedClass;
+import com.javadeobfuscator.deobfuscator.rules.generic.RuleIllegalSignature;
+import com.javadeobfuscator.deobfuscator.rules.normalizer.RuleSourceFileAttribute;
+import com.javadeobfuscator.deobfuscator.rules.skidsuite2.RuleFakeException;
+import com.javadeobfuscator.deobfuscator.rules.smoke.RuleNumberObfuscation;
+import com.javadeobfuscator.deobfuscator.rules.special.RuleBisguardClassEncryption;
+import com.javadeobfuscator.deobfuscator.rules.special.RuleSuperblaubeereObfuscation;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleHideAccess;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleInvokedynamic1;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleInvokedynamic2;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleStringDecryptor;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleStringDecryptorV3;
+import com.javadeobfuscator.deobfuscator.rules.stringer.RuleStringDecryptorWithThread;
+import com.javadeobfuscator.deobfuscator.rules.zelix.RuleEnhancedStringEncryption;
+import com.javadeobfuscator.deobfuscator.rules.zelix.RuleMethodParameterChangeStringEncryption;
+import com.javadeobfuscator.deobfuscator.rules.zelix.RuleReflectionDecryptor;
+import com.javadeobfuscator.deobfuscator.rules.zelix.RuleSimpleStringEncryption;
+import com.javadeobfuscator.deobfuscator.rules.zelix.RuleSuspiciousClinit;
 
 public class Rules {
+
     public static final List<Rule> RULES = ImmutableList.of(
             // ClassGuard
             new RuleClassGuardPackage(),
@@ -54,8 +70,25 @@ public class Rules {
 
             // Dash-O
             new com.javadeobfuscator.deobfuscator.rules.dasho.RuleStringDecryptor(),
-            
+            new com.javadeobfuscator.deobfuscator.rules.dasho.RuleFlowObfuscation(),
+
             // Allatori
-            new com.javadeobfuscator.deobfuscator.rules.allatori.RuleStringDecryptor()
+            new com.javadeobfuscator.deobfuscator.rules.allatori.RuleStringDecryptor(),
+
+            // AntiReleak
+            new com.javadeobfuscator.deobfuscator.rules.antireleak.RuleStringDecryptor(),
+            new RuleInvokeDynamic(),
+
+            // SkidSuite2
+            new RuleFakeException(),
+            new com.javadeobfuscator.deobfuscator.rules.skidsuite2.RuleStringDecryptor(),
+
+            // Smoke
+            new com.javadeobfuscator.deobfuscator.rules.smoke.RuleStringDecryptor(),
+            new RuleNumberObfuscation(),
+
+            // Special
+            new RuleBisguardClassEncryption(),
+            new RuleSuperblaubeereObfuscation()
     );
 }
