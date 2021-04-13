@@ -22,6 +22,10 @@ import com.javadeobfuscator.deobfuscator.exceptions.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 import com.javadeobfuscator.deobfuscator.utils.*;
+import me.coley.cafedude.ClassFile;
+import me.coley.cafedude.InvalidClassException;
+import me.coley.cafedude.io.ClassFileReader;
+import me.coley.cafedude.io.ClassFileWriter;
 import org.apache.commons.io.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
@@ -30,6 +34,7 @@ import org.objectweb.asm.util.*;
 import org.slf4j.*;
 
 import java.io.*;
+import java.lang.instrument.IllegalClassFormatException;
 import java.lang.reflect.*;
 import java.util.AbstractMap.*;
 import java.util.*;
@@ -238,7 +243,10 @@ public class Deobfuscator {
             Enumeration<? extends ZipEntry> e = zipIn.entries();
             while (e.hasMoreElements()) {
                 ZipEntry next = e.nextElement();
-                if (next.isDirectory()) {
+
+                // Some obfuscators can screw with the ZIP format and store data
+                // in directory entries, and yes, the JVM is cool with that.
+                if (next.isDirectory() || next.getName().endsWith(".class/")) {
                     continue;
                 }
 
@@ -250,12 +258,34 @@ public class Deobfuscator {
 
     public void loadInput(String name, byte[] data) {
         boolean passthrough = true;
+        
+        if (name.endsWith(".class") || name.endsWith(".class/")) {
+            // These 'classes' are likely red-herrings using the '.class/' trick.
+            // So we will toss them since they're not real classes.
+            if (data.length <= 30)
+                return;
 
-        if (name.endsWith(".class")) {
             try {
-                ClassReader reader = new ClassReader(data);
-                ClassNode node = new ClassNode();
-                reader.accept(node, ClassReader.SKIP_FRAMES);
+
+                ClassReader reader;
+                ClassNode node;
+                try {
+                    reader = new ClassReader(data);
+                    node = new ClassNode();
+                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                } catch (Throwable t) {
+                    // Check and see if Cafedood can patch out ASM crashing data
+                    ClassFileReader cfr = new ClassFileReader();
+                    cfr.setDropForwardVersioned(true);
+                    ClassFile cf = cfr.read(data);
+                    ClassFileWriter cfw = new ClassFileWriter();
+                    byte[] fixedData = cfw.write(cf);
+                    // Should be compliant now unless a new crash is discovered.
+                    // Check for updates or open an issue on the CAFED00D project if this occurs
+                    reader = new ClassReader(fixedData);
+                    node = new ClassNode();
+                    reader.accept(node, ClassReader.SKIP_FRAMES);
+                }
 
                 readers.put(node, reader);
                 setConstantPool(node, new ConstantPool(reader));
@@ -275,13 +305,8 @@ public class Deobfuscator {
                 } else {
                     classpath.put(node.name, node);
                 }
-            } catch (IllegalArgumentException x) {
-            	if(PARAMORPHISM_V2)
-            		invaildClasses.put(name, data);
-            	else
-            		logger.error("Could not parse {} (is it a class file?)", name, x);
-            } catch (ArrayIndexOutOfBoundsException x) {
-            	if(PARAMORPHISM_V2)
+            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException | InvalidClassException x) {
+            	if(PARAMORPHISM_V2 || this != null)
             		invaildClasses.put(name, data);
             	else
             		logger.error("Could not parse {} (is it a class file?)", name, x);
