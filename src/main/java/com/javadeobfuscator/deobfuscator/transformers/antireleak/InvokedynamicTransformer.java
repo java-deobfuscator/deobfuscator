@@ -17,6 +17,7 @@
 package com.javadeobfuscator.deobfuscator.transformers.antireleak;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -58,7 +59,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig>
 		System.out.println("[AntiReleak] [InvokedynamicTransformer] Starting");
 		System.out.println(
 			"[AntiReleak] [InvokedynamicTransformer] Finding invokedynamic instructions");
-		int amount = findInvokeDynamic();
+		int amount = findInvokeDynamic(classNodes());
 		System.out.println("[AntiReleak] [InvokedynamicTransformer] Found "
 			+ amount + " invokedynamic instructions");
 		if(amount > 0)
@@ -79,10 +80,10 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig>
 		return amount > 0;
 	}
 	
-	private int findInvokeDynamic()
+	public static int findInvokeDynamic(Collection<ClassNode> classNodes)
 	{
 		AtomicInteger total = new AtomicInteger();
-		classNodes().forEach(classNode -> {
+		classNodes.forEach(classNode -> {
 			classNode.methods.forEach(methodNode -> {
 				for(int i = 0; i < methodNode.instructions.size(); i++)
 				{
@@ -774,7 +775,7 @@ public class InvokedynamicTransformer extends Transformer<TransformerConfig>
 		});
 	}
 	
-	private boolean isInteger(String str)
+	private static boolean isInteger(String str)
 	{
 		try
 		{

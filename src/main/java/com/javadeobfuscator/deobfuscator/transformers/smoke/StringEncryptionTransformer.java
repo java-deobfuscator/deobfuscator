@@ -115,7 +115,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         return count.get();
 	}
 
-	private boolean isSmokeMethod(MethodNode method)
+	public static boolean isSmokeMethod(MethodNode method)
     {
 		boolean containsArray = false;
 		int putstatic = 0;

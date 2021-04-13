@@ -23,7 +23,7 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
  */
 public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 {
-	private LabelNode NO_INSN = new LabelNode();
+	private static final LabelNode NO_INSN = new LabelNode();
 		
 	@Override
 	public boolean transform() throws Throwable
@@ -245,13 +245,13 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		 return counter.get() > 0;
 	}
 	
-	private AbstractInsnNode getNext(List<AbstractInsnNode> list,
+	public static AbstractInsnNode getNext(List<AbstractInsnNode> list,
 		LinkedHashMap<LabelNode, List<AbstractInsnNode>> flow, FlowAnalyzer.Result result, AbstractInsnNode ain, int count)
 	{
 		return getNext(list, flow, result, ain, count, true);
 	}
 	
-	private AbstractInsnNode getNext(List<AbstractInsnNode> list,
+	private static AbstractInsnNode getNext(List<AbstractInsnNode> list,
 		LinkedHashMap<LabelNode, List<AbstractInsnNode>> flow, FlowAnalyzer.Result result, AbstractInsnNode ain, int count, boolean doJump)
 	{
 		int index = list.indexOf(ain);
@@ -288,7 +288,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 		return NO_INSN;
 	}
 	 
-	private boolean verifyJumps(LinkedHashMap<LabelNode, List<AbstractInsnNode>> flow, FlowAnalyzer.Result result, AbstractInsnNode lbl)
+	private static boolean verifyJumps(LinkedHashMap<LabelNode, List<AbstractInsnNode>> flow, FlowAnalyzer.Result result, AbstractInsnNode lbl)
 	{
 		int jumpCount = 0;
 		outer:
