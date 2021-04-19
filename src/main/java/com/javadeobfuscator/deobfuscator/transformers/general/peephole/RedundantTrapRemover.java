@@ -16,20 +16,25 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.general.peephole;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
-import com.javadeobfuscator.deobfuscator.transformers.Transformer;
-import com.javadeobfuscator.deobfuscator.utils.Utils;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.objectweb.asm.Opcodes.*;
 
 public class RedundantTrapRemover extends Transformer<TransformerConfig> {
-    private boolean doesTrapCatch(TryCatchBlockNode node, String... exceptions) {
+
+    private Boolean doesTrapCatch(TryCatchBlockNode node, String... exceptions) {
         if (node.type == null) {
             return true;
         }
@@ -37,8 +42,13 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
             return true;
         }
         for (String exception : exceptions) {
-            if (getDeobfuscator().isSubclass(node.type, exception)) {
-                return true;
+            try {
+                if (getDeobfuscator().isSubclass(node.type, exception)) {
+                    return true;
+                }
+            } catch (NoClassInPathException ex) {
+                logger.warn("Could not find class " + ex.getMessage());
+                return null;
             }
         }
         return false;
@@ -53,6 +63,7 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                     {
                         List<TryCatchBlockNode> remove = new ArrayList<>();
 //                        List<TryCatchBlockNode> add = new ArrayList<>();
+                        tcbnFor:
                         for (TryCatchBlockNode tryCatchBlockNode : methodNode.tryCatchBlocks) {
                             boolean containsThrowableInstructions = false;
                             boolean previousInsnThrows = false;
@@ -72,7 +83,13 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case LALOAD:
                                         case SALOAD:
                                         case AALOAD: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/ArrayIndexOutOfBoundsException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode,
+                                                    "java/lang/NullPointerException",
+                                                    "java/lang/ArrayIndexOutOfBoundsException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -84,7 +101,14 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case LASTORE:
                                         case SASTORE:
                                         case AASTORE: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/ArrayIndexOutOfBoundsException", "java/lang/ArrayStoreException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode,
+                                                    "java/lang/NullPointerException",
+                                                    "java/lang/ArrayIndexOutOfBoundsException",
+                                                    "java/lang/ArrayStoreException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -93,7 +117,11 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case NEWARRAY:
                                         case ANEWARRAY:
                                         case MULTIANEWARRAY: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NegativeArraySizeException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/NegativeArraySizeException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -105,14 +133,22 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case FRETURN:
                                         case LRETURN:
                                         case ARETURN: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/IllegalMonitorStateException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/IllegalMonitorStateException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
                                             break;
                                         }
                                         case ARRAYLENGTH: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -125,7 +161,11 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                             break;
                                         }
                                         case CHECKCAST: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/ClassCastException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/ClassCastException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -133,7 +173,11 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         }
                                         case GETFIELD:
                                         case PUTFIELD: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -142,7 +186,11 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case GETSTATIC:
                                         case PUTSTATIC:
                                         case NEW: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/Error")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/Error");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -152,7 +200,11 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                         case IREM:
                                         case LDIV:
                                         case LREM: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/ArithmeticException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/ArithmeticException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -168,14 +220,24 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                                             break;
                                         }
                                         case MONITORENTER: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
                                             break;
                                         }
                                         case MONITOREXIT: {
-                                            if (doesTrapCatch(tryCatchBlockNode, "java/lang/NullPointerException", "java/lang/IllegalMonitorStateException")) {
+                                            Boolean b = doesTrapCatch(tryCatchBlockNode,
+                                                    "java/lang/NullPointerException", 
+                                                    "java/lang/IllegalMonitorStateException");
+                                            if (b == null) {
+                                                continue tcbnFor;
+                                            }
+                                            if (b) {
                                                 containsThrowableInstructions = true;
                                                 currentInsnThrows = true;
                                             }
@@ -203,7 +265,8 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
 
 //                                    if (!currentInsnThrows) {
 //                                        if (previousInsnThrows) {
-//                                            TryCatchBlockNode tcbn = new TryCatchBlockNode(new LabelNode(), new LabelNode(), tryCatchBlockNode.handler, tryCatchBlockNode.type);
+//                                            TryCatchBlockNode tcbn = new TryCatchBlockNode(new LabelNode(), new LabelNode(), tryCatchBlockNode.handler, 
+//                                            tryCatchBlockNode.type);
 //                                            methodNode.instructions.insertBefore(firstThrowable, tcbn.start);
 //                                            methodNode.instructions.insert(latestThrowable, tcbn.end);
 //                                            firstThrowable = null;
@@ -247,7 +310,9 @@ public class RedundantTrapRemover extends Transformer<TransformerConfig> {
                             duplicates.computeIfAbsent(
                                     new AbstractMap.SimpleEntry<>(
                                             tryCatchBlockNode.type,
-                                            Arrays.asList(Utils.getNext(tryCatchBlockNode.start), Utils.getNext(tryCatchBlockNode.end), Utils.getNext(tryCatchBlockNode.handler))
+                                            Arrays.asList(Utils.getNext(tryCatchBlockNode.start),
+                                                    Utils.getNext(tryCatchBlockNode.end),
+                                                    Utils.getNext(tryCatchBlockNode.handler))
                                     ), key -> new ArrayList<>()).add(tryCatchBlockNode);
                         }
 
