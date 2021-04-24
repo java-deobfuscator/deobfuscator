@@ -102,7 +102,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 		System.out.println("[Special] [ParamorphismTransformer] Starting");
 		if(getDeobfuscator().invaildClasses.isEmpty())
 		{
-			System.out.println("[Special] [ParamorphismTransformer] Paramorphism not found or option not enabled. Exiting (If you see folder class in your jar.then consider using V1 or else v2 )");
+			System.out.println("[Special] [ParamorphismTransformer] Paramorphism not found or option not enabled. Exiting (If you see folder class in your jar.then consider using V2 or else v1 )");
 			return false;
 		}
 		AtomicInteger annotRemoved = new AtomicInteger();
