@@ -78,7 +78,7 @@ public class RuleNumberObfuscation implements Rule {
                     }
                 }
                 if (count > 3) {
-                    return "Found potential number obfuscation (" + count + " times) in " + classNode.name + "/" + method.name + method.desc;
+                    return "Found potential number obfuscation (" + count + " times) in " + classNode.name + " " + method.name + method.desc;
                 }
             }
         }

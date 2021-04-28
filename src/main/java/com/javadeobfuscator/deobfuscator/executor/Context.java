@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class Context { //FIXME clinit classes
-    private List<StackTraceElement> context = new ArrayList<>();
+    private final List<StackTraceElement> context = new ArrayList<>();
 
     public Provider provider;
     public Map<String, ClassNode> dictionary;
@@ -56,8 +56,8 @@ public class Context { //FIXME clinit classes
         return orig;
     }
 
-    private Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsBefore = new HashMap<>();
-    private Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsAfter = new HashMap<>();
+    private final Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsBefore = new HashMap<>();
+    private final Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsAfter = new HashMap<>();
 
     public void doBreakpoint(AbstractInsnNode now, boolean before, List<JavaValue> stack, List<JavaValue> locals, Object tothrow) {
         if (before && breakpointsBefore.containsKey(now)) {
@@ -75,9 +75,9 @@ public class Context { //FIXME clinit classes
     }
 
     public static class BreakpointInfo {
-        private Object throwable;
-        private List<JavaValue> stack;
-        private List<JavaValue> locals;
+        private final Object throwable;
+        private final List<JavaValue> stack;
+        private final List<JavaValue> locals;
 
         public BreakpointInfo(Object throwable, List<JavaValue> stack, List<JavaValue> locals) {
             this.throwable = throwable;

@@ -35,33 +35,84 @@ import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
 
 public class TransformerHelper implements Opcodes {
     public static boolean isInvokeVirtual(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn == null) {
+            return false;
+        }
         if (insn.getOpcode() != INVOKEVIRTUAL) {
             return false;
         }
         MethodInsnNode methodInsnNode = (MethodInsnNode) insn;
         return (owner == null || methodInsnNode.owner.equals(owner)) &&
-                (name == null || methodInsnNode.name.equals(name)) &&
-                (desc == null || methodInsnNode.desc.equals(desc));
+               (name == null || methodInsnNode.name.equals(name)) &&
+               (desc == null || methodInsnNode.desc.equals(desc));
+    }
+
+    public static boolean isInvokeSpecial(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn == null) {
+            return false;
+        }
+        if (insn.getOpcode() != INVOKESPECIAL) {
+            return false;
+        }
+        MethodInsnNode methodInsnNode = (MethodInsnNode) insn;
+        return (owner == null || methodInsnNode.owner.equals(owner)) &&
+               (name == null || methodInsnNode.name.equals(name)) &&
+               (desc == null || methodInsnNode.desc.equals(desc));
     }
 
     public static boolean isInvokeStatic(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn == null) {
+            return false;
+        }
         if (insn.getOpcode() != INVOKESTATIC) {
             return false;
         }
         MethodInsnNode methodInsnNode = (MethodInsnNode) insn;
         return (owner == null || methodInsnNode.owner.equals(owner)) &&
-                (name == null || methodInsnNode.name.equals(name)) &&
-                (desc == null || methodInsnNode.desc.equals(desc));
+               (name == null || methodInsnNode.name.equals(name)) &&
+               (desc == null || methodInsnNode.desc.equals(desc));
+    }
+
+    public static boolean isInvokeDynamic(AbstractInsnNode insn, String name, String desc, String bsmOwner, String bsmName, String bsmDesc, Integer bsmArgAmount) {
+        if (insn == null) {
+            return false;
+        }
+        if (insn.getOpcode() != INVOKEDYNAMIC) {
+            return false;
+        }
+        InvokeDynamicInsnNode methodInsnNode = (InvokeDynamicInsnNode) insn;
+        return (name == null || methodInsnNode.name.equals(name)) &&
+               (desc == null || methodInsnNode.desc.equals(desc)) &&
+               (bsmOwner == null || methodInsnNode.bsm.getOwner().equals(bsmOwner)) &&
+               (bsmName == null || methodInsnNode.bsm.getName().equals(bsmName)) &&
+               (bsmDesc == null || methodInsnNode.bsm.getDesc().equals(bsmDesc)) &&
+               (bsmArgAmount == null || methodInsnNode.bsmArgs.length == bsmArgAmount);
     }
 
     public static boolean isPutStatic(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn == null) {
+            return false;
+        }
         if (insn.getOpcode() != PUTSTATIC) {
             return false;
         }
         FieldInsnNode fieldInsnNode = (FieldInsnNode) insn;
         return (owner == null || fieldInsnNode.owner.equals(owner)) &&
-                (name == null || fieldInsnNode.name.equals(name)) &&
-                (desc == null || fieldInsnNode.desc.equals(desc));
+               (name == null || fieldInsnNode.name.equals(name)) &&
+               (desc == null || fieldInsnNode.desc.equals(desc));
+    }
+
+    public static boolean isGetStatic(AbstractInsnNode insn, String owner, String name, String desc) {
+        if (insn == null) {
+            return false;
+        }
+        if (insn.getOpcode() != GETSTATIC) {
+            return false;
+        }
+        FieldInsnNode fieldInsnNode = (FieldInsnNode) insn;
+        return (owner == null || fieldInsnNode.owner.equals(owner)) &&
+               (name == null || fieldInsnNode.name.equals(name)) &&
+               (desc == null || fieldInsnNode.desc.equals(desc));
     }
 
     public static MethodNode findClinit(ClassNode classNode) {
@@ -74,7 +125,19 @@ public class TransformerHelper implements Opcodes {
 
     public static MethodNode findMethodNode(ClassNode classNode, String name, String desc, boolean basic) {
         List<MethodNode> methods = findMethodNodes(classNode, name, desc, basic);
-        if (methods.isEmpty() || methods.size() > 1) {
+        if (methods.size() != 1) {
+            return null;
+        }
+        return methods.get(0);
+    }
+
+    public static MethodNode findFirstMethodNode(ClassNode classNode, String name, String desc) {
+        return findFirstMethodNode(classNode, name, desc, false);
+    }
+
+    public static MethodNode findFirstMethodNode(ClassNode classNode, String name, String desc, boolean basic) {
+        List<MethodNode> methods = findMethodNodes(classNode, name, desc, basic);
+        if (methods.isEmpty()) {
             return null;
         }
         return methods.get(0);
@@ -94,7 +157,7 @@ public class TransformerHelper implements Opcodes {
 
     public static FieldNode findFieldNode(ClassNode classNode, String name, String desc) {
         List<FieldNode> fields = findFieldNodes(classNode, name, desc);
-        if (fields.isEmpty() || fields.size() > 1) {
+        if (fields.size() != 1) {
             return null;
         }
         return fields.get(0);
@@ -112,8 +175,7 @@ public class TransformerHelper implements Opcodes {
     }
 
     public static boolean containsInvokeStatic(MethodNode methodNode, String owner, String name, String desc) {
-        for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
-            AbstractInsnNode insn = it.next();
+        for (AbstractInsnNode insn : methodNode.instructions) {
             if (isInvokeStatic(insn, owner, name, desc)) {
                 return true;
             }
@@ -122,8 +184,7 @@ public class TransformerHelper implements Opcodes {
     }
 
     public static boolean containsInvokeVirtual(MethodNode methodNode, String owner, String name, String desc) {
-        for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
-            AbstractInsnNode insn = it.next();
+        for (AbstractInsnNode insn : methodNode.instructions) {
             if (isInvokeVirtual(insn, owner, name, desc)) {
                 return true;
             }
@@ -133,8 +194,7 @@ public class TransformerHelper implements Opcodes {
 
     public static int countOccurencesOf(MethodNode methodNode, int opcode) {
         int i = 0;
-        for (ListIterator<AbstractInsnNode> it = methodNode.instructions.iterator(); it.hasNext(); ) {
-            AbstractInsnNode insnNode = it.next();
+        for (AbstractInsnNode insnNode : methodNode.instructions) {
             if (insnNode.getOpcode() == opcode) {
                 i++;
             }
@@ -471,6 +531,32 @@ public class TransformerHelper implements Opcodes {
         if (insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH) return true;
         if (insn.getOpcode() == LDC) return ((LdcInsnNode) insn).cst instanceof Integer;
         return false;
+    }
+
+    public static boolean isConstantString(AbstractInsnNode insn) {
+        return insn instanceof LdcInsnNode && ((LdcInsnNode) insn).cst instanceof String;
+    }
+
+    public static boolean isConstantType(AbstractInsnNode insn) {
+        return insn instanceof LdcInsnNode && ((LdcInsnNode) insn).cst instanceof Type;
+    }
+
+    public static String getConstantString(AbstractInsnNode insn) {
+        if (!isConstantString(insn)) {
+            return null;
+        }
+        return ((String) ((LdcInsnNode) insn).cst);
+    }
+
+    public static Type getConstantType(AbstractInsnNode insn) {
+        if (!isConstantType(insn)) {
+            return null;
+        }
+        return ((Type) ((LdcInsnNode) insn).cst);
+    }
+    
+    public static boolean nullsafeOpcodeEqual(AbstractInsnNode insn, int opcode) {
+        return insn != null && insn.getOpcode() == opcode;
     }
 
     public static String insnToString(AbstractInsnNode insn) {

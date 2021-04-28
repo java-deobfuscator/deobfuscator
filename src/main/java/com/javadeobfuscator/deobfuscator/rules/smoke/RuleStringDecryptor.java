@@ -42,34 +42,37 @@ public class RuleStringDecryptor implements Rule {
                     }
                     MethodInsnNode m = (MethodInsnNode) ain;
                     String strCl = m.owner;
-                    if (m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
-                        if (classes.containsKey(strCl)) {
-                            ClassNode innerClassNode = classes.get(strCl);
-                            MethodNode decrypterNode = innerClassNode.methods.stream()
-                                    .filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc))
-                                    .findFirst()
-                                    .orElse(null);
-                            if (decrypterNode != null && StringEncryptionTransformer.isSmokeMethod(decrypterNode)) {
-                                if (frames == null) {
-                                    try {
-                                        frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
-                                    } catch (AnalyzerException e) {
-                                        continue;
-                                    }
-                                }
-                                Frame<SourceValue> f = frames[method.instructions.indexOf(m)];
-                                if (f.getStack(f.getStackSize() - 2).insns.size() != 1 || f.getStack(f.getStackSize() - 1).insns.size() != 1) {
-                                    continue;
-                                }
-                                AbstractInsnNode a1 = f.getStack(f.getStackSize() - 2).insns.iterator().next();
-                                AbstractInsnNode a2 = f.getStack(f.getStackSize() - 1).insns.iterator().next();
-                                if (a1.getOpcode() != Opcodes.LDC || !Utils.isInteger(a2)) {
-                                    continue;
-                                }
-                                return "Found possible string decryption method in " + classNode.name + "/" + decrypterNode.name + decrypterNode.desc;
-                            }
+                    if (!m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
+                        continue;
+                    }
+                    if (!classes.containsKey(strCl)) {
+                        continue;
+                    }
+                    ClassNode innerClassNode = classes.get(strCl);
+                    MethodNode decrypterNode = innerClassNode.methods.stream()
+                            .filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc))
+                            .findFirst()
+                            .orElse(null);
+                    if (decrypterNode == null || !StringEncryptionTransformer.isSmokeMethod(decrypterNode)) {
+                        continue;
+                    }
+                    if (frames == null) {
+                        try {
+                            frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
+                        } catch (AnalyzerException e) {
+                            continue;
                         }
                     }
+                    Frame<SourceValue> f = frames[method.instructions.indexOf(m)];
+                    if (f.getStack(f.getStackSize() - 2).insns.size() != 1 || f.getStack(f.getStackSize() - 1).insns.size() != 1) {
+                        continue;
+                    }
+                    AbstractInsnNode a1 = f.getStack(f.getStackSize() - 2).insns.iterator().next();
+                    AbstractInsnNode a2 = f.getStack(f.getStackSize() - 1).insns.iterator().next();
+                    if (a1.getOpcode() != Opcodes.LDC || !Utils.isInteger(a2)) {
+                        continue;
+                    }
+                    return "Found possible string decryption method in " + classNode.name + " " + decrypterNode.name + decrypterNode.desc;
                 }
             }
         }

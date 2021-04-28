@@ -16,15 +16,24 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import static org.objectweb.asm.Opcodes.*;
 
 import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.Opcodes;
@@ -34,6 +43,8 @@ import org.objectweb.asm.util.Printer;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceMethodVisitor;
 import sun.misc.Unsafe;
+
+import static org.objectweb.asm.Opcodes.*;
 
 public class Utils {
     public static boolean isInstruction(AbstractInsnNode node) {
@@ -183,6 +194,7 @@ public class Utils {
     private static final TraceMethodVisitor methodPrinter = new TraceMethodVisitor(printer);
 
     public static String prettyprint(AbstractInsnNode insnNode) {
+        if (insnNode == null) return "null";
         insnNode.accept(methodPrinter);
         StringWriter sw = new StringWriter();
         printer.print(new PrintWriter(sw));
