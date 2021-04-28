@@ -19,7 +19,7 @@ public class RuleInvokeDynamic implements Rule {
     public String test(Deobfuscator deobfuscator) {
         int invokeDynamicCount = InvokedynamicTransformer.findInvokeDynamic(deobfuscator.getClasses().values());
         if (invokeDynamicCount > 0) {
-            return "Found " + invokeDynamicCount + " potential AntiReleak invokednymic instructions";
+            return "Found " + invokeDynamicCount + " potential AntiReleak Invokedynamic instructions";
         }
         return null;
     }

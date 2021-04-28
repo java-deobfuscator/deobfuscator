@@ -41,10 +41,10 @@ public class RuleStringDecryptor implements Rule {
                         continue;
                     }
                     MethodInsnNode m = (MethodInsnNode) ain;
-                    String strCl = m.owner;
                     if (!m.desc.equals("(Ljava/lang/String;I)Ljava/lang/String;")) {
                         continue;
                     }
+                    String strCl = m.owner;
                     if (!classes.containsKey(strCl)) {
                         continue;
                     }
