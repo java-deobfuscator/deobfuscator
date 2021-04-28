@@ -7,7 +7,7 @@ import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.rules.Rule;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.transformers.skidsuite2.FakeExceptionTransformer;
-import org.objectweb.asm.Opcodes;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
@@ -27,11 +27,10 @@ public class RuleFakeException implements Rule {
                     continue;
                 }
                 for (TryCatchBlockNode tc : methodNode.tryCatchBlocks) {
-                    if (tc.handler != null && tc.handler.getNext() != null
-                        && tc.handler.getNext().getOpcode() == Opcodes.ACONST_NULL
-                        && tc.handler.getNext().getNext() != null
-                        && tc.handler.getNext().getNext().getOpcode() == Opcodes.ATHROW) {
-                        return "Found possible fake excepton pattern in " + classNode.name + "/" + methodNode.name;
+                    if (tc.handler != null
+                        && TransformerHelper.nullsafeOpcodeEqual(tc.handler.getNext(), ACONST_NULL)
+                        && TransformerHelper.nullsafeOpcodeEqual(tc.handler.getNext().getNext(), ATHROW)) {
+                        return "Found possible fake exception pattern in " + classNode.name + " " + methodNode.name + methodNode.desc;
                     }
                 }
             }

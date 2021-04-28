@@ -7,7 +7,7 @@ import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.rules.Rule;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.transformers.antireleak.StringEncryptionTransformer;
-import org.objectweb.asm.Opcodes;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -36,9 +36,8 @@ public class RuleStringDecryptor implements Rule {
                                 && min.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")
                                 && methodNode.desc.equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
                                                           + "Ljava/lang/invoke/MethodType;Ljava/lang/Class;Ljava/lang/String;I)Ljava/lang/invoke/CallSite;")
-                                && previous != null
-                                && previous.getOpcode() == LDC) {
-                                return "Found possible string decryption method (type 1): " + classNode.name + "/" + methodNode.name + methodNode.desc;
+                                && TransformerHelper.nullsafeOpcodeEqual(previous, LDC)) {
+                                return "Found possible string decryption method (type 1): " + classNode.name + " " + methodNode.name + methodNode.desc;
                             }
                             // Type 2
                             if (!type2Possible1 && min.desc.equals(methodNode.desc)
@@ -56,7 +55,7 @@ public class RuleStringDecryptor implements Rule {
                                 && methodNode.desc.equals("(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;"
                                                           + "Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;"
                                                           + "Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
-                                return "Found possible string decryption method (type 3): " + classNode.name + "/" + methodNode.name + methodNode.desc;
+                                return "Found possible string decryption method (type 3): " + classNode.name + " " + methodNode.name + methodNode.desc;
                             }
                             break;
                         }
@@ -64,15 +63,13 @@ public class RuleStringDecryptor implements Rule {
                             // Type 2
                             if (!type2Possible2 && ain.getPrevious().getOpcode() == INVOKESTATIC
                                 && ain.getPrevious().getPrevious().getOpcode() == LDC
-                                && ain.getNext() != null && ain.getNext().getOpcode() == AASTORE
-                                && ain.getNext().getNext() != null && ain.getNext().getNext().getOpcode() == GETSTATIC) {
+                                && TransformerHelper.nullsafeOpcodeEqual(ain.getNext(), AASTORE)
+                                && TransformerHelper.nullsafeOpcodeEqual(ain.getNext().getNext(), GETSTATIC)) {
                                 AbstractInsnNode next = ain.getNext().getNext().getNext().getNext().getNext().getNext();
                                 while (next != null) {
                                     if (next.getOpcode() == -1
-                                        && next.getNext() != null
-                                        && next.getNext().getOpcode() == Opcodes.ALOAD
-                                        && next.getNext().getNext() != null
-                                        && next.getNext().getNext().getOpcode() == Opcodes.INSTANCEOF) {
+                                        && TransformerHelper.nullsafeOpcodeEqual(next.getNext(), ALOAD)
+                                        && TransformerHelper.nullsafeOpcodeEqual(next.getNext().getNext(), INSTANCEOF)) {
                                         type2Possible2 = true;
                                         break;
                                     }
@@ -83,7 +80,7 @@ public class RuleStringDecryptor implements Rule {
                         }
                     }
                     if (type2Possible1 && type2Possible2) {
-                        return "Found possible string decryption method (type 2): " + classNode.name + "/" + methodNode.name + methodNode.desc;
+                        return "Found possible string decryption method (type 2): " + classNode.name + " " + methodNode.name + methodNode.desc;
                     }
                 }
             }
