@@ -464,6 +464,15 @@ public class TransformerHelper implements Opcodes {
         return className.substring(0, lastIndex);
     }
 
+    public static String getMostOuterClassName(String className) {
+        className = getFullClassName(className);
+        int lastIndex = className.indexOf("$");
+        if (lastIndex == -1) {
+            return className;
+        }
+        return className.substring(0, lastIndex);
+    }
+
     public static String getInnerClassName(String className) {
         className = getFullClassName(className);
         int lastIndex = className.lastIndexOf("$");

@@ -24,8 +24,11 @@ import com.javadeobfuscator.deobfuscator.utils.*;
 import org.objectweb.asm.tree.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class RuleSourceFileAttribute implements Rule {
+	private static final Pattern fileEndingPattern = Pattern.compile("\\.\\w{1,10}$");
+
     @Override
     public String getDescription() {
         return "Some obfuscators don't remove the SourceFile attribute by default. This information can be recovered, and is very useful";
@@ -34,35 +37,59 @@ public class RuleSourceFileAttribute implements Rule {
     @Override
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
-            if (classNode.sourceFile == null) {
+            if (classNode.sourceFile == null || classNode.sourceFile.trim().isEmpty()) {
                 continue;
             }
 
-            if (classNode.sourceFile.equals("SourceFile")) {
+            if (classNode.sourceFile.equalsIgnoreCase("SourceFile")) {
                 continue;
             }
 
             String sourceFile = classNode.sourceFile;
             if (sourceFile.endsWith(".java")) {
-                sourceFile = sourceFile.substring(0, sourceFile.length() - 5);
-            }
-
-            if (sourceFile.equals(TransformerHelper.getFullClassName(classNode.name))) {
+                sourceFile = sourceFile.substring(0, sourceFile.length() - ".java".length());
+            } else if (sourceFile.endsWith(".kt")) {
+                sourceFile = sourceFile.substring(0, sourceFile.length() - ".kt".length());
+            } else if (!fileEndingPattern.matcher(sourceFile).find()) {
+                // Without or with a too long or non-ascii file ending it is safe to assume that the sourceFile attribute
+                // was modified by some obfuscator, don't suggest the transformer in such cases
                 continue;
             }
 
-            if (sourceFile.equals(TransformerHelper.getOuterClassName(classNode.name))) {
+            if (similar(sourceFile, TransformerHelper.getFullClassName(classNode.name))) {
                 continue;
             }
 
-            if (sourceFile.equals(TransformerHelper.getInnerClassName(classNode.name))) {
+			if (similar(sourceFile, TransformerHelper.getOuterClassName(classNode.name))) {
+				continue;
+			}
+
+			if (similar(sourceFile, TransformerHelper.getMostOuterClassName(classNode.name))) {
+				continue;
+			}
+
+            if (similar(sourceFile, TransformerHelper.getInnerClassName(classNode.name))) {
                 continue;
             }
+
+			if (similar(sourceFile, TransformerHelper.getInnerClassName(TransformerHelper.getOuterClassName(classNode.name)))) {
+				continue;
+			}
 
             return "Found possible SourceFile attribute on " + classNode.name + ": " + classNode.sourceFile;
         }
 
         return null;
+    }
+
+    private static boolean similar(String sourceFile, String simpleClassName) {
+        if (sourceFile.equalsIgnoreCase(simpleClassName)) {
+            return true;
+        }
+        if (simpleClassName.endsWith("Kt")) {
+            simpleClassName = simpleClassName.substring(0, simpleClassName.length() - "Kt".length());
+        }
+        return sourceFile.equalsIgnoreCase(simpleClassName);
     }
 
     @Override

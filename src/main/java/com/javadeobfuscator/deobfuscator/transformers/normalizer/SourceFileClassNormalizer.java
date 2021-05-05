@@ -38,7 +38,9 @@ public class SourceFileClassNormalizer extends AbstractNormalizer<SourceFileClas
 
             String sourceFileName = classNode.sourceFile;
             if (classNode.sourceFile.endsWith(".java")) {
-                sourceFileName = sourceFileName.substring(0, sourceFileName.lastIndexOf("."));
+                sourceFileName = sourceFileName.substring(0, sourceFileName.length() - ".java".length());
+            } else if (sourceFileName.endsWith(".kt")) {
+                sourceFileName = sourceFileName.substring(0, sourceFileName.length() - ".kt".length());
             }
 
             String innerClasses = "";
