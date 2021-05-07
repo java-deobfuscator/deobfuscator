@@ -12,6 +12,7 @@
 deobfuscator.iml
 /.settings
 /.idea
+*.iml
 *.jar
 *.txt
 *.ser
