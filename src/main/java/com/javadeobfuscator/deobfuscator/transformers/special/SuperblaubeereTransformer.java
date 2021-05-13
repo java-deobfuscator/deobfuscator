@@ -232,10 +232,10 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
 									   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_2_GOTO.getCaptured().label) {
 								mode = 1;
 							} else if (REDUNDANT_IF_3_MATCHER.matchImmediately(refer.instructions.iterator())
-									   && Utils.isInteger(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious())
-									   && Utils.getIntValue(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious()) == 0
+									   && Utils.isInteger(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious())
+									   && Utils.getIntValue(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious()) == 0
 									   && refer.instructions.getLast().getOpcode() == IRETURN
-									   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_2_GOTO.getCaptured().label) {
+									   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_3_GOTO.getCaptured().label) {
 								mode = 2;
 							}
 							if (mode == 0) {
