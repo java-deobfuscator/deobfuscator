@@ -192,6 +192,15 @@ public class TransformerHelper implements Opcodes {
         return false;
     }
 
+    public static boolean containsInvokeSpecial(MethodNode methodNode, String owner, String name, String desc) {
+        for (AbstractInsnNode insn : methodNode.instructions) {
+            if (isInvokeSpecial(insn, owner, name, desc)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static int countOccurencesOf(MethodNode methodNode, int opcode) {
         int i = 0;
         for (AbstractInsnNode insnNode : methodNode.instructions) {

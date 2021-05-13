@@ -85,96 +85,111 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
 
         System.out.println("[Allatori] [StringEncryptionTransformer] Starting");
 
-        for(ClassNode classNode : classes.values())
-            for(MethodNode method : classNode.methods)
-            {
-            	InstructionModifier modifier = new InstructionModifier();
-                Frame<SourceValue>[] frames;
-                try 
-                {
-                    frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
-                }catch(AnalyzerException e) 
-                {
-                    oops("unexpected analyzer exception", e);
-                    continue;
-                }
+        int iterations = 0;
+        boolean edit;
+        do {
+        	++iterations;
+        	edit = false;
+			for (ClassNode classNode : classes.values())
+				for (MethodNode method : classNode.methods) {
+					InstructionModifier modifier = new InstructionModifier();
+					Frame<SourceValue>[] frames;
+					try {
+						frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
+					} catch (AnalyzerException e) {
+						oops("unexpected analyzer exception", e);
+						continue;
+					}
 
-                for(AbstractInsnNode ain : TransformerHelper.instructionIterator(method))
-                	if(ain.getOpcode() == Opcodes.INVOKESTATIC) 
-                	{
-                        MethodInsnNode m = (MethodInsnNode)ain;
-                        String strCl = m.owner;
-                        if(m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")
-                        	|| m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) 
-                        {
-                        	Frame<SourceValue> f = frames[method.instructions.indexOf(m)];
-                        	if(f.getStack(f.getStackSize() - 1).insns.size() != 1)
-                        		continue;
-							AbstractInsnNode ldc = f.getStack(f.getStackSize() - 1).insns.iterator().next();
-							if(ldc.getOpcode() != Opcodes.LDC || !(((LdcInsnNode)ldc).cst instanceof String))
+					for (AbstractInsnNode ain : TransformerHelper.instructionIterator(method)) {
+						if (ain.getOpcode() != Opcodes.INVOKESTATIC) {
+							continue;
+						}
+						MethodInsnNode m = (MethodInsnNode) ain;
+						String strCl = m.owner;
+						if (m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;") || m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
+							Frame<SourceValue> f = frames[method.instructions.indexOf(m)];
+							if (f.getStack(f.getStackSize() - 1).insns.size() != 1)
 								continue;
-    						Context context = new Context(provider);
-                            context.push(classNode.name, method.name, getDeobfuscator().getConstantPool(classNode).getSize());
-    						if(classes.containsKey(strCl)) 
-    						{
-    							ClassNode innerClassNode = classes.get(strCl);
-    							MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) 
-    								&& mn.desc.equals(m.desc)).findFirst().orElse(null);
-    							if(decrypterNode == null || decrypterNode.instructions.getFirst() == null)
-    								continue;
-    					        Map<Integer, AtomicInteger> insnCount = new HashMap<>();
-    					        Map<String, AtomicInteger> invokeCount = new HashMap<>();
-    					        for(AbstractInsnNode i = decrypterNode.instructions.getFirst(); i != null; i = i.getNext()) 
-    					        {
-    					        	int opcode = i.getOpcode();
-    					        	insnCount.putIfAbsent(opcode, new AtomicInteger(0));
-    					        	insnCount.get(opcode).getAndIncrement();
-    					            if(i instanceof MethodInsnNode)
-    					            {
-    					            	invokeCount.putIfAbsent(((MethodInsnNode)i).name, new AtomicInteger(0));
-    					            	invokeCount.get(((MethodInsnNode)i).name).getAndIncrement();
-    					            }
-    					        }
-    							if(decryptor.contains(decrypterNode) || isAllatoriMethod(insnCount, invokeCount))
-    							{
-    								patchMethod(invokeCount, decrypterNode);
-                                    try 
-                                    {
-                                        ((LdcInsnNode)ldc).cst = MethodExecutor.execute(innerClassNode, decrypterNode, 
-                                        	Collections.singletonList(JavaValue.valueOf(((LdcInsnNode)ldc).cst)), null, context);
-            							modifier.remove(m);
-                                        decryptor.add(decrypterNode);
-                                        count.getAndIncrement();
-                                    }catch(Throwable t) 
-                                    {
-                                        System.out.println("Error while decrypting Allatori string.");
-                                        System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
-                                        System.out.println(classNode.name + " " + method.name + method.desc + " " + m.owner + " " + m.name + m.desc);
-                                        t.printStackTrace(System.out);
-                                    }
-    							}
-    						}
-                        }
-                	}
-                modifier.apply(method);
-            }
-        System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings");
+							AbstractInsnNode ldc = f.getStack(f.getStackSize() - 1).insns.iterator().next();
+							if (ldc.getOpcode() != Opcodes.LDC || !(((LdcInsnNode) ldc).cst instanceof String))
+								continue;
+							Context context = new Context(provider);
+							context.push(classNode.name, method.name, getDeobfuscator().getConstantPool(classNode).getSize());
+							if (classes.containsKey(strCl)) {
+								ClassNode innerClassNode = classes.get(strCl);
+								MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name)
+																										&& mn.desc.equals(m.desc)).findFirst().orElse(null);
+								if (decrypterNode == null || decrypterNode.instructions.getFirst() == null)
+									continue;
+								Map<String, AtomicInteger> invokeCount = new HashMap<>();
+								for (AbstractInsnNode i = decrypterNode.instructions.getFirst(); i != null; i = i.getNext()) {
+									if (i instanceof MethodInsnNode) {
+										invokeCount.compute(((MethodInsnNode) i).name, (k, v) -> {
+											if (v == null) {
+												return new AtomicInteger(1);
+											} else {
+												v.getAndIncrement();
+												return v;
+											}
+										});
+									}
+								}
+								if (decryptor.contains(decrypterNode) || isAllatoriMethod(decrypterNode)) {
+									patchMethod(invokeCount, decrypterNode);
+									try {
+										((LdcInsnNode) ldc).cst = MethodExecutor.execute(innerClassNode, decrypterNode,
+												Collections.singletonList(JavaValue.valueOf(((LdcInsnNode) ldc).cst)), null, context);
+										modifier.remove(m);
+										decryptor.add(decrypterNode);
+										count.getAndIncrement();
+										edit = true;
+									} catch (Throwable t) {
+										System.out.println("Error while decrypting Allatori string.");
+										System.out.println("Are you sure you're deobfuscating something obfuscated by Allatori?");
+										System.out.println(classNode.name + " " + method.name + method.desc + " " + m.owner + " " + m.name + m.desc);
+										t.printStackTrace(System.out);
+									}
+								}
+							}
+						}
+					}
+					modifier.apply(method);
+				}
+		} while (edit);
+        System.out.println("[Allatori] [StringEncryptionTransformer] Decrypted " + count + " encrypted strings in " + Math.min(1, iterations - 1) + " iterations");
         System.out.println("[Allatori] [StringEncryptionTransformer] Removed " + cleanup(decryptor) + " decryption methods");
         System.out.println("[Allatori] [StringEncryptionTransformer] Done");
         return count.get() > 0;
     }
+	public static boolean isAllatoriMethod(MethodNode decryptorNode) {
+    	return isAllatoriMethod1(decryptorNode) || isAllatoriMethod2(decryptorNode);
+	}
 
-    private boolean isAllatoriMethod(Map<Integer, AtomicInteger> insnCount, Map<String, AtomicInteger> invokeCount) {
-        //XXX: Better detector
-    	if(insnCount.get(Opcodes.IXOR) == null ||
-    		insnCount.get(Opcodes.NEWARRAY) == null ||
-    		invokeCount.get("charAt") == null || invokeCount.get("length") == null)
-    			return false;
-        return insnCount.get(Opcodes.IXOR).get() >= 3 &&
-               insnCount.get(Opcodes.NEWARRAY).get() >= 1 &&
-               invokeCount.get("charAt").get() >= 2 &&
-               invokeCount.get("length").get() >= 1;
-    }
+	private static boolean isAllatoriMethod1(MethodNode decryptorNode) {
+		boolean isAllatori = true;
+		isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "charAt", "(I)C");
+		isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "length", "()I");
+		isAllatori = isAllatori && TransformerHelper.containsInvokeSpecial(decryptorNode, "java/lang/String", "<init>", null);
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, IXOR) > 2;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, NEWARRAY) > 0;
+		return isAllatori;
+	}
+
+	private static boolean isAllatoriMethod2(MethodNode decryptorNode) {
+		boolean isAllatori = true;
+		isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "charAt", "(I)C");
+		isAllatori = isAllatori && TransformerHelper.containsInvokeVirtual(decryptorNode, "java/lang/String", "length", "()I");
+		isAllatori = isAllatori && TransformerHelper.containsInvokeSpecial(decryptorNode, "java/lang/String", "<init>", null);
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, CASTORE) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, NEW) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, IINC) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, IXOR) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, I2C) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, ARETURN) > 0;
+		isAllatori = isAllatori && TransformerHelper.countOccurencesOf(decryptorNode, NEWARRAY) == 1;
+		return isAllatori;
+	}
 
     private void patchMethod(Map<String, AtomicInteger> invokeCount, MethodNode method) {
         if (invokeCount.containsKey("getStackTrace") && invokeCount.containsKey("getClassName")) {
