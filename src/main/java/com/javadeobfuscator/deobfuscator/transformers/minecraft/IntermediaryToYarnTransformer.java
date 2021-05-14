@@ -256,7 +256,7 @@ public class IntermediaryToYarnTransformer extends AbstractNormalizer<Intermedia
         			mixinClassNode = getDeobfuscator().assureLoaded(mixinClass);
         		}catch(NoClassInPathException e)
         		{
-        			System.out.println("[IntermediaryToYarnTransformer] Class not found: " + mixinClasses);
+        			System.out.println("[IntermediaryToYarnTransformer] Class not found: " + mixinClass);
         		}
         		
         		for(ClassNode cn : getSuperClasses(mixinClassNode, rev, classMappings, notchToIntClass))

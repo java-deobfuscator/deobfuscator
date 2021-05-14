@@ -306,7 +306,7 @@ public class Deobfuscator {
                     classpath.put(node.name, node);
                 }
             } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException | InvalidClassException x) {
-            	if(PARAMORPHISM_V2 || this != null)
+            	if(PARAMORPHISM_V2)
             		invaildClasses.put(name, data);
             	else
             		logger.error("Could not parse {} (is it a class file?)", name, x);

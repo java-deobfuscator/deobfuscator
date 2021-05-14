@@ -151,7 +151,7 @@ public class SrgToMCPTransformer extends AbstractNormalizer<SrgToMCPTransformer.
 	        		}
 	        	else
 	        	{
-	        		String[] beginning = line.split(" ");
+	        		String[] beginning = line.split(" ", 2);
 	        		if(beginning.length != 2)
 	        			throw new RuntimeException("Unexpected srg mapping");
 	        		line = beginning[1];
@@ -264,8 +264,8 @@ public class SrgToMCPTransformer extends AbstractNormalizer<SrgToMCPTransformer.
     			{
     				System.out.println("[SrgToMCPTransformer] Field not found: " + notchName + " @ " + classNode.name);
     				itr2.remove();
-    			}
-    			node.getKey().desc = getMappedType(Type.getType(field.desc), classMappings).toString();
+    			}else
+    				node.getKey().desc = getMappedType(Type.getType(field.desc), classMappings).toString();
     		}
     	}
     	//Remap mixin shadow methods/fields
@@ -277,6 +277,7 @@ public class SrgToMCPTransformer extends AbstractNormalizer<SrgToMCPTransformer.
     				if(annot.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;") && annot.values.size() >= 2)
     				{
     					int index = -1;
+    					boolean isValue = true;
     					for(int i = 0; i < annot.values.size(); i++)
     					{
     						Object o = annot.values.get(i);
@@ -285,13 +286,21 @@ public class SrgToMCPTransformer extends AbstractNormalizer<SrgToMCPTransformer.
     							index = i + 1;
     							break;
     						}
+    						if("targets".equals(o))
+    						{
+    							index = i + 1;
+    							isValue = false;
+    							break;
+    						}
     					}
     					List<?> list = (List<?>)annot.values.get(index);
     					for(Object o : list)
     					{
-    						if(!(o instanceof Type))
+    						if(isValue && !(o instanceof Type))
     							continue;
-    						mixinClasses.add(((Type)o).getInternalName());
+    						if(!isValue && !(o instanceof String))
+    							continue;
+    						mixinClasses.add(isValue ? ((Type)o).getInternalName() : (String)o);
     					}
     				}
     		
@@ -315,7 +324,8 @@ public class SrgToMCPTransformer extends AbstractNormalizer<SrgToMCPTransformer.
         			mixinClassNode = getDeobfuscator().assureLoaded(mixinClass);
         		}catch(NoClassInPathException e)
         		{
-        			System.out.println("[SrgToMCPTransformer] Class not found: " + mixinClasses);
+        			System.out.println("[SrgToMCPTransformer] Class not found: " + mixinClass);
+        			continue;
         		}
         		
         		for(ClassNode cn : getSuperClasses(mixinClassNode, classMappings))

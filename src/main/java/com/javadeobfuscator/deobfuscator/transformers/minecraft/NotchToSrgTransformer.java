@@ -97,7 +97,7 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
 	        		}
 	        	else
 	        	{
-	        		String[] beginning = line.split(" ");
+	        		String[] beginning = line.split(" ", 2);
 	        		if(beginning.length != 2)
 	        			throw new RuntimeException("Unexpected srg mapping");
 	        		line = beginning[1];
@@ -213,11 +213,13 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
     			{
     				System.out.println("[NotchToSrgTransformer] Field not found: " + node.getKey().name + " @ " + entry.getKey());
     				itr2.remove();
+    			}else
+    			{
+	    			if(rev)
+	    				node.getKey().desc = getMappedType(Type.getType(field.desc), classMappings).toString();
+	    			else
+	    				node.getKey().desc = field.desc;
     			}
-    			if(rev)
-    				node.getKey().desc = getMappedType(Type.getType(field.desc), classMappings).toString();
-    			else
-    				node.getKey().desc = field.desc;
     		}
     	}
     	//This is only useful when we are trying to "collapse" the classes into one package (reobf)
@@ -231,6 +233,7 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
     				if(annot.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;") && annot.values.size() >= 2)
     				{
     					int index = -1;
+    					boolean isValue = true;
     					for(int i = 0; i < annot.values.size(); i++)
     					{
     						Object o = annot.values.get(i);
@@ -239,13 +242,21 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
     							index = i + 1;
     							break;
     						}
+    						if("targets".equals(o))
+    						{
+    							index = i + 1;
+    							isValue = false;
+    							break;
+    						}
     					}
     					List<?> list = (List<?>)annot.values.get(index);
     					for(Object o : list)
     					{
-    						if(!(o instanceof Type))
+    						if(isValue && !(o instanceof Type))
     							continue;
-    						mixinClasses.add(((Type)o).getInternalName());
+    						if(!isValue && !(o instanceof String))
+    							continue;
+    						mixinClasses.add(isValue ? ((Type)o).getInternalName() : (String)o);
     					}
     				}
     		
@@ -265,7 +276,8 @@ public class NotchToSrgTransformer extends AbstractNormalizer<NotchToSrgTransfor
         			mixinClassNode = getDeobfuscator().assureLoaded(mixinClass);
         		}catch(NoClassInPathException e)
         		{
-        			System.out.println("[NotchToSrgTransformer] Class not found: " + mixinClasses);
+        			System.out.println("[NotchToSrgTransformer] Class not found: " + mixinClass);
+        			continue;
         		}
         		
         		for(ClassNode cn : getSuperClasses(mixinClassNode, rev, classMappings))

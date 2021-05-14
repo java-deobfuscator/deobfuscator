@@ -203,7 +203,7 @@ public class NotchToIntermediaryTransformer extends AbstractNormalizer<NotchToIn
         			mixinClassNode = getDeobfuscator().assureLoaded(mixinClass);
         		}catch(NoClassInPathException e)
         		{
-        			System.out.println("[NotchToIntermediaryTransformer] Class not found: " + mixinClasses);
+        			System.out.println("[NotchToIntermediaryTransformer] Class not found: " + mixinClass);
         		}
         		
         		for(ClassNode cn : getSuperClasses(mixinClassNode, rev, classMappings))
