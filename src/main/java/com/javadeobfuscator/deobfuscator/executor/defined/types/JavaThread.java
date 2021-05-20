@@ -2,7 +2,6 @@ package com.javadeobfuscator.deobfuscator.executor.defined.types;
 
 import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -50,7 +49,7 @@ public class JavaThread {
                     threadContext.file = context.file;
 
                     thread = new Thread(() -> MethodExecutor.execute(classNode, method, Collections.emptyList(), instance, threadContext));
-                    ThreadStore.addThread(thread.getId(), this);
+                    context.threadStore.addThread(thread.getId(), this);
                     this.context = threadContext;
 
                     thread.start();

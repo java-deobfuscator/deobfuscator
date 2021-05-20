@@ -18,6 +18,8 @@ public class Context { //FIXME clinit classes
     public Map<String, ClassNode> dictionary;
     public Map<ClassNode, ConstantPool> constantPools;
     public final Map<AbstractInsnNode, BiFunction<List<JavaValue>, Context, JavaValue>> customMethodFunc = new HashMap<>();
+    public final ThreadStore threadStore = new ThreadStore();
+    public final Monitor monitor = new Monitor();
 
     public Set<String> clinit = new HashSet<>();
 

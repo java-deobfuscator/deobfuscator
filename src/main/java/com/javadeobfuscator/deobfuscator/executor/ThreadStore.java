@@ -7,13 +7,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ThreadStore {
-    private static Map<Long, JavaThread> threads = Collections.synchronizedMap(new HashMap<>());
+    private Map<Long, JavaThread> threads = Collections.synchronizedMap(new HashMap<>());
 
-    public static void addThread(long threadId, JavaThread thread) {
+    public void addThread(long threadId, JavaThread thread) {
         threads.put(threadId, thread);
     }
 
-    public static JavaThread retrieveThread(long threadId) {
+    public JavaThread retrieveThread(long threadId) {
         JavaThread thread = threads.get(threadId);
 
         if (thread == null) { // main thread
