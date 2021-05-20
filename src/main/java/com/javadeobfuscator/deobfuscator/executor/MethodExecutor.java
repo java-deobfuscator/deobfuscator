@@ -1743,11 +1743,11 @@ public class MethodExecutor {
                         break;
                     }
                     case MONITORENTER: {
-                        Monitor.enter(stack.remove(0));
+                        context.monitor.enter(stack.remove(0));
                         break;
                     }
                     case MONITOREXIT: {
-                        Monitor.exit(stack.remove(0));
+                        context.monitor.exit(stack.remove(0));
                         break;
                     }
                     case MULTIANEWARRAY: {
