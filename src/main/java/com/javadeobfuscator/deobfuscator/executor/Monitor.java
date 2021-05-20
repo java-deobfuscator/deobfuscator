@@ -5,10 +5,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Monitor {
-    private final static Map<Object, Thread> locks = new HashMap<>();
-    private final static Map<Thread, AtomicInteger> counters = new HashMap<>();
+    private final Map<Object, Thread> locks = new HashMap<>();
+    private final Map<Thread, AtomicInteger> counters = new HashMap<>();
 
-    public static void enter(Object obj) {
+    public void enter(Object obj) {
         if (obj == null) throw new NullPointerException();
 
         while (true) {
@@ -34,7 +34,7 @@ public class Monitor {
         }
     }
 
-    public static void exit(Object obj) {
+    public void exit(Object obj) {
         if (obj == null) throw new NullPointerException();
 
         boolean notify = false;
