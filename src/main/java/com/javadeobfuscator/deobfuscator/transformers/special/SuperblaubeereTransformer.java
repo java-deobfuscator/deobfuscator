@@ -380,9 +380,9 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
 			for (MethodNode m : toRemove) {
 				for (AbstractInsnNode ain : m.instructions.toArray()) {
 					if (TransformerHelper.isInvokeVirtual(ain, "java/lang/String", "getBytes", "(Ljava/nio/charset/Charset;)[B")) {
-						MethodExecutor.customMethodFunc.put(ain, (list, ctx) -> new JavaArray((list.get(1).as(String.class)).getBytes(StandardCharsets.UTF_8)));
+						context.customMethodFunc.put(ain, (list, ctx) -> new JavaArray((list.get(1).as(String.class)).getBytes(StandardCharsets.UTF_8)));
 					} else if (TransformerHelper.isInvokeSpecial(ain, "java/lang/String", "<init>", "([BLjava/nio/charset/Charset;)V")) {
-						MethodExecutor.customMethodFunc.put(ain, (list, ctx) -> {
+						context.customMethodFunc.put(ain, (list, ctx) -> {
 							list.get(2).initialize(new String(list.get(0).as(byte[].class), StandardCharsets.UTF_8));
 							return null;
 						});

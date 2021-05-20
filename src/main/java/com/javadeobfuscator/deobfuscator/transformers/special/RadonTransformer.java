@@ -546,6 +546,8 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 		Map<ClassNode, Set<MethodNode>> indyBootstrap1 = new HashMap<>();
 		if(INDY)
 		{
+			Context context = new Context(provider);
+			context.dictionary = this.classpath;
 			for(ClassNode classNode : classNodes())
 				for(MethodNode method : classNode.methods)
 					for(AbstractInsnNode ain : method.instructions.toArray())
@@ -571,7 +573,7 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 	                            MethodNode bootstrapMethodNode = bootstrapClassNode.methods.stream().filter(mn -> mn.name.equals(bootstrap.getName()) 
 	                            	&& mn.desc.equals(bootstrap.getDesc())).findFirst().orElse(null);
 	                            if(!indyBootstrap.containsKey(bootstrapClassNode) || !indyBootstrap.get(bootstrapClassNode).contains(bootstrapMethodNode))
-	                            	patchMethodIndy(bootstrapMethodNode);
+	                            	patchMethodIndy(context, bootstrapMethodNode);
 	                            List<JavaValue> args = new ArrayList<>();
 	                            args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); //Lookup
 	                            args.add(JavaValue.valueOf(dyn.name)); //dyn method name
@@ -579,13 +581,12 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 	                            for(Object o : dyn.bsmArgs)
 	                                args.add(JavaValue.valueOf(o));
 	                            try
-	                            {	                            
-	                                Context context = new Context(provider);
-	                                context.dictionary = this.classpath;
+	                            {
 	                                MethodInsnNode replacement = null;
 	
 	                                if(FAST_INDY)
 	                                {
+	                                	context.clearStackTrace();
 	                                	String[] result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
 		                                switch (result[3]) {
 		                                	case "findVirtual":
@@ -598,6 +599,7 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 		                                }
 	                                }else
 	                                {
+										context.clearStackTrace();
 		                                JavaMethodHandle result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
 		                                String clazz = result.clazz.replace('.', '/');
 		                                switch (result.type) {
@@ -648,9 +650,8 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 	                            for(Object o : dyn.bsmArgs)
 	                                args.add(JavaValue.valueOf(o));
 	                            try
-	                            {	                            
-	                                Context context = new Context(provider);
-	                                context.dictionary = this.classpath;
+	                            {
+									context.clearStackTrace();
 	
 	                                JavaHandle result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
 	                                AbstractInsnNode replacement = null;
@@ -707,9 +708,8 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 							args.add(JavaValue.valueOf(dyn.name)); //dyn method name
 							args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
 							try
-							{	                            
-								Context context = new Context(provider);
-								context.dictionary = this.classpath;
+							{
+								context.clearStackTrace();
 								
 								JavaHandle result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
 								AbstractInsnNode replacement = null;
@@ -893,7 +893,7 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 		return true;
 	}
 	
-	private void patchMethodIndy(MethodNode method)
+	private void patchMethodIndy(Context context, MethodNode method)
 	{
 		for(AbstractInsnNode ain : method.instructions.toArray())
 			if(ain instanceof MethodInsnNode && (((MethodInsnNode)ain).owner.equals("java/lang/Runtime")
@@ -915,7 +915,7 @@ public class RadonTransformer extends Transformer<TransformerConfig>
 					&& ((MethodInsnNode)ain).name.equals("asType"))
 					method.instructions.set(ain, new InsnNode(Opcodes.POP));
 				else if(ain.getOpcode() == Opcodes.INVOKEVIRTUAL && ((MethodInsnNode)ain).owner.equals("java/lang/invoke/MethodHandles$Lookup"))
-					MethodExecutor.customMethodFunc.put(ain, (args, ctx) -> {
+					context.customMethodFunc.put(ain, (args, ctx) -> {
 						String owner = args.remove(0).as(String.class);
 						String name = args.remove(0).as(String.class);
 						String desc = args.remove(0).as(String.class);
