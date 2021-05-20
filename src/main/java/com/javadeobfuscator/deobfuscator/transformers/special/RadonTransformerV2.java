@@ -107,6 +107,8 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
                 return false;
             }
         });
+		Context context = new Context(provider);
+		context.dictionary = classpath;
         
 		System.out.println("[Special] [RadonTransformerV2] Starting");
 		AtomicInteger eject = new AtomicInteger();
@@ -157,7 +159,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 						&& ((MethodInsnNode)ain).owner.equals("java/lang/Class")
 						&& ((MethodInsnNode)ain).name.equals("getResourceAsStream")
 						&& ((MethodInsnNode)ain).desc.equals("(Ljava/lang/String;)Ljava/io/InputStream;"))
-					MethodExecutor.customMethodFunc.put(ain, (list, ctx) -> {
+					context.customMethodFunc.put(ain, (list, ctx) -> {
 						try {
 							String clazzName = list.remove(0).as(String.class);
 							list.remove(0).as(JavaClass.class);
@@ -182,10 +184,9 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 									AbstractInsnNode ldc = ain.getPrevious();
 									if (!(ldc instanceof LdcInsnNode) || !(((LdcInsnNode)ldc).cst instanceof String))
 										continue;
-									Context context = new Context(provider);
+									context.clearStackTrace();
 									context.push(classNode.name, m.name,
 											getDeobfuscator().getConstantPool(classNode).getSize());
-									context.dictionary = classpath;
 									((LdcInsnNode)ldc).cst = MethodExecutor.execute(atOwner, atDecr,
 											Arrays.asList(JavaValue.valueOf(((LdcInsnNode) ldc).cst)), null, context);
 									modifier.remove(ain);
@@ -874,8 +875,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 								m.name.equals("<clinit>")).findFirst().orElse(null);
 							if(numberDecryptClass.contains(decryptorNode) || isCorrectNumberDecrypt(clinit))
 							{
-								Context context = new Context(provider);
-		                        context.dictionary = classpath;
+		                        context.clearStackTrace();
 		                        context.push(classNode.name, method.name, getDeobfuscator().getConstantPool(classNode).getSize());
 								try
 								{
@@ -947,8 +947,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 									&& f.desc.equals(putstaticF.desc)).findFirst().orElse(null);
 								if(poolField != null)
 								{
-									Context context = new Context(provider);
-									context.dictionary = classpath;
+									context.clearStackTrace();
 									MethodExecutor.execute(classNode, pool, Arrays.asList(), null, context);
 									Object[] value = (Object[])context.provider.getField(classNode.name, poolField.name, poolField.desc, null, context);
 									for(MethodNode method : classNode.methods)
@@ -1015,9 +1014,8 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 	                            for(Object o : dyn.bsmArgs)
 	                                args.add(JavaValue.valueOf(o));
 	                            try
-	                            {	                            
-	                                Context context = new Context(provider);
-	                                context.dictionary = this.classpath;
+	                            {
+									context.clearStackTrace();
 	
 	                                JavaMethodHandle result = MethodExecutor.execute(bootstrapClassNode, bootstrapMethodNode, args, null, context);
 	                                String clazz = result.clazz.replace('.', '/');
@@ -1091,8 +1089,7 @@ public class RadonTransformerV2 extends Transformer<TransformerConfig>
 									stackOffset++;
 								}
 								instructions = new ArrayList<>(new HashSet<>(instructions));
-								Context context = new Context(provider);
-		                        context.dictionary = classpath;
+								context.clearStackTrace();
 		                        context.push(classNode.name, method.name, getDeobfuscator().getConstantPool(classNode).getSize());
 								try
 								{

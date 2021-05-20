@@ -8,14 +8,16 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public class Context { //FIXME clinit classes
-    private final List<StackTraceElement> context = new ArrayList<>();
+    private final List<StackTraceElement> stackTrace = new ArrayList<>();
 
     public Provider provider;
     public Map<String, ClassNode> dictionary;
     public Map<ClassNode, ConstantPool> constantPools;
+    public final Map<AbstractInsnNode, BiFunction<List<JavaValue>, Context, JavaValue>> customMethodFunc = new HashMap<>();
 
     public Set<String> clinit = new HashSet<>();
 
@@ -26,25 +28,25 @@ public class Context { //FIXME clinit classes
     }
 
     public StackTraceElement at(int index) {
-        return context.get(index);
+        return stackTrace.get(index);
     }
 
     public StackTraceElement pop() {
-        return context.remove(0);
+        return stackTrace.remove(0);
     }
 
     public void push(String clazz, String method, int constantPoolSize) {
         clazz = clazz.replace('/', '.');
-        context.add(0, new StackTraceElement(clazz, method, "", constantPoolSize));
+        stackTrace.add(0, new StackTraceElement(clazz, method, "", constantPoolSize));
     }
     
     public void push(String clazz, String method, String sourceFile, int constantPoolSize) {
         clazz = clazz.replace('/', '.');
-        context.add(0, new StackTraceElement(clazz, method, sourceFile, constantPoolSize));
+        stackTrace.add(0, new StackTraceElement(clazz, method, sourceFile, constantPoolSize));
     }
 
     public int size() {
-        return context.size();
+        return stackTrace.size();
     }
 
     public StackTraceElement[] getStackTrace() {
@@ -54,6 +56,10 @@ public class Context { //FIXME clinit classes
             orig[i] = new StackTraceElement(e.getClassName(), e.getMethodName(), e.getFileName(), -1);
         }
         return orig;
+    }
+
+    public void clearStackTrace() {
+        stackTrace.clear();
     }
 
     private final Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsBefore = new HashMap<>();

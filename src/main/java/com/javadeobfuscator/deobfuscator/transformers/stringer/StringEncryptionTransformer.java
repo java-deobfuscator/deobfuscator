@@ -307,6 +307,11 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
         Map<AbstractInsnNode, String> enhanced = new HashMap<>();
         List<ClassNode> mapped = new ArrayList<>();
 
+        Context context = new Context(provider);
+        context.dictionary = classpath;
+        context.constantPools = getDeobfuscator().getConstantPools();
+        context.file = getDeobfuscator().getConfig().getInput();
+
         for (ClassNode classNode : classNodes()) {
             for (MethodNode methodNode : classNode.methods) {
                 InsnList methodInsns = methodNode.instructions;
@@ -328,11 +333,8 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                     if (decrypterNode != null) {
                                     	decryptors.add(innerClassNode);
-                                        Context context = new Context(provider);
-                                        context.dictionary = classpath;
-                                        context.constantPools = getDeobfuscator().getConstantPools();
+                                    	context.clearStackTrace();
                                         context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
-                                        context.file = getDeobfuscator().getConfig().getInput();
                                         MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
                                         if (clinitMethod != null) {
                                             MethodExecutor.execute(classes.get(strCl), clinitMethod, Collections.emptyList(), null, context);
@@ -344,7 +346,7 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                             		if(innerInsn instanceof InvokeDynamicInsnNode)
                                             		{
                                             			InvokeDynamicInsnNode innerIndy = (InvokeDynamicInsnNode)innerInsn;
-                                            			MethodExecutor.customMethodFunc.put(innerIndy, (args, ctx) -> {
+                                            			context.customMethodFunc.put(innerIndy, (args, ctx) -> {
                                             				MethodNode innerBootstrap = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerIndy.bsm.getName())
                                             					&& mn.desc.equals(innerIndy.bsm.getDesc())).findFirst().orElse(null);
                                             				//Execute bootstrap
@@ -442,11 +444,8 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                     if (decrypterNode != null) {
                                     	decryptors.add(innerClassNode);
-                                        Context context = new Context(provider);
-                                        context.dictionary = classpath;
-                                        context.constantPools = getDeobfuscator().getConstantPools();
+                                        context.clearStackTrace();
                                         context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
-                                        context.file = getDeobfuscator().getConfig().getInput();
                                         // Stringer3
                                         if (innerClassNode.superName.equals("java/lang/Thread")) {
                                             MethodNode clinitMethod = classes.get(strCl).methods.stream().filter(mn -> mn.name.equals("<clinit>")).findFirst().orElse(null);
@@ -496,11 +495,8 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                         MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(m.name) && mn.desc.equals(m.desc) && Modifier.isStatic(mn.access)).findFirst().orElse(null);
                                         if (decrypterNode != null) {
                                         	decryptors.add(innerClassNode);
-                                            Context context = new Context(provider);
-                                            context.dictionary = classpath;
-                                            context.constantPools = getDeobfuscator().getConstantPools();
+                                        	context.clearStackTrace();
                                             context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
-                                            context.file = getDeobfuscator().getConfig().getInput();
 
                                             // Stringer3
                                             if (innerClassNode.superName.equals("java/lang/Thread")) {
@@ -572,11 +568,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
                                                     ClassNode innerClassNode = classes.get(strCl);
                                                     decryptors.add(innerClassNode);
                                                     MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(innerMethod.name) && mn.desc.equals(innerMethod.desc)).findFirst().orElse(null);
-                                                    Context context = new Context(provider);
+                                                    context.clearStackTrace();
                                                     context.push(classNode.name.replace('/', '.'), methodNode.name, getDeobfuscator().getConstantPool(classNode).getSize());
                                                     context.push(targetClassNode.name.replace('/', '.'), targetMethodNode.name, getDeobfuscator().getConstantPool(targetClassNode).getSize());
-                                                    context.dictionary = classpath;
-                                                    context.constantPools = getDeobfuscator().getConstantPools();
                                                     Object o = MethodExecutor.execute(classes.get(strCl), decrypterNode, Arrays.asList(new JavaObject(innerLdc.cst, "java/lang/String")), null, context);
                                                     innerLdc.cst = o;
                                                     targetMethodNode.instructions.remove(innerMethod);
