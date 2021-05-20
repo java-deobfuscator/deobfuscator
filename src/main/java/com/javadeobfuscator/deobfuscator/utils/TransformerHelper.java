@@ -16,24 +16,42 @@
 
 package com.javadeobfuscator.deobfuscator.utils;
 
-import com.google.common.base.*;
-import com.google.common.primitives.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.javavm.*;
-import org.objectweb.asm.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.primitives.Booleans;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.javavm.VirtualMachine;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.tree.analysis.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.Frame;
-import org.slf4j.*;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.*;
-
-import static com.javadeobfuscator.deobfuscator.utils.Utils.*;
+import static com.javadeobfuscator.deobfuscator.utils.Utils.loadBytes;
 
 public class TransformerHelper implements Opcodes {
+
     public static boolean isInvokeVirtual(AbstractInsnNode insn, String owner, String name, String desc) {
         if (insn == null) {
             return false;
@@ -167,7 +185,7 @@ public class TransformerHelper implements Opcodes {
         List<FieldNode> fields = new ArrayList<>();
         for (FieldNode f : classNode.fields) {
             if ((name == null || f.name.equals(name)) &&
-                    (desc == null || f.desc.equals(desc))) {
+                (desc == null || f.desc.equals(desc))) {
                 fields.add(f);
             }
         }
@@ -192,6 +210,15 @@ public class TransformerHelper implements Opcodes {
         return false;
     }
 
+    public static boolean containsInvokeSpecial(MethodNode methodNode, String owner, String name, String desc) {
+        for (AbstractInsnNode insn : methodNode.instructions) {
+            if (isInvokeSpecial(insn, owner, name, desc)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static int countOccurencesOf(MethodNode methodNode, int opcode) {
         int i = 0;
         for (AbstractInsnNode insnNode : methodNode.instructions) {
@@ -202,6 +229,22 @@ public class TransformerHelper implements Opcodes {
         return i;
     }
 
+    public static Map<Integer, AtomicInteger> calcOpcodeOccurenceMap(MethodNode methodNode) {
+        Map<Integer, AtomicInteger> map = new HashMap<>();
+        for (AbstractInsnNode abstractInsnNode : methodNode.instructions) {
+            int opcode = abstractInsnNode.getOpcode();
+            if (opcode >= 0) {
+                map.compute(opcode, (opc, i) -> {
+                    if (i == null) {
+                        return new AtomicInteger(1);
+                    }
+                    i.getAndIncrement();
+                    return i;
+                });
+            }
+        }
+        return map;
+    }
 
     public static File javaLib(String name) {
         return new File(System.getProperty("java.home") + File.separator + "lib" + File.separator + name);
@@ -523,18 +566,18 @@ public class TransformerHelper implements Opcodes {
     }
 
     public static boolean hasArgumentTypesOtherThan(Type[] types, Type... want) {
-    	loop:
+        loop:
         for (Type t : types) {
-            for (int i = 0; i < want.length; i++) {
-                if (t.equals(want[i])) {
-                	continue loop;
+            for (Type type : want) {
+                if (t.equals(type)) {
+                    continue loop;
                 }
             }
             return true;
         }
-    	return false;
+        return false;
     }
-    
+
     public static boolean isConstantInt(AbstractInsnNode insn) {
         if (insn.getOpcode() >= ICONST_M1 && insn.getOpcode() <= ICONST_5) return true;
         if (insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH) return true;
@@ -563,7 +606,7 @@ public class TransformerHelper implements Opcodes {
         }
         return ((Type) ((LdcInsnNode) insn).cst);
     }
-    
+
     public static boolean nullsafeOpcodeEqual(AbstractInsnNode insn, int opcode) {
         return insn != null && insn.getOpcode() == opcode;
     }
