@@ -41,7 +41,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.javadeobfuscator.deobfuscator.executor.ThreadStore;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.*;
 import com.javadeobfuscator.deobfuscator.executor.exceptions.ExecutionException;
 import com.javadeobfuscator.deobfuscator.executor.values.*; 
@@ -647,7 +646,7 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.as(JavaThread.class).start();
                 return null;
             });
-            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> ThreadStore.retrieveThread(Thread.currentThread().getId()));
+            put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> context.threadStore.retrieveThread(Thread.currentThread().getId()));
             put("getId()J", (targetObject, args, context) -> targetObject.as(JavaThread.class).getThread().getId());
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> {
                 context.push("java.lang.Thread", "getStackTrace", 0);
