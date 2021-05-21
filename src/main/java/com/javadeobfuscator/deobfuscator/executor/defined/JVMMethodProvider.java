@@ -62,7 +62,7 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 public class JVMMethodProvider extends MethodProvider {
-    @SuppressWarnings("serial")
+    @SuppressWarnings({"serial", "CloneableClassWithoutClone"})
     //@formatter:off
     private static final Map<String, Map<String, Function3<JavaValue, List<JavaValue>, Context, Object>>> functions = new HashMap<String, Map<String, Function3<JavaValue, List<JavaValue>, Context, Object>>>() {{
         // Java
@@ -96,13 +96,6 @@ public class JVMMethodProvider extends MethodProvider {
                 expect(targetObject, targetObject.type()); 
                 targetObject.initialize(new JavaObject(null, targetObject.type())); 
                 initObject(context, targetObject.type(), targetObject); 
-                return null;
-            });
-        }});
-        put("java/util/zip/ZipInputStream", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
-            put("<init>(Ljava/io/InputStream;)V", (targetObject, args, context) -> {
-                System.out.println("New ZipInputStream with " + args.get(0).value());
-                targetObject.initialize(new ZipInputStream(args.get(0).as(InputStream.class)));
                 return null;
             });
         }});
