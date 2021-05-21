@@ -346,8 +346,8 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 				}
 			}
 		}
-		classNodes().stream().parallel().forEach(cn -> {
-			cn.methods.stream().parallel().forEach(mn -> {
+		classNodes().stream().forEach(cn -> {
+			cn.methods.stream().forEach(mn -> {
 				for (AbstractInsnNode ain : mn.instructions.toArray()) {
 					if (ain instanceof MethodInsnNode && !((MethodInsnNode) ain).owner.startsWith("java/lang/")) {
 
