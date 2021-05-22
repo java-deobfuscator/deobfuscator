@@ -351,7 +351,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 				for (AbstractInsnNode ain : mn.instructions.toArray()) {
 					if (ain instanceof MethodInsnNode && !((MethodInsnNode) ain).owner.startsWith("java/lang/")) {
 MethodInsnNode min = (MethodInsnNode) ain;
-						if (!replacements.containsKey(((MethodInsnNode) ain).owner)) {
+						if (!replacements.containsKey(min.owner)) {
 							continue;
 						}
 
