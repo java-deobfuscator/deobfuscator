@@ -350,7 +350,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 			cn.methods.stream().forEach(mn -> {
 				for (AbstractInsnNode ain : mn.instructions.toArray()) {
 					if (ain instanceof MethodInsnNode && !((MethodInsnNode) ain).owner.startsWith("java/lang/")) {
-
+MethodInsnNode min = (MethodInsnNode) ain;
 						if (!replacements.containsKey(((MethodInsnNode) ain).owner)) {
 							continue;
 						}
