@@ -359,7 +359,7 @@ MethodInsnNode min = (MethodInsnNode) ain;
 								String.format("[Special] [ParamorphismTransformer] Redirecting %s in %s->%s(%s)",
 										min.owner, cn.name, mn.name, mn.desc));
 
-						Map<MethodNode, AbstractInsnNode> map = replacements.get(((MethodInsnNode) ain).owner);
+						Map<MethodNode, AbstractInsnNode> map = replacements.get(min.owner);
 
 						if (map == null)
 							continue;
