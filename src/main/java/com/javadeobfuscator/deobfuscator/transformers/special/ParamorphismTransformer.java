@@ -357,7 +357,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 
 						System.out.println(
 								String.format("[Special] [ParamorphismTransformer] Redirecting %s in %s->%s(%s)",
-										((MethodInsnNode) ain).owner, cn.name, mn.name, mn.desc));
+										min.owner, cn.name, mn.name, mn.desc));
 
 						Map<MethodNode, AbstractInsnNode> map = replacements.get(((MethodInsnNode) ain).owner);
 
