@@ -365,7 +365,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 							continue;
 
 						MethodNode caller = map.keySet().stream().filter(m -> m.name.equals(((MethodInsnNode) ain).name)
-								&& m.desc.equals(((MethodInsnNode) ain).desc)).findFirst().orElse(null);
+								&& m.desc.equals(min.desc)).findFirst().orElse(null);
 						mn.instructions.set(ain, map.get(caller).clone(null));
 						if (map.get(caller) instanceof LdcInsnNode)
 							stringCalls.incrementAndGet();
