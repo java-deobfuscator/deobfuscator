@@ -49,7 +49,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 public class ParamorphismTransformer extends Transformer<TransformerConfig>
 {
-	public static boolean OVERRIDE = true;
 	
 	@Override
 	public boolean transform()
@@ -101,9 +100,9 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
             }
         });
 		System.out.println("[Special] [ParamorphismTransformer] Starting");
-		if(getDeobfuscator().invaildClasses.isEmpty() && !OVERRIDE)
+		if(getDeobfuscator().invaildClasses.isEmpty())
 		{
-			System.out.println("[Special] [ParamorphismTransformer] Paramorphism not found or option not enabled. Exiting");
+			System.out.println("[Special] [ParamorphismTransformer] Paramorphism not found or option not enabled. Exiting (If you see folder class in your jar.then consider using V2 or else v1 )");
 			return false;
 		}
 		AtomicInteger annotRemoved = new AtomicInteger();
@@ -266,6 +265,8 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 			}
 		//Decrypt classes
 		Set<String> toRemove = new HashSet<>();
+		Map<String, Map<MethodNode, AbstractInsnNode>> replacements = new HashMap<>();
+		
 		for(ClassNode classNode : classNodes())
 		{
 			MethodNode clinit = classNode.methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
@@ -309,7 +310,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 			         reader.accept(node, ClassReader.SKIP_FRAMES);
 			         toRemove.add(node.interfaces.get(0));//Interface
 			         //Decrypt all
-			         Map<MethodNode, AbstractInsnNode> replacements = new HashMap<>();
+			         Map<MethodNode, AbstractInsnNode> pip = new HashMap<>();
 			         JavaValue instance = JavaValue.valueOf(new Object());
 			         for(MethodNode method : node.methods)
 			         {
@@ -330,27 +331,13 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 			        	 if(mode.getOpcode() == Opcodes.GETFIELD && ((FieldInsnNode)mode).owner.equals(node.name))
 			        	 {
 			        		 String res = MethodExecutor.execute(node, method, Arrays.asList(), instance, context);
-			        		 replacements.put(method, new LdcInsnNode(res));
+			        		 pip.put(method, new LdcInsnNode(res));
 			        	 }else if(mode instanceof FieldInsnNode || mode instanceof MethodInsnNode)
-			        		 replacements.put(method, mode.clone(null));
+			        		 pip.put(method, mode.clone(null));
 			        	 else if(mode instanceof LdcInsnNode)
-			        		 replacements.put(method, mode.clone(null));
+			        		 pip.put(method, mode.clone(null));
 			         }
-			         for(ClassNode cn : classNodes())
-			        	 for(MethodNode mn : cn.methods)
-			        		 for(AbstractInsnNode ain : mn.instructions.toArray())
-			        			 if(ain instanceof MethodInsnNode && ((MethodInsnNode)ain).owner.equals(classNode.name))
-			        			 {
-			        				 MethodNode caller = node.methods.stream().filter(m -> m.name.equals(((MethodInsnNode)ain).name)
-			        					 && m.desc.equals(((MethodInsnNode)ain).desc)).findFirst().orElse(null);
-			        				 mn.instructions.set(ain, replacements.get(caller).clone(null));
-			        				 if(replacements.get(caller) instanceof LdcInsnNode)
-			        					 stringCalls.incrementAndGet();
-			        				 else if(replacements.get(caller) instanceof MethodInsnNode)
-			        					 methodCalls.incrementAndGet();
-			        				 else if(replacements.get(caller) instanceof FieldInsnNode)
-			        					 fieldCalls.incrementAndGet();
-			        			 }
+				 replacements.put(classNode.name, pip);
 				}catch(Exception e)
 				{
 					e.printStackTrace();
@@ -359,6 +346,37 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
 				}
 			}
 		}
+		classNodes().stream().forEach(cn -> {
+			cn.methods.stream().forEach(mn -> {
+				for (AbstractInsnNode ain : mn.instructions.toArray()) {
+					if (ain instanceof MethodInsnNode && !((MethodInsnNode) ain).owner.startsWith("java/lang/")) {
+
+						if (!replacements.containsKey(((MethodInsnNode) ain).owner)) {
+							continue;
+						}
+
+						System.out.println(
+								String.format("[Special] [ParamorphismTransformer] Redirecting %s in %s->%s(%s)",
+										((MethodInsnNode) ain).owner, cn.name, mn.name, mn.desc));
+
+						Map<MethodNode, AbstractInsnNode> map = replacements.get(((MethodInsnNode) ain).owner);
+
+						if (map == null)
+							continue;
+
+						MethodNode caller = map.keySet().stream().filter(m -> m.name.equals(((MethodInsnNode) ain).name)
+								&& m.desc.equals(((MethodInsnNode) ain).desc)).findFirst().orElse(null);
+						mn.instructions.set(ain, map.get(caller).clone(null));
+						if (map.get(caller) instanceof LdcInsnNode)
+							stringCalls.incrementAndGet();
+						else if (map.get(caller) instanceof MethodInsnNode)
+							methodCalls.incrementAndGet();
+						else if (map.get(caller) instanceof FieldInsnNode)
+							fieldCalls.incrementAndGet();
+					}
+				}
+			});
+		});
 		for(String s : toRemove)
 		{
 			classes.remove(s);
