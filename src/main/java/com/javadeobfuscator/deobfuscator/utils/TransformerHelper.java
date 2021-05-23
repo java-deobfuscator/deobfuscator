@@ -231,10 +231,9 @@ public class TransformerHelper implements Opcodes {
 
     public static Map<Integer, AtomicInteger> calcOpcodeOccurenceMap(MethodNode methodNode) {
         Map<Integer, AtomicInteger> map = new HashMap<>();
-        for (AbstractInsnNode abstractInsnNode : methodNode.instructions) {
-            int opcode = abstractInsnNode.getOpcode();
-            if (opcode >= 0) {
-                map.compute(opcode, (opc, i) -> {
+        for (AbstractInsnNode ain : methodNode.instructions) {
+            if (Utils.isInstruction(ain)) {
+                map.compute(ain.getOpcode(), (opc, i) -> {
                     if (i == null) {
                         return new AtomicInteger(1);
                     }
