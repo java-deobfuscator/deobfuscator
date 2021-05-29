@@ -54,8 +54,10 @@ public class RuleStringDecryptor implements Rule {
                     }
                     MethodInsnNode m = (MethodInsnNode) ain;
                     String strCl = m.owner;
-                    if ((!m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;") && !m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;"))
-                        || !deobfuscator.getClasses().containsKey(strCl)) {
+                    if (!m.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;") && !m.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) {
+                        continue;
+                    }
+                    if (!deobfuscator.getClasses().containsKey(strCl)) {
                         continue;
                     }
                     ClassNode innerClassNode = deobfuscator.getClasses().get(strCl);
