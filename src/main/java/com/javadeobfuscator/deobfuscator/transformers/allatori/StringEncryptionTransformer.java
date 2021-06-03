@@ -49,6 +49,7 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
+@TransformerConfig.ConfigOptions(configClass = StringEncryptionTransformer.Config.class)
 public class StringEncryptionTransformer extends Transformer<StringEncryptionTransformer.Config> {
 
     public static class Config extends TransformerConfig {
