@@ -40,8 +40,15 @@ public class RuleStringDecryptor implements Rule {
                     }
                     MethodInsnNode min = (MethodInsnNode) ain;
 
-                    if (analyzerResult == null) {
-                        analyzerResult = MethodAnalyzer.analyze(classNode, methodNode);
+                    try {
+                        if (analyzerResult == null) {
+                            analyzerResult = MethodAnalyzer.analyze(classNode, methodNode);
+                        }
+                    } catch (Exception e) {
+                        if (deobfuscator.getConfig().isDebugRulesAnalyzer()) {
+                            e.printStackTrace();
+                        }
+                        break;
                     }
                     MethodFrame frame = (MethodFrame) analyzerResult.getFrames().get(min).get(0);
 

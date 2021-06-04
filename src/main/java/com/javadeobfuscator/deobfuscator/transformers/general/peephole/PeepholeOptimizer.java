@@ -22,7 +22,7 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import java.util.*;
 
 public class PeepholeOptimizer extends Transformer<TransformerConfig> {
-    private static final Set<Class<? extends Transformer>> PEEPHOLE_TRANSFORMERS = new LinkedHashSet<>();
+    private static final Set<Class<? extends Transformer<?>>> PEEPHOLE_TRANSFORMERS = new LinkedHashSet<>();
 
     @Override
     public boolean transform() throws Throwable {
@@ -30,8 +30,7 @@ public class PeepholeOptimizer extends Transformer<TransformerConfig> {
         boolean madeModifications;
         do {
             madeModifications = false;
-            for (Class<? extends Transformer> peepholeTransformerClass :
-                    PEEPHOLE_TRANSFORMERS) {
+            for (Class<? extends Transformer<?>> peepholeTransformerClass : PEEPHOLE_TRANSFORMERS) {
                 // todo the set should have the config
                 TransformerConfig config = TransformerConfig.configFor(peepholeTransformerClass);
                 if (getDeobfuscator().runFromConfig(config)) {

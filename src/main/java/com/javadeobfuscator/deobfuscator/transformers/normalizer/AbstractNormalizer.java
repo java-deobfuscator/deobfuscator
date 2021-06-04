@@ -64,7 +64,7 @@ public abstract class AbstractNormalizer<T extends AbstractNormalizer.Config> ex
         @JsonProperty(value = "mapping-file")
         private File mappingFile;
 
-        public Config(Class<? extends Transformer> implementation) {
+        public Config(Class<? extends Transformer<?>> implementation) {
             super(implementation);
         }
 

@@ -101,7 +101,7 @@ public class ParamorphismTransformer extends Transformer<TransformerConfig>
             }
         });
 		System.out.println("[Special] [ParamorphismTransformer] Starting");
-		if(getDeobfuscator().invaildClasses.isEmpty() && !OVERRIDE)
+		if(getDeobfuscator().invalidClasses.isEmpty() && !OVERRIDE)
 		{
 			System.out.println("[Special] [ParamorphismTransformer] Paramorphism not found or option not enabled. Exiting");
 			return false;

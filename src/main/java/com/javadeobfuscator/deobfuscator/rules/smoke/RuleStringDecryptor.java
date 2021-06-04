@@ -15,7 +15,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
@@ -59,7 +58,10 @@ public class RuleStringDecryptor implements Rule {
                     if (frames == null) {
                         try {
                             frames = new Analyzer<>(new SourceInterpreter()).analyze(classNode.name, method);
-                        } catch (AnalyzerException e) {
+                        } catch (Exception e) {
+                            if (deobfuscator.getConfig().isDebugRulesAnalyzer()) {
+                                e.printStackTrace();
+                            }
                             continue;
                         }
                     }

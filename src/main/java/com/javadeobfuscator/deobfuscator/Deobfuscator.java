@@ -16,77 +16,73 @@
 
 package com.javadeobfuscator.deobfuscator;
 
-import com.javadeobfuscator.deobfuscator.asm.*;
-import com.javadeobfuscator.deobfuscator.config.*;
-import com.javadeobfuscator.deobfuscator.exceptions.*;
-import com.javadeobfuscator.deobfuscator.rules.*;
-import com.javadeobfuscator.deobfuscator.transformers.*;
-import com.javadeobfuscator.deobfuscator.utils.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Modifier;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
+
+import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
+import com.javadeobfuscator.deobfuscator.config.Configuration;
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.rules.Rule;
+import com.javadeobfuscator.deobfuscator.rules.Rules;
+import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.ClassTree;
+import com.javadeobfuscator.deobfuscator.utils.Utils;
 import me.coley.cafedude.ClassFile;
 import me.coley.cafedude.InvalidClassException;
 import me.coley.cafedude.io.ClassFileReader;
 import me.coley.cafedude.io.ClassFileWriter;
-import org.apache.commons.io.*;
-import org.objectweb.asm.*;
-import org.objectweb.asm.commons.*;
-import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.*;
-import org.slf4j.*;
-
-import java.io.*;
-import java.lang.instrument.IllegalClassFormatException;
-import java.lang.reflect.*;
-import java.util.AbstractMap.*;
-import java.util.*;
-import java.util.Map.*;
-import java.util.regex.*;
-import java.util.zip.*;
+import org.apache.commons.io.IOUtils;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Deobfuscator {
-    private Map<String, ClassNode> classpath = new HashMap<>();
-    private Map<String, ClassNode> libraries = new HashMap<>();
-    private Map<String, ClassNode> classes = new HashMap<>();
-    private Map<String, ClassTree> hierachy = new HashMap<>();
-    private Set<ClassNode> libraryClassnodes = new HashSet<>();
 
-    public Map<String, byte[]> getInputPassthrough() {
-        return inputPassthrough;
-    }
+    private static final boolean DEBUG = false;
 
-    // Entries from the input jar that will be passed through to the output
-    private Map<String, byte[]> inputPassthrough = new HashMap<>();
-
-    // Constant pool data since ClassNodes don't support custom data
-    private Map<ClassNode, ConstantPool> constantPools = new HashMap<>();
-    private Map<ClassNode, ClassReader> readers = new HashMap<>();
+    private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
 
     private final Configuration configuration;
-    private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
+
+    private final Map<String, ClassNode> classpath = new HashMap<>();
+    private final Map<String, ClassNode> libraries = new HashMap<>();
+    private final Map<String, ClassNode> classes = new HashMap<>();
+    private final Map<String, ClassTree> hierachy = new HashMap<>();
+    private final Set<ClassNode> libraryClassnodes = new HashSet<>();
+    /**
+     * Entries from the input jar that will be passed through to the output
+     */
+    private final Map<String, byte[]> inputPassthrough = new HashMap<>();
+    /**
+     * Constant pool data since ClassNodes don't support custom data
+     */
+    private final Map<ClassNode, ConstantPool> constantPools = new HashMap<>();
+    private final Map<ClassNode, ClassReader> readers = new HashMap<>();
+    public Map<String, byte[]> invalidClasses = new HashMap<>();
+    public List<String> junkFiles = new ArrayList<>();
 
     public Deobfuscator(Configuration configuration) {
         this.configuration = configuration;
     }
-
-    private static final boolean DEBUG = false;
-    /**
-     * Some obfuscators like to have junk classes. If ALL your libraries are added,
-     * enable this to dump troublesome classes. Note that this will not get rid of all junk classes.
-     */
-    private static final boolean DELETE_USELESS_CLASSES = false;
-    
-    public Map<String, byte[]> invaildClasses = new HashMap<>();
-    
-    /**
-     * Must enable for paramorphism obfuscated files.
-     */
-    private static final boolean PARAMORPHISM = false;
-    
-    public List<String> junkFiles = new ArrayList<>();
-    
-    /**
-     * Must enable for paramorphism v2 obfuscated files.
-     */
-    private static final boolean PARAMORPHISM_V2 = false;
 
     public ConstantPool getConstantPool(ClassNode classNode) {
         return this.constantPools.get(classNode);
@@ -98,6 +94,26 @@ public class Deobfuscator {
 
     public Map<ClassNode, ConstantPool> getConstantPools() {
         return this.constantPools;
+    }
+
+    public Map<String, byte[]> getInputPassthrough() {
+        return inputPassthrough;
+    }
+
+    public Configuration getConfig() {
+        return this.configuration;
+    }
+
+    public Map<String, ClassNode> getClasses() {
+        return this.classes;
+    }
+
+    public Map<ClassNode, ClassReader> getReaders() {
+        return readers;
+    }
+
+    public Map<String, ClassNode> getLibraries() {
+        return libraries;
     }
 
     private Map<String, ClassNode> loadClasspathFile(File file, boolean skipCode) throws IOException {
@@ -119,10 +135,6 @@ public class Deobfuscator {
         zipIn.close();
 
         return map;
-    }
-
-    public Map<String, ClassNode> getLibraries() {
-        return libraries;
     }
 
     private void loadClasspath() throws IOException {
@@ -180,65 +192,61 @@ public class Deobfuscator {
     }
 
     private void loadInput() throws IOException {
-    	if(PARAMORPHISM_V2)
-    	{
-    		//Load folder "classes"
-    		try(ZipFile zipIn = new ZipFile(configuration.getInput())) {
-	            Enumeration<? extends ZipEntry> e = zipIn.entries();
-	            while(e.hasMoreElements()) {
-	                ZipEntry next = e.nextElement();
-	                if(next.isDirectory() && next.getName().endsWith(".class/")) {
-	                	byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
-	                	loadInput(next.getName().substring(0, next.getName().length() - 1), data);
-	                }else if(!next.isDirectory() && next.getName().contains(".class/"))
-	                	junkFiles.add(next.getName());
-	            }
-    		}
-    	}else if(PARAMORPHISM)
-    	{
-    		Map<String, String> classNameToName = new HashMap<>();
-    		Map<String, byte[]> entries = new HashMap<>();
-    		//Check all duplicate files
-	    	try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
-	            Enumeration<? extends ZipEntry> e = zipIn.entries();
-	            while (e.hasMoreElements()) {
-	                ZipEntry next = e.nextElement();
-	                if (next.isDirectory() || !next.getName().endsWith(".class")) {
-	                    continue;
-	                }
-	                
-	                try {
-		                byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
-	                    ClassReader reader = new ClassReader(data);
-	                    ClassNode node = new ClassNode();
-	                    reader.accept(node, ClassReader.SKIP_FRAMES);
-	                    if(entries.containsKey(node.name))
-	                    {
-	                    	invaildClasses.put(next.getName(), data);
-	                    	invaildClasses.put(classNameToName.get(node.name), entries.get(node.name));
-	                    }else
-	                    {
-	                    	classNameToName.put(node.name, next.getName());
-	                    	entries.put(node.name, data);
-	                    }
-	                }catch(Exception ex)
-	                {
-	                	continue;
-	                }
-	            }
-	        }
-	    	//Filter out real classes
-	    	List<String> real = new ArrayList<>();
-	    	for(Entry<String, byte[]> entry : invaildClasses.entrySet())
-	    	{
+        if (this.configuration.isParamorphismV2()) {
+            //Load folder "classes"
+            try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
+                Enumeration<? extends ZipEntry> e = zipIn.entries();
+                while (e.hasMoreElements()) {
+                    ZipEntry next = e.nextElement();
+                    if (next.isDirectory() && next.getName().endsWith(".class/")) {
+                        byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
+                        loadInput(next.getName().substring(0, next.getName().length() - 1), data);
+                    } else if (!next.isDirectory() && next.getName().contains(".class/")) {
+                        junkFiles.add(next.getName());
+                    }
+                }
+            }
+        } else if (this.configuration.isParamorphism()) {
+            Map<String, String> classNameToName = new HashMap<>();
+            Map<String, byte[]> entries = new HashMap<>();
+            //Check all duplicate files
+            try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
+                Enumeration<? extends ZipEntry> e = zipIn.entries();
+                while (e.hasMoreElements()) {
+                    ZipEntry next = e.nextElement();
+                    if (next.isDirectory() || !next.getName().endsWith(".class")) {
+                        continue;
+                    }
+
+                    try {
+                        byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
+                        ClassReader reader = new ClassReader(data);
+                        ClassNode node = new ClassNode();
+                        reader.accept(node, ClassReader.SKIP_FRAMES);
+                        if (entries.containsKey(node.name)) {
+                            invalidClasses.put(next.getName(), data);
+                            invalidClasses.put(classNameToName.get(node.name), entries.get(node.name));
+                        } else {
+                            classNameToName.put(node.name, next.getName());
+                            entries.put(node.name, data);
+                        }
+                    } catch (Exception ex) {
+                        continue;
+                    }
+                }
+            }
+            //Filter out real classes
+            List<String> real = new ArrayList<>();
+            for (Entry<String, byte[]> entry : invalidClasses.entrySet()) {
                 ClassReader reader = new ClassReader(entry.getValue());
                 ClassNode node = new ClassNode();
                 reader.accept(node, ClassReader.SKIP_FRAMES);
-                if((node.name + ".class").equals(entry.getKey()))
-                	real.add(entry.getKey());
-	    	}
-	    	real.forEach(s -> invaildClasses.remove(s));
-    	}
+                if ((node.name + ".class").equals(entry.getKey())) {
+                    real.add(entry.getKey());
+                }
+            }
+            real.forEach(s -> invalidClasses.remove(s));
+        }
         try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
             Enumeration<? extends ZipEntry> e = zipIn.entries();
             while (e.hasMoreElements()) {
@@ -258,12 +266,13 @@ public class Deobfuscator {
 
     public void loadInput(String name, byte[] data) {
         boolean passthrough = true;
-        
+
         if (name.endsWith(".class") || name.endsWith(".class/")) {
             // These 'classes' are likely red-herrings using the '.class/' trick.
             // So we will toss them since they're not real classes.
-            if (data.length <= 30)
+            if (data.length <= 30) {
                 return;
+            }
 
             try {
 
@@ -293,23 +302,31 @@ public class Deobfuscator {
                 if (!isClassIgnored(node)) {
                     for (int i = 0; i < node.methods.size(); i++) {
                         MethodNode methodNode = node.methods.get(i);
-                        JSRInlinerAdapter adapter = new JSRInlinerAdapter(methodNode, methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(new String[0]));
+                        JSRInlinerAdapter adapter = new JSRInlinerAdapter(
+                                methodNode,
+                                methodNode.access,
+                                methodNode.name,
+                                methodNode.desc,
+                                methodNode.signature,
+                                methodNode.exceptions.toArray(new String[0]));
                         methodNode.accept(adapter);
                         node.methods.set(i, adapter);
                     }
 
-                    if(!invaildClasses.containsKey(name))
-                    	classes.put(node.name, node);
+                    if (!invalidClasses.containsKey(name)) {
+                        classes.put(node.name, node);
+                    }
                     classpath.put(node.name, node);
                     passthrough = false;
                 } else {
                     classpath.put(node.name, node);
                 }
             } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException | InvalidClassException x) {
-            	if(PARAMORPHISM_V2)
-            		invaildClasses.put(name, data);
-            	else
-            		logger.error("Could not parse {} (is it a class file?)", name, x);
+                if (this.configuration.isParamorphismV2()) {
+                    invalidClasses.put(name, data);
+                } else {
+                    logger.error("Could not parse {} (is it a class file?)", name, x);
+                }
             }
         }
 
@@ -332,10 +349,13 @@ public class Deobfuscator {
                         MethodInsnNode mn = (MethodInsnNode) node;
                         ClassNode targetNode = classes.get(mn.owner);
                         if (targetNode != null) {
-                            MethodNode targetMethod = targetNode.methods.stream().filter(m -> m.name.equals(mn.name) && m.desc.equals(mn.desc)).findFirst().orElse(null);
-                            if (targetMethod != null) {
-                                callers.computeIfAbsent(targetMethod, k -> new ArrayList<>()).add(new SimpleEntry<>(classNode, methodNode));
-                            }
+                            targetNode.methods.stream()
+                                    .filter(m -> m.name.equals(mn.name) && m.desc.equals(mn.desc))
+                                    .findFirst()
+                                    .ifPresent(targetMethod -> {
+                                        callers.computeIfAbsent(targetMethod, k -> new ArrayList<>())
+                                                .add(new SimpleEntry<>(classNode, methodNode));
+                                    });
                         }
                     }
                 }
@@ -427,7 +447,7 @@ public class Deobfuscator {
     }
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
-        Transformer transformer = config.getImplementation().newInstance();
+        Transformer<?> transformer = config.getImplementation().newInstance();
         transformer.init(this, config, classes, classpath, readers);
         boolean madeChangesAtLeastOnce = false;
         boolean madeChanges;
@@ -458,8 +478,7 @@ public class Deobfuscator {
 
     public void loadHierachy() {
         Set<String> processed = new HashSet<>();
-        LinkedList<ClassNode> toLoad = new LinkedList<>();
-        toLoad.addAll(this.classes.values());
+        LinkedList<ClassNode> toLoad = new LinkedList<>(this.classes.values());
         while (!toLoad.isEmpty()) {
             for (ClassNode toProcess : loadHierachy(toLoad.poll())) {
                 if (processed.add(toProcess.name)) {
@@ -498,13 +517,15 @@ public class Deobfuscator {
 
         ClassTree thisTree = getOrCreateClassTree(specificNode.name);
         ClassNode superClass;
-        if (DELETE_USELESS_CLASSES) {
+        if (this.configuration.isDeleteUselessClasses()) {
             superClass = assureLoadedElseRemove(specificNode.name, specificNode.superName);
-            if (superClass == null)
+            if (superClass == null) {
                 //It got removed
                 return toProcess;
-        } else
+            }
+        } else {
             superClass = assureLoaded(specificNode.superName);
+        }
         if (superClass == null) {
             throw new IllegalArgumentException("Could not load " + specificNode.name);
         }
@@ -515,13 +536,15 @@ public class Deobfuscator {
 
         for (String interfaceReference : specificNode.interfaces) {
             ClassNode interfaceNode;
-            if (DELETE_USELESS_CLASSES) {
+            if (this.configuration.isDeleteUselessClasses()) {
                 interfaceNode = assureLoadedElseRemove(specificNode.name, interfaceReference);
-                if (interfaceNode == null)
+                if (interfaceNode == null) {
                     //It got removed
                     return toProcess;
-            } else
+                }
+            } else {
                 interfaceNode = assureLoaded(interfaceReference);
+            }
             if (interfaceNode == null) {
                 throw new IllegalArgumentException("Could not load " + interfaceReference);
             }
@@ -552,8 +575,9 @@ public class Deobfuscator {
                 layer.clear();
                 for (String r : clone) {
                     ClassTree tree = hierachy.get(r);
-                    if (tree != null)
+                    if (tree != null) {
                         layer.addAll(tree.subClasses);
+                    }
                 }
             }
         }
@@ -619,19 +643,8 @@ public class Deobfuscator {
         return classBytes;
     }
 
-    public Configuration getConfig() {
-        return this.configuration;
-    }
-
-    public Map<String, ClassNode> getClasses() {
-        return this.classes;
-    }
-
-    public Map<ClassNode, ClassReader> getReaders() {
-        return readers;
-    }
-
     public class CustomClassWriter extends ClassWriter {
+
         public CustomClassWriter(int flags) {
             super(flags);
         }
@@ -677,8 +690,9 @@ public class Deobfuscator {
         }
 
         private boolean isAssignableFrom(String type1, String type2) {
-            if (type1.equals("java/lang/Object"))
+            if (type1.equals("java/lang/Object")) {
                 return true;
+            }
             if (type1.equals(type2)) {
                 return true;
             }
@@ -686,8 +700,7 @@ public class Deobfuscator {
             assureLoaded(type2);
             ClassTree firstTree = getClassTree(type1);
             Set<String> allChilds1 = new HashSet<>();
-            LinkedList<String> toProcess = new LinkedList<>();
-            toProcess.addAll(firstTree.subClasses);
+            LinkedList<String> toProcess = new LinkedList<>(firstTree.subClasses);
             while (!toProcess.isEmpty()) {
                 String s = toProcess.poll();
                 if (allChilds1.add(s)) {
@@ -699,5 +712,4 @@ public class Deobfuscator {
             return allChilds1.contains(type2);
         }
     }
-
 }

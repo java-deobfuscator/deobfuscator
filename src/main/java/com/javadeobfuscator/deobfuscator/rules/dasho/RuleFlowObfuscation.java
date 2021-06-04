@@ -39,33 +39,39 @@ public class RuleFlowObfuscation implements Rule {
                 if (method.instructions == null || method.instructions.size() == 0) {
                     continue;
                 }
-                FlowAnalyzer analyzer = new FlowAnalyzer(method);
-                LinkedHashMap<LabelNode, List<AbstractInsnNode>> result = analyzer.analyze(method.instructions.getFirst(),
-                        new ArrayList<>(), new HashMap<>(), false, true);
-                FlowAnalyzer.Result jumpAnalysis = analyzer.analyze();
-                List<AbstractInsnNode> ordered = new ArrayList<>();
-                for (Map.Entry<LabelNode, List<AbstractInsnNode>> e : result.entrySet()) {
-                    if (e.getKey() != FlowAnalyzer.ABSENT) {
-                        ordered.add(e.getKey());
-                    }
-                    ordered.addAll(e.getValue());
-                    for (Triple<LabelNode, FlowAnalyzer.JumpData, Integer> entry : jumpAnalysis.labels.get(e.getKey()).getValue()) {
-                        if (entry.getMiddle().cause == FlowAnalyzer.JumpCause.NEXT) {
-                            ordered.add(new JumpInsnNode(Opcodes.GOTO, entry.getLeft()));
+                try {
+                    FlowAnalyzer analyzer = new FlowAnalyzer(method);
+                    LinkedHashMap<LabelNode, List<AbstractInsnNode>> result = analyzer.analyze(method.instructions.getFirst(),
+                            new ArrayList<>(), new HashMap<>(), false, true);
+                    FlowAnalyzer.Result jumpAnalysis = analyzer.analyze();
+                    List<AbstractInsnNode> ordered = new ArrayList<>();
+                    for (Map.Entry<LabelNode, List<AbstractInsnNode>> e : result.entrySet()) {
+                        if (e.getKey() != FlowAnalyzer.ABSENT) {
+                            ordered.add(e.getKey());
+                        }
+                        ordered.addAll(e.getValue());
+                        for (Triple<LabelNode, FlowAnalyzer.JumpData, Integer> entry : jumpAnalysis.labels.get(e.getKey()).getValue()) {
+                            if (entry.getMiddle().cause == FlowAnalyzer.JumpCause.NEXT) {
+                                ordered.add(new JumpInsnNode(Opcodes.GOTO, entry.getLeft()));
+                            }
                         }
                     }
-                }
-                for (AbstractInsnNode ain : ordered) {
-                    if (Utils.getIntValue(ain) == -1
-                        && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 1).getOpcode() == Opcodes.ISTORE
-                        && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 2).getOpcode() == Opcodes.LDC
-                        && ((LdcInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 2)).cst.equals("0")
-                        && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3).getOpcode() == Opcodes.IINC
-                        && ((IincInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3)).incr == 1
-                        && ((IincInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3)).var ==
-                           ((VarInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 1)).var
-                        && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 4).getOpcode() == Opcodes.ASTORE) {
-                        return "Found possible flow obfuscation pattern in " + classNode.name + "/" + method.name + method.desc;
+                    for (AbstractInsnNode ain : ordered) {
+                        if (Utils.getIntValue(ain) == -1
+                            && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 1).getOpcode() == Opcodes.ISTORE
+                            && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 2).getOpcode() == Opcodes.LDC
+                            && ((LdcInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 2)).cst.equals("0")
+                            && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3).getOpcode() == Opcodes.IINC
+                            && ((IincInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3)).incr == 1
+                            && ((IincInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 3)).var ==
+                               ((VarInsnNode) FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 1)).var
+                            && FlowObfuscationTransformer.getNext(ordered, result, jumpAnalysis, ain, 4).getOpcode() == Opcodes.ASTORE) {
+                            return "Found possible flow obfuscation pattern in " + classNode.name + "/" + method.name + method.desc;
+                        }
+                    }
+                } catch (Exception e) {
+                    if (deobfuscator.getConfig().isDebugRulesAnalyzer()) {
+                        e.printStackTrace();
                     }
                 }
             }

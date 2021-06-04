@@ -50,6 +50,28 @@ public class Configuration {
     @JsonProperty
     private boolean detect;
 
+    /**
+     * Must enable for paramorphism obfuscated files.
+     */
+    @JsonProperty
+    private boolean paramorphism;
+
+    /**
+     * Must enable for paramorphism v2 obfuscated files.
+     */
+    @JsonProperty
+    private boolean paramorphismV2;
+
+    @JsonProperty
+    private boolean debugRulesAnalyzer;
+
+    /**
+     * Some obfuscators like to have junk classes. If ALL your libraries are added, enable this to dump troublesome classes. Note that this will not get rid of all
+     * junk classes.
+     */
+    @JsonProperty
+    private boolean deleteUselessClasses;
+
     public File getInput() {
         return input;
     }
@@ -120,5 +142,37 @@ public class Configuration {
 
     public void setSmartRedo(boolean smartRedo) {
         this.smartRedo = smartRedo;
+    }
+
+    public boolean isParamorphism() {
+        return paramorphism;
+    }
+
+    public void setParamorphism(boolean paramorphism) {
+        this.paramorphism = paramorphism;
+    }
+
+    public boolean isParamorphismV2() {
+        return paramorphismV2;
+    }
+
+    public void setParamorphismV2(boolean paramorphismV2) {
+        this.paramorphismV2 = paramorphismV2;
+    }
+
+    public boolean isDebugRulesAnalyzer() {
+        return debugRulesAnalyzer;
+    }
+
+    public void setDebugRulesAnalyzer(boolean debugRulesAnalyzer) {
+        this.debugRulesAnalyzer = debugRulesAnalyzer;
+    }
+
+    public boolean isDeleteUselessClasses() {
+        return deleteUselessClasses;
+    }
+
+    public void setDeleteUselessClasses(boolean deleteUselessClasses) {
+        this.deleteUselessClasses = deleteUselessClasses;
     }
 }
