@@ -6,7 +6,7 @@
     <version>1.0.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.asm>8.0.1</version.asm>
+        <version.asm>9.1</version.asm>
     </properties>
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
