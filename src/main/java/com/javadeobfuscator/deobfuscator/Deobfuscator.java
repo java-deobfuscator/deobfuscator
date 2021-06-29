@@ -124,12 +124,16 @@ public class Deobfuscator {
         while (entries.hasMoreElements()) {
             ZipEntry ent = entries.nextElement();
             if (ent.getName().endsWith(".class")) {
-                ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
-                ClassNode node = new ClassNode();
-                reader.accept(node, (skipCode ? 0 : 0) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                map.put(node.name, node);
+                try {
+                    ClassReader reader = new ClassReader(zipIn.getInputStream(ent));
+                    ClassNode node = new ClassNode();
+                    reader.accept(node, (skipCode ? 0 : 0) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    map.put(node.name, node);
 
-                setConstantPool(node, new ConstantPool(reader));
+                    setConstantPool(node, new ConstantPool(reader));
+                } catch (Exception ex) {
+                    logger.warn("Could not load class " + ent.getName() + " from library " + file, ex);
+                }
             }
         }
         zipIn.close();
