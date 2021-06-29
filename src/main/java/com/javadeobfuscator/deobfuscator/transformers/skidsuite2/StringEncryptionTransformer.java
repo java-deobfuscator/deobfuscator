@@ -89,28 +89,28 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                         } else if (arg instanceof NewArrayFrame) {
                             NewArrayFrame newArrayFrame = (NewArrayFrame) arg;
                             localRemove.add(result.getMapping().get(newArrayFrame));
-                            if (newArrayFrame.getLength() instanceof LdcFrame) {
-                            	localRemove.add(result.getMapping().get(newArrayFrame.getLength()));
-                                char[] arr = new char[((Number) ((LdcFrame) newArrayFrame.getLength()).getConstant()).intValue()];
-                                JavaObject obj = new JavaObject(arr, "java/lang/Object");
-                                for (Frame child0 : arg.getChildren()) {
-                                    if (child0 instanceof ArrayStoreFrame) {
-                                        ArrayStoreFrame arrayStoreFrame = (ArrayStoreFrame) child0;
-                                        if (arrayStoreFrame.getIndex() instanceof LdcFrame && arrayStoreFrame.getObject() instanceof LdcFrame) {
-                                        	localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex()));
-                                        	localRemove.add(result.getMapping().get(arrayStoreFrame.getObject()));
-                                        	localRemove.add(result.getMapping().get(arrayStoreFrame));
-                                            arr[((Number) ((LdcFrame) arrayStoreFrame.getIndex()).getConstant()).intValue()] = (char) ((Number) ((LdcFrame) arrayStoreFrame.getObject()).getConstant()).intValue();
-                                        } else {
-                                            continue insns;
-                                        }
-                                    }else if(child0 instanceof DupFrame)
-                                		localRemove.add(result.getMapping().get(child0));
-                                }
-                                args.add(obj);
-                            } else {
+                            if (!(newArrayFrame.getLength() instanceof LdcFrame)) {
                                 continue insns;
                             }
+                            localRemove.add(result.getMapping().get(newArrayFrame.getLength()));
+                            char[] arr = new char[((Number) ((LdcFrame) newArrayFrame.getLength()).getConstant()).intValue()];
+                            JavaObject obj = new JavaObject(arr, "java/lang/Object");
+                            for (Frame child0 : arg.getChildren()) {
+                                if (child0 instanceof ArrayStoreFrame) {
+                                    ArrayStoreFrame arrayStoreFrame = (ArrayStoreFrame) child0;
+                                    if (arrayStoreFrame.getIndex() instanceof LdcFrame && arrayStoreFrame.getObject() instanceof LdcFrame) {
+                                        localRemove.add(result.getMapping().get(arrayStoreFrame.getIndex()));
+                                        localRemove.add(result.getMapping().get(arrayStoreFrame.getObject()));
+                                        localRemove.add(result.getMapping().get(arrayStoreFrame));
+                                        int pos = ((Number) ((LdcFrame) arrayStoreFrame.getIndex()).getConstant()).intValue();
+                                        arr[pos] = (char) ((Number) ((LdcFrame) arrayStoreFrame.getObject()).getConstant()).intValue();
+                                    } else {
+                                        continue insns;
+                                    }
+                                }else if(child0 instanceof DupFrame)
+                                    localRemove.add(result.getMapping().get(child0));
+                            }
+                            args.add(obj);
                         }
                     }
 
