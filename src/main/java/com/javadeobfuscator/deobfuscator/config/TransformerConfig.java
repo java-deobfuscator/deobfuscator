@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.*;
 
+@SuppressWarnings("rawtypes")
 public class TransformerConfig {
     @Inherited
     @Retention(RetentionPolicy.RUNTIME)
