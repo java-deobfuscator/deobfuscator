@@ -42,8 +42,33 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
+@TransformerConfig.ConfigOptions(configClass = SuperblaubeereTransformer.Config.class)
+public class SuperblaubeereTransformer extends Transformer<SuperblaubeereTransformer.Config> {
 
+	public static class Config extends TransformerConfig {
+		private boolean fastIndy = true;
+		private boolean classEncryption = false;
+
+		public Config() {
+			super(SuperblaubeereTransformer.class);
+		}
+
+		public boolean isFastIndy() {
+			return fastIndy;
+		}
+
+		public void setFastIndy(boolean fastIndy) {
+			this.fastIndy = fastIndy;
+		}
+
+		public boolean isClassEncryption() {
+			return classEncryption;
+		}
+
+		public void setClassEncryption(boolean classEncryption) {
+			this.classEncryption = classEncryption;
+		}
+	}
 	public static final IterableInsnMatcher STRING_ENCRYPT_MATCHER = new IterableInsnMatcher(a -> {
 		a.addStep(new TypeInsnStep(NEW, "java/lang/Exception"));
 		a.addStep(new SimpleStep(DUP));
@@ -75,9 +100,6 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
 		a.addStep(new ConstantIntInsnStep(1));
 		a.addStep(REDUNDANT_IF_3_GOTO);
 	});
-
-	public static boolean FAST_INDY = true;
-	public static boolean CLASS_ENCRYPTION = false;
 
 	@Override
 	public boolean transform() throws Throwable {
@@ -133,407 +155,465 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
 		AtomicInteger unpoolString = new AtomicInteger();
 		AtomicInteger inlinedIfs = new AtomicInteger();
 		AtomicInteger indy = new AtomicInteger();
+
+		Set<String> erroredClasses = new HashSet<>();
 		//Fold numbers
 		for (ClassNode classNode : classNodes()) {
-			for (MethodNode method : classNode.methods) {
-				boolean modified;
-				do {
-					modified = false;
-					for (AbstractInsnNode ain : method.instructions.toArray()) {
-						if (Utils.isInteger(ain) && ain.getNext() != null && Utils.isInteger(ain.getNext()) && ain.getNext().getNext() != null
-							&& isArth(ain.getNext().getNext())) {
-							int res = doArth(Utils.getIntValue(ain), Utils.getIntValue(ain.getNext()), ain.getNext().getNext());
-							method.instructions.remove(ain.getNext().getNext());
-							method.instructions.remove(ain.getNext());
-							method.instructions.set(ain, Utils.getIntInsn(res));
-							num.incrementAndGet();
-							modified = true;
-						} else if (Utils.isInteger(ain) && ain.getNext() != null && ain.getNext().getOpcode() == INEG) {
-							method.instructions.remove(ain.getNext());
-							method.instructions.set(ain, Utils.getIntInsn(-Utils.getIntValue(ain)));
-							num.incrementAndGet();
-							modified = true;
-						} else {
-							String str = TransformerHelper.getConstantString(ain);
-							if (StringUtils.containsOnly(str, ' ')
-								&& TransformerHelper.isInvokeVirtual(ain.getNext(), "java/lang/String", "length", null)) {
-								if (TransformerHelper.nullsafeOpcodeEqual(ain.getNext().getNext(), POP)) {
-									method.instructions.remove(ain.getNext().getNext());
-									method.instructions.remove(ain.getNext());
-									method.instructions.remove(ain);
-								} else if (TransformerHelper.nullsafeOpcodeEqual(ain.getNext().getNext(), POP2)) {
-									method.instructions.set(ain.getNext().getNext(), new InsnNode(POP));
-									method.instructions.remove(ain.getNext());
-									method.instructions.remove(ain);
-								} else {
-									method.instructions.remove(ain.getNext());
-									method.instructions.set(ain, Utils.getIntInsn(str.length()));
-									num.incrementAndGet();
-								}
+			if (erroredClasses.contains(classNode.name)) {
+				continue;
+			}
+			try {
+				for (MethodNode method : classNode.methods) {
+					boolean modified;
+					do {
+						modified = false;
+						for (AbstractInsnNode ain : method.instructions.toArray()) {
+							if (Utils.isInteger(ain) && ain.getNext() != null && Utils.isInteger(ain.getNext()) && ain.getNext().getNext() != null
+								&& isArth(ain.getNext().getNext())) {
+								int res = doArth(Utils.getIntValue(ain), Utils.getIntValue(ain.getNext()), ain.getNext().getNext());
+								method.instructions.remove(ain.getNext().getNext());
+								method.instructions.remove(ain.getNext());
+								method.instructions.set(ain, Utils.getIntInsn(res));
+								num.incrementAndGet();
 								modified = true;
+							} else if (Utils.isInteger(ain) && ain.getNext() != null && ain.getNext().getOpcode() == INEG) {
+								method.instructions.remove(ain.getNext());
+								method.instructions.set(ain, Utils.getIntInsn(-Utils.getIntValue(ain)));
+								num.incrementAndGet();
+								modified = true;
+							} else {
+								String str = TransformerHelper.getConstantString(ain);
+								if (StringUtils.containsOnly(str, ' ')
+									&& TransformerHelper.isInvokeVirtual(ain.getNext(), "java/lang/String", "length", null)) {
+									if (TransformerHelper.nullsafeOpcodeEqual(ain.getNext().getNext(), POP)) {
+										method.instructions.remove(ain.getNext().getNext());
+										method.instructions.remove(ain.getNext());
+										method.instructions.remove(ain);
+									} else if (TransformerHelper.nullsafeOpcodeEqual(ain.getNext().getNext(), POP2)) {
+										method.instructions.set(ain.getNext().getNext(), new InsnNode(POP));
+										method.instructions.remove(ain.getNext());
+										method.instructions.remove(ain);
+									} else {
+										method.instructions.remove(ain.getNext());
+										method.instructions.set(ain, Utils.getIntInsn(str.length()));
+										num.incrementAndGet();
+									}
+									modified = true;
+								}
 							}
 						}
-					}
-				} while (modified);
+					} while (modified);
+				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
 		}
 		//Reduntant ifs
 		for (ClassNode classNode : classNodes()) {
-			for (MethodNode method : classNode.methods) {
-				for (AbstractInsnNode ain : method.instructions.toArray()) {
-					if ((Utils.isInteger(ain) || ain.getOpcode() == ACONST_NULL)
-						&& ain.getNext() != null && isSingleIf(ain.getNext())) {
-						AbstractInsnNode next = ain.getNext();
-						if (runSingleIf(ain, next)) {
-							while (ain.getNext() != null && !(ain.getNext() instanceof LabelNode)) {
-								method.instructions.remove(ain.getNext());
+			if (erroredClasses.contains(classNode.name)) {
+				continue;
+			}
+			try {
+				for (MethodNode method : classNode.methods) {
+					for (AbstractInsnNode ain : method.instructions.toArray()) {
+						if ((Utils.isInteger(ain) || ain.getOpcode() == ACONST_NULL)
+							&& ain.getNext() != null && isSingleIf(ain.getNext())) {
+							AbstractInsnNode next = ain.getNext();
+							if (runSingleIf(ain, next)) {
+								while (ain.getNext() != null && !(ain.getNext() instanceof LabelNode)) {
+									method.instructions.remove(ain.getNext());
+								}
+								method.instructions.set(ain, new JumpInsnNode(GOTO, ((JumpInsnNode) next).label));
+							} else {
+								method.instructions.remove(next);
+								method.instructions.remove(ain);
 							}
-							method.instructions.set(ain, new JumpInsnNode(GOTO, ((JumpInsnNode) next).label));
-						} else {
-							method.instructions.remove(next);
-							method.instructions.remove(ain);
-						}
-					} else if (Utils.isInteger(ain) && ain.getNext() != null
-							   && Utils.isInteger(ain.getNext()) && ain.getNext().getNext() != null
-							   && isDoubleIf(ain.getNext().getNext())) {
-						AbstractInsnNode next = ain.getNext().getNext();
-						if (runDoubleIf(Utils.getIntValue(ain), Utils.getIntValue(ain.getNext()), next)) {
-							while (ain.getNext() != null && !(ain.getNext() instanceof LabelNode)) {
+						} else if (Utils.isInteger(ain) && ain.getNext() != null
+								   && Utils.isInteger(ain.getNext()) && ain.getNext().getNext() != null
+								   && isDoubleIf(ain.getNext().getNext())) {
+							AbstractInsnNode next = ain.getNext().getNext();
+							if (runDoubleIf(Utils.getIntValue(ain), Utils.getIntValue(ain.getNext()), next)) {
+								while (ain.getNext() != null && !(ain.getNext() instanceof LabelNode)) {
+									method.instructions.remove(ain.getNext());
+								}
+								method.instructions.set(ain, new JumpInsnNode(GOTO, ((JumpInsnNode) next).label));
+							} else {
+								method.instructions.remove(next);
 								method.instructions.remove(ain.getNext());
+								method.instructions.remove(ain);
 							}
-							method.instructions.set(ain, new JumpInsnNode(GOTO, ((JumpInsnNode) next).label));
-						} else {
-							method.instructions.remove(next);
-							method.instructions.remove(ain.getNext());
-							method.instructions.remove(ain);
 						}
 					}
 				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
 		}
 		//Reduntant ifs
 		for (ClassNode classNode : classNodes()) {
-			Set<MethodNode> toRemove = new HashSet<>();
-			for (MethodNode method : classNode.methods) {
-				for (AbstractInsnNode ain : method.instructions.toArray()) {
-					if (ain.getOpcode() == INVOKESTATIC && ((MethodInsnNode) ain).owner.equals(classNode.name)) {
-						MethodNode refer = classNode.methods.stream().filter(m -> m.name.equals(((MethodInsnNode) ain).name)
-																				  && m.desc.equals(((MethodInsnNode) ain).desc)).findFirst().orElse(null);
-						if (refer != null && !Modifier.isNative(refer.access) && !Modifier.isAbstract(refer.access)
-							&& Modifier.isPrivate(refer.access) && Modifier.isStatic(refer.access)) {
-							int mode = -1;
-							AbstractInsnNode first = refer.instructions.getFirst();
-							if (REDUNDANT_IF_1_MATCHER.matchImmediately(refer.instructions.iterator())) {
-								mode = 0;
-							} else if (REDUNDANT_IF_2_MATCHER.matchImmediately(refer.instructions.iterator())
-									   && Utils.isInteger(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious())
-									   && Utils.getIntValue(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious()) == 0
-									   && refer.instructions.getLast().getOpcode() == IRETURN
-									   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_2_GOTO.getCaptured().label) {
-								mode = 1;
-							} else if (REDUNDANT_IF_3_MATCHER.matchImmediately(refer.instructions.iterator())
-									   && Utils.isInteger(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious())
-									   && Utils.getIntValue(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious()) == 0
-									   && refer.instructions.getLast().getOpcode() == IRETURN
-									   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_3_GOTO.getCaptured().label) {
-								mode = 2;
-							}
-							if (mode == 0) {
-								toRemove.add(refer);
-								method.instructions.set(ain, first.getNext().getNext().clone(null));
-								inlinedIfs.incrementAndGet();
-							} else if (mode == 1) {
-								toRemove.add(refer);
-								LabelNode jump = ((JumpInsnNode) ain.getNext()).label;
-								method.instructions.remove(ain.getNext());
-								method.instructions.set(ain,
-										new JumpInsnNode(first.getNext().getOpcode(), jump));
-								inlinedIfs.incrementAndGet();
-							} else if (mode == 2) {
-								toRemove.add(refer);
-								LabelNode jump = ((JumpInsnNode) ain.getNext()).label;
-								method.instructions.remove(ain.getNext());
-								method.instructions.set(ain,
-										new JumpInsnNode(first.getNext().getNext().getOpcode(), jump));
-								inlinedIfs.incrementAndGet();
+			if (erroredClasses.contains(classNode.name)) {
+				continue;
+			}
+			try {
+				Set<MethodNode> toRemove = new HashSet<>();
+				for (MethodNode method : classNode.methods) {
+					for (AbstractInsnNode ain : method.instructions.toArray()) {
+						if (ain.getOpcode() == INVOKESTATIC && ((MethodInsnNode) ain).owner.equals(classNode.name)) {
+							MethodNode refer = classNode.methods.stream().filter(m -> m.name.equals(((MethodInsnNode) ain).name)
+																					  && m.desc.equals(((MethodInsnNode) ain).desc)).findFirst().orElse(null);
+							if (refer != null && !Modifier.isNative(refer.access) && !Modifier.isAbstract(refer.access)
+								&& Modifier.isPrivate(refer.access) && Modifier.isStatic(refer.access)) {
+								int mode = -1;
+								AbstractInsnNode first = refer.instructions.getFirst();
+								if (REDUNDANT_IF_1_MATCHER.matchImmediately(refer.instructions.iterator())) {
+									mode = 0;
+								} else if (REDUNDANT_IF_2_MATCHER.matchImmediately(refer.instructions.iterator())
+										   && Utils.isInteger(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious())
+										   && Utils.getIntValue(REDUNDANT_IF_2_GOTO.getCaptured().label.getPrevious()) == 0
+										   && refer.instructions.getLast().getOpcode() == IRETURN
+										   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_2_GOTO.getCaptured().label) {
+									mode = 1;
+								} else if (REDUNDANT_IF_3_MATCHER.matchImmediately(refer.instructions.iterator())
+										   && Utils.isInteger(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious())
+										   && Utils.getIntValue(REDUNDANT_IF_3_GOTO.getCaptured().label.getPrevious()) == 0
+										   && refer.instructions.getLast().getOpcode() == IRETURN
+										   && refer.instructions.getLast().getPrevious() == REDUNDANT_IF_3_GOTO.getCaptured().label) {
+									mode = 2;
+								}
+								if (mode == 0) {
+									toRemove.add(refer);
+									method.instructions.set(ain, first.getNext().getNext().clone(null));
+									inlinedIfs.incrementAndGet();
+								} else if (mode == 1) {
+									toRemove.add(refer);
+									LabelNode jump = ((JumpInsnNode) ain.getNext()).label;
+									method.instructions.remove(ain.getNext());
+									method.instructions.set(ain,
+											new JumpInsnNode(first.getNext().getOpcode(), jump));
+									inlinedIfs.incrementAndGet();
+								} else if (mode == 2) {
+									toRemove.add(refer);
+									LabelNode jump = ((JumpInsnNode) ain.getNext()).label;
+									method.instructions.remove(ain.getNext());
+									method.instructions.set(ain,
+											new JumpInsnNode(first.getNext().getNext().getOpcode(), jump));
+									inlinedIfs.incrementAndGet();
+								}
 							}
 						}
 					}
 				}
+				toRemove.forEach(m -> classNode.methods.remove(m));
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
-			toRemove.forEach(m -> classNode.methods.remove(m));
 		}
 		//Unpool numbers
 		for (ClassNode classNode : classNodes()) {
-			MethodNode clinit = TransformerHelper.findClinit(classNode);
-			if (clinit == null) {
+			if (erroredClasses.contains(classNode.name)) {
 				continue;
 			}
-			AbstractInsnNode first = clinit.instructions.getFirst();
-			if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
-				continue;
-			}
-			MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
-			AbstractInsnNode thirdInsn = refMethod.instructions.getFirst().getNext().getNext();
-			if (!TransformerHelper.isPutStatic(thirdInsn, null, null, "[I")) {
-				continue;
-			}
-			FieldInsnNode insnNode = (FieldInsnNode) thirdInsn;
-			FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
-			Context context = new Context(provider);
-			MethodExecutor.execute(classNode, refMethod, null, null, context);
-			int[] result = (int[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc, null, context);
-			classNode.methods.remove(refMethod);
-			clinit.instructions.remove(clinit.instructions.getFirst());
-			classNode.fields.remove(field);
-			for (MethodNode method : classNode.methods) {
-				for (AbstractInsnNode ain : method.instructions.toArray()) {
-					if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
-						if (!Utils.isInteger(ain.getNext())) {
-							throw new IllegalStateException();
+			try {
+				MethodNode clinit = TransformerHelper.findClinit(classNode);
+				if (clinit == null) {
+					continue;
+				}
+				AbstractInsnNode first = clinit.instructions.getFirst();
+				if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
+					continue;
+				}
+				MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
+				AbstractInsnNode thirdInsn = refMethod.instructions.getFirst().getNext().getNext();
+				if (!TransformerHelper.isPutStatic(thirdInsn, null, null, "[I")) {
+					continue;
+				}
+				FieldInsnNode insnNode = (FieldInsnNode) thirdInsn;
+				FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
+				Context context = new Context(provider);
+				MethodExecutor.execute(classNode, refMethod, null, null, context);
+				int[] result = (int[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc, null, context);
+				classNode.methods.remove(refMethod);
+				clinit.instructions.remove(clinit.instructions.getFirst());
+				classNode.fields.remove(field);
+				for (MethodNode method : classNode.methods) {
+					for (AbstractInsnNode ain : method.instructions.toArray()) {
+						if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
+							if (!Utils.isInteger(ain.getNext())) {
+								throw new IllegalStateException();
+							}
+							method.instructions.remove(ain.getNext().getNext());
+							int value = Utils.getIntValue(ain.getNext());
+							method.instructions.remove(ain.getNext());
+							method.instructions.set(ain, Utils.getIntInsn(result[value]));
+							unpoolNum.incrementAndGet();
 						}
-						method.instructions.remove(ain.getNext().getNext());
-						int value = Utils.getIntValue(ain.getNext());
-						method.instructions.remove(ain.getNext());
-						method.instructions.set(ain, Utils.getIntInsn(result[value]));
-						unpoolNum.incrementAndGet();
 					}
 				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
 		}
 		//Decrypt encrypted strings
 		for (ClassNode classNode : classNodes()) {
-			MethodNode clinit = TransformerHelper.findClinit(classNode);
-			if (clinit == null) {
+			if (erroredClasses.contains(classNode.name)) {
 				continue;
 			}
-			AbstractInsnNode first = clinit.instructions.getFirst();
-			if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
-				continue;
-			}
-			MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
-			if (refMethod == null || refMethod.instructions.size() <= 3) {
-				continue;
-			}
-			if (!STRING_ENCRYPT_MATCHER.matchImmediately(refMethod.instructions.iterator())) {
-				continue;
-			}
-			AbstractInsnNode lastPrev = refMethod.instructions.getLast().getPrevious();
-			if (lastPrev.getOpcode() != PUTSTATIC) {
-				continue;
-			}
-			FieldInsnNode insnNode = (FieldInsnNode) lastPrev;
-			FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
-			Context context = new Context(provider);
-			context.dictionary = classpath;
-			MethodExecutor.execute(classNode, refMethod, null, null, context);
-			Object[] resultArray = (Object[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc, null, context);
-			classNode.methods.remove(refMethod);
-			clinit.instructions.remove(clinit.instructions.getFirst());
-			classNode.fields.remove(field);
-			for (MethodNode method : classNode.methods) {
-				for (AbstractInsnNode ain : method.instructions.toArray()) {
-					if (!TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
-						continue;
-					}
-					if (!Utils.isInteger(ain.getNext())) {
-						throw new IllegalStateException();
-					}
-					method.instructions.remove(ain.getNext().getNext());
-					int value = Utils.getIntValue(ain.getNext());
-					method.instructions.remove(ain.getNext());
-					Object resVal = resultArray[value];
-					if (resVal == null) {
-						System.out.println("Array contains null string?");
-					}
-					method.instructions.set(ain, new LdcInsnNode(resVal));
+			try {
+				MethodNode clinit = TransformerHelper.findClinit(classNode);
+				if (clinit == null) {
+					continue;
 				}
-			}
-			classNode.sourceFile = null;
-		}
-		//Unpool strings
-		for (ClassNode classNode : classNodes()) {
-			MethodNode clinit = TransformerHelper.findClinit(classNode);
-			if (clinit == null) {
-				continue;
-			}
-			AbstractInsnNode first = clinit.instructions.getFirst();
-			if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
-				continue;
-			}
-			MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
-			AbstractInsnNode thirdInsn = refMethod.instructions.getFirst().getNext().getNext();
-			if (!TransformerHelper.isPutStatic(thirdInsn, null, null, "[Ljava/lang/String;")) {
-				continue;
-			}
-			FieldInsnNode insnNode = (FieldInsnNode) thirdInsn;
-			FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
-			Context context = new Context(provider);
-			context.dictionary = classpath;
-			Set<MethodNode> toRemove = new HashSet<>();
-			for (AbstractInsnNode ain : refMethod.instructions.toArray()) {
-				if (TransformerHelper.isInvokeStatic(ain, classNode.name, null, null)) {
-					MethodInsnNode min = (MethodInsnNode) ain;
-					toRemove.add(TransformerHelper.findMethodNode(classNode, min.name, min.desc));
+				AbstractInsnNode first = clinit.instructions.getFirst();
+				if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
+					continue;
 				}
-			}
-			for (MethodNode m : toRemove) {
-				for (AbstractInsnNode ain : m.instructions.toArray()) {
-					if (TransformerHelper.isInvokeVirtual(ain, "java/lang/String", "getBytes", "(Ljava/nio/charset/Charset;)[B")) {
-						context.customMethodFunc.put(ain, (list, ctx) -> new JavaArray((list.get(1).as(String.class)).getBytes(StandardCharsets.UTF_8)));
-					} else if (TransformerHelper.isInvokeSpecial(ain, "java/lang/String", "<init>", "([BLjava/nio/charset/Charset;)V")) {
-						context.customMethodFunc.put(ain, (list, ctx) -> {
-							list.get(2).initialize(new String(list.get(0).as(byte[].class), StandardCharsets.UTF_8));
-							return null;
-						});
-					}
+				MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
+				if (refMethod == null || refMethod.instructions.size() <= 3) {
+					continue;
 				}
-			}
-			MethodExecutor.execute(classNode, refMethod, null, null, context);
-			Object[] result = (Object[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc,
-					null, context);
-			for (MethodNode m : toRemove) {
-				classNode.methods.remove(m);
-			}
-			classNode.methods.remove(refMethod);
-			clinit.instructions.remove(clinit.instructions.getFirst());
-			classNode.fields.remove(field);
-			for (MethodNode method : classNode.methods) {
-				for (AbstractInsnNode ain : method.instructions.toArray()) {
-					if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
+				if (!STRING_ENCRYPT_MATCHER.matchImmediately(refMethod.instructions.iterator())) {
+					continue;
+				}
+				AbstractInsnNode lastPrev = refMethod.instructions.getLast().getPrevious();
+				if (lastPrev.getOpcode() != PUTSTATIC) {
+					continue;
+				}
+				FieldInsnNode insnNode = (FieldInsnNode) lastPrev;
+				FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
+				Context context = new Context(provider);
+				context.dictionary = classpath;
+				MethodExecutor.execute(classNode, refMethod, null, null, context);
+				Object[] resultArray = (Object[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc, null, context);
+				classNode.methods.remove(refMethod);
+				clinit.instructions.remove(clinit.instructions.getFirst());
+				classNode.fields.remove(field);
+				for (MethodNode method : classNode.methods) {
+					for (AbstractInsnNode ain : method.instructions.toArray()) {
+						if (!TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
+							continue;
+						}
 						if (!Utils.isInteger(ain.getNext())) {
 							throw new IllegalStateException();
 						}
 						method.instructions.remove(ain.getNext().getNext());
 						int value = Utils.getIntValue(ain.getNext());
 						method.instructions.remove(ain.getNext());
-						if (result[value] == null) {
+						Object resVal = resultArray[value];
+						if (resVal == null) {
 							System.out.println("Array contains null string?");
 						}
-						method.instructions.set(ain, new LdcInsnNode(result[value]));
-						unpoolString.incrementAndGet();
+						method.instructions.set(ain, new LdcInsnNode(resVal));
 					}
 				}
+				classNode.sourceFile = null;
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
+			}
+		}
+		//Unpool strings
+		for (ClassNode classNode : classNodes()) {
+			if (erroredClasses.contains(classNode.name)) {
+				continue;
+			}
+			try {
+				MethodNode clinit = TransformerHelper.findClinit(classNode);
+				if (clinit == null) {
+					continue;
+				}
+				AbstractInsnNode first = clinit.instructions.getFirst();
+				if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
+					continue;
+				}
+				MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
+				AbstractInsnNode thirdInsn = refMethod.instructions.getFirst().getNext().getNext();
+				if (!TransformerHelper.isPutStatic(thirdInsn, null, null, "[Ljava/lang/String;")) {
+					continue;
+				}
+				FieldInsnNode insnNode = (FieldInsnNode) thirdInsn;
+				FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
+				Context context = new Context(provider);
+				context.dictionary = classpath;
+				Set<MethodNode> toRemove = new HashSet<>();
+				for (AbstractInsnNode ain : refMethod.instructions.toArray()) {
+					if (TransformerHelper.isInvokeStatic(ain, classNode.name, null, null)) {
+						MethodInsnNode min = (MethodInsnNode) ain;
+						toRemove.add(TransformerHelper.findMethodNode(classNode, min.name, min.desc));
+					}
+				}
+				for (MethodNode m : toRemove) {
+					for (AbstractInsnNode ain : m.instructions.toArray()) {
+						if (TransformerHelper.isInvokeVirtual(ain, "java/lang/String", "getBytes", "(Ljava/nio/charset/Charset;)[B")) {
+							context.customMethodFunc.put(ain, (list, ctx) -> new JavaArray((list.get(1).as(String.class)).getBytes(StandardCharsets.UTF_8)));
+						} else if (TransformerHelper.isInvokeSpecial(ain, "java/lang/String", "<init>", "([BLjava/nio/charset/Charset;)V")) {
+							context.customMethodFunc.put(ain, (list, ctx) -> {
+								list.get(2).initialize(new String(list.get(0).as(byte[].class), StandardCharsets.UTF_8));
+								return null;
+							});
+						}
+					}
+				}
+				MethodExecutor.execute(classNode, refMethod, null, null, context);
+				Object[] result = (Object[]) context.provider.getField(classNode.name, insnNode.name, insnNode.desc,
+						null, context);
+				for (MethodNode m : toRemove) {
+					classNode.methods.remove(m);
+				}
+				classNode.methods.remove(refMethod);
+				clinit.instructions.remove(clinit.instructions.getFirst());
+				classNode.fields.remove(field);
+				for (MethodNode method : classNode.methods) {
+					for (AbstractInsnNode ain : method.instructions.toArray()) {
+						if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc)) {
+							if (!Utils.isInteger(ain.getNext())) {
+								throw new IllegalStateException();
+							}
+							method.instructions.remove(ain.getNext().getNext());
+							int value = Utils.getIntValue(ain.getNext());
+							method.instructions.remove(ain.getNext());
+							if (result[value] == null) {
+								System.out.println("Array contains null string?");
+							}
+							method.instructions.set(ain, new LdcInsnNode(result[value]));
+							unpoolString.incrementAndGet();
+						}
+					}
+				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
 		}
 		//Remove InvokeDynamics
 		for (ClassNode classNode : classNodes()) {
-			MethodNode clinit = TransformerHelper.findClinit(classNode);
-			if (clinit == null) {
+			if (erroredClasses.contains(classNode.name)) {
 				continue;
 			}
-			AbstractInsnNode first = clinit.instructions.getFirst();
-			if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
-				continue;
-			}
-			MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
-			FieldNode[] fields = isIndyMethod(classNode, refMethod);
-			if (fields == null) {
-				continue;
-			}
-			MethodNode bootstrap = classNode.methods.stream().filter(m -> isBootstrap(classNode, fields, m)).findFirst().orElse(null);
-			if (FAST_INDY) {
-				Map<Integer, String> indys = new HashMap<>();
-				Map<Integer, Type> indyClasses = new HashMap<>();
-				for (AbstractInsnNode ain : refMethod.instructions.toArray()) {
-					String str = TransformerHelper.getConstantString(ain);
-					if (str != null) {
-						indys.put(Utils.getIntValue(ain.getPrevious()), str);
-						continue;
-					}
-					Type type = TransformerHelper.getConstantType(ain);
-					if (type != null) {
-						indyClasses.put(Utils.getIntValue(ain.getPrevious()), type);
-						continue;
-					}
-					if (TransformerHelper.isGetStatic(ain, null, "TYPE", "Ljava/lang/Class;")) {
-						indyClasses.put(Utils.getIntValue(ain.getPrevious()), getTypeForClass(((FieldInsnNode) ain).owner));
-					}
+			try {
+				MethodNode clinit = TransformerHelper.findClinit(classNode);
+				if (clinit == null) {
+					continue;
 				}
-				for (MethodNode method : classNode.methods) {
-					for (AbstractInsnNode ain : method.instructions.toArray()) {
-						if (!TransformerHelper.isInvokeDynamic(ain, null, null, classNode.name, bootstrap.name, bootstrap.desc, 0)) {
+				AbstractInsnNode first = clinit.instructions.getFirst();
+				if (!TransformerHelper.isInvokeStatic(first, classNode.name, null, "()V")) {
+					continue;
+				}
+				MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
+				FieldNode[] fields = isIndyMethod(classNode, refMethod);
+				if (fields == null) {
+					continue;
+				}
+				MethodNode bootstrap = classNode.methods.stream().filter(m -> isBootstrap(classNode, fields, m)).findFirst().orElse(null);
+				if (getConfig().isFastIndy()) {
+					Map<Integer, String> indys = new HashMap<>();
+					Map<Integer, Type> indyClasses = new HashMap<>();
+					for (AbstractInsnNode ain : refMethod.instructions.toArray()) {
+						String str = TransformerHelper.getConstantString(ain);
+						if (str != null) {
+							indys.put(Utils.getIntValue(ain.getPrevious()), str);
 							continue;
 						}
-						int value = Integer.parseInt(((InvokeDynamicInsnNode) ain).name);
-						String[] decrypted = indys.get(value).split(":");
-						int typeStrLength = decrypted[3].length();
-						if (typeStrLength <= 2) {
-							method.instructions.set(ain, new MethodInsnNode(getOpcodeByTypeStrLength(typeStrLength), decrypted[0].replace('.', '/'),
-									decrypted[1], decrypted[2], false));
-						} else {
-							method.instructions.set(ain, new FieldInsnNode(getOpcodeByTypeStrLength(typeStrLength), decrypted[0].replace('.', '/'),
-									decrypted[1], indyClasses.get(Integer.parseInt(decrypted[2])).getDescriptor()));
-						}
-						indy.incrementAndGet();
-					}
-				}
-			} else {
-				Context refCtx = new Context(provider);
-				refCtx.dictionary = classpath;
-				MethodExecutor.execute(classNode, refMethod, null, null, refCtx);
-				for (MethodNode method : classNode.methods) {
-					for (AbstractInsnNode ain : method.instructions.toArray()) {
-						if (!TransformerHelper.isInvokeDynamic(ain, null, null, classNode.name, bootstrap.name, bootstrap.desc, 0)) {
+						Type type = TransformerHelper.getConstantType(ain);
+						if (type != null) {
+							indyClasses.put(Utils.getIntValue(ain.getPrevious()), type);
 							continue;
 						}
-						List<JavaValue> args = new ArrayList<>();
-						args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); //Lookup
-						args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) ain).name)); //dyn method name
-						args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
-						try {
-							Context context = new Context(provider);
-							context.dictionary = classpath;
-
-							JavaHandle result = MethodExecutor.execute(classNode, bootstrap, args, null, context);
-							AbstractInsnNode replacement = null;
-							if (result instanceof JavaMethodHandle) {
-								JavaMethodHandle jmh = (JavaMethodHandle) result;
-								String clazz = jmh.clazz.replace('.', '/');
-								switch (jmh.type) {
-									case "virtual":
-										boolean isInterface = (classpath.get(clazz).access & ACC_INTERFACE) != 0;
-										replacement = new MethodInsnNode(isInterface ?
-												INVOKEINTERFACE : INVOKEVIRTUAL, clazz, jmh.name, jmh.desc,
-												isInterface);
-										break;
-									case "static":
-										replacement = new MethodInsnNode(INVOKESTATIC, clazz, jmh.name, jmh.desc, false);
-										break;
-								}
-							} else {
-								JavaFieldHandle jfh = (JavaFieldHandle) result;
-								String clazz = jfh.clazz.replace('.', '/');
-								switch (jfh.type) {
-									case "virtual":
-										replacement = new FieldInsnNode(jfh.setter ?
-												PUTFIELD : GETFIELD, clazz, jfh.name, jfh.desc);
-										break;
-									case "static":
-										replacement = new FieldInsnNode(jfh.setter ?
-												PUTSTATIC : GETSTATIC, clazz, jfh.name, jfh.desc);
-										break;
-								}
+						if (TransformerHelper.isGetStatic(ain, null, "TYPE", "Ljava/lang/Class;")) {
+							indyClasses.put(Utils.getIntValue(ain.getPrevious()), getTypeForClass(((FieldInsnNode) ain).owner));
+						}
+					}
+					for (MethodNode method : classNode.methods) {
+						for (AbstractInsnNode ain : method.instructions.toArray()) {
+							if (!TransformerHelper.isInvokeDynamic(ain, null, null, classNode.name, bootstrap.name, bootstrap.desc, 0)) {
+								continue;
 							}
-							method.instructions.insert(ain, replacement);
-							method.instructions.remove(ain);
+							int value = Integer.parseInt(((InvokeDynamicInsnNode) ain).name);
+							String[] decrypted = indys.get(value).split(":");
+							int typeStrLength = decrypted[3].length();
+							if (typeStrLength <= 2) {
+								method.instructions.set(ain, new MethodInsnNode(getOpcodeByTypeStrLength(typeStrLength), decrypted[0].replace('.', '/'),
+										decrypted[1], decrypted[2], false));
+							} else {
+								method.instructions.set(ain, new FieldInsnNode(getOpcodeByTypeStrLength(typeStrLength), decrypted[0].replace('.', '/'),
+										decrypted[1], indyClasses.get(Integer.parseInt(decrypted[2])).getDescriptor()));
+							}
 							indy.incrementAndGet();
-						} catch (Exception e) {
-							e.printStackTrace();
+						}
+					}
+				} else {
+					Context refCtx = new Context(provider);
+					refCtx.dictionary = classpath;
+					MethodExecutor.execute(classNode, refMethod, null, null, refCtx);
+					for (MethodNode method : classNode.methods) {
+						for (AbstractInsnNode ain : method.instructions.toArray()) {
+							if (!TransformerHelper.isInvokeDynamic(ain, null, null, classNode.name, bootstrap.name, bootstrap.desc, 0)) {
+								continue;
+							}
+							List<JavaValue> args = new ArrayList<>();
+							args.add(new JavaObject(null, "java/lang/invoke/MethodHandles$Lookup")); //Lookup
+							args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) ain).name)); //dyn method name
+							args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
+							try {
+								Context context = new Context(provider);
+								context.dictionary = classpath;
+
+								JavaHandle result = MethodExecutor.execute(classNode, bootstrap, args, null, context);
+								AbstractInsnNode replacement = null;
+								if (result instanceof JavaMethodHandle) {
+									JavaMethodHandle jmh = (JavaMethodHandle) result;
+									String clazz = jmh.clazz.replace('.', '/');
+									switch (jmh.type) {
+										case "virtual":
+											boolean isInterface = (classpath.get(clazz).access & ACC_INTERFACE) != 0;
+											replacement = new MethodInsnNode(isInterface ?
+													INVOKEINTERFACE : INVOKEVIRTUAL, clazz, jmh.name, jmh.desc,
+													isInterface);
+											break;
+										case "static":
+											replacement = new MethodInsnNode(INVOKESTATIC, clazz, jmh.name, jmh.desc, false);
+											break;
+									}
+								} else {
+									JavaFieldHandle jfh = (JavaFieldHandle) result;
+									String clazz = jfh.clazz.replace('.', '/');
+									switch (jfh.type) {
+										case "virtual":
+											replacement = new FieldInsnNode(jfh.setter ?
+													PUTFIELD : GETFIELD, clazz, jfh.name, jfh.desc);
+											break;
+										case "static":
+											replacement = new FieldInsnNode(jfh.setter ?
+													PUTSTATIC : GETSTATIC, clazz, jfh.name, jfh.desc);
+											break;
+									}
+								}
+								method.instructions.insert(ain, replacement);
+								method.instructions.remove(ain);
+								indy.incrementAndGet();
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				}
+				classNode.fields.remove(fields[0]);
+				classNode.fields.remove(fields[1]);
+				classNode.methods.remove(bootstrap);
+				classNode.methods.remove(refMethod);
+				clinit.instructions.remove(first);
+			} catch (Throwable t) {
+				t.printStackTrace();
+				erroredClasses.add(classNode.name);
 			}
-			classNode.fields.remove(fields[0]);
-			classNode.fields.remove(fields[1]);
-			classNode.methods.remove(bootstrap);
-			classNode.methods.remove(refMethod);
-			clinit.instructions.remove(first);
 		}
 		AtomicInteger decrypted = new AtomicInteger();
 		//Warning: No checks will be done to verify if classloader is from Superblaubeere obf
 		classEncryption:
-		if (CLASS_ENCRYPTION) {
+		if (getConfig().isClassEncryption()) {
 			String[] lines = null;
 			int index = -1;
 			if (getDeobfuscator().getInputPassthrough().containsKey("META-INF/MANIFEST.MF")) {
@@ -603,8 +683,14 @@ public class SuperblaubeereTransformer extends Transformer<TransformerConfig> {
 		System.out.println("[Special] [SuperblaubeereTransformer] Unpooled " + unpoolString + " strings");
 		System.out.println("[Special] [SuperblaubeereTransformer] Inlined " + inlinedIfs + " if statements");
 		System.out.println("[Special] [SuperblaubeereTransformer] Removed " + indy + " invokedynamics");
-		if (CLASS_ENCRYPTION) {
+		if (getConfig().isClassEncryption()) {
 			System.out.println("[Special] [SuperblaubeereTransformer] Decrypted " + decrypted + " classes");
+		}
+		if (!erroredClasses.isEmpty()) {
+			System.out.println("[Special] [SuperblaubeereTransformer] Errors occurred during decryption of " + erroredClasses.size() + " classes:");
+			for (String erroredClass : erroredClasses) {
+				System.out.println("[Special] [SuperblaubeereTransformer]   - " + erroredClass);
+			}
 		}
 		System.out.println("[Special] [SuperblaubeereTransformer] Done");
 		return num.get() > 0 || unpoolNum.get() > 0 || unpoolString.get() > 0 || inlinedIfs.get() > 0 || indy.get() > 0;
