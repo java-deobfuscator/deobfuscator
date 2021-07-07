@@ -1245,7 +1245,7 @@ public class MethodExecutor {
                                         	break;
                                     }
                                 } else {
-                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc).setThrownFromInvoke(true);
+                                    throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.owner + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                                 }
                                 break;
                             } catch (NoSuchMethodHandlerException | IllegalArgumentException t) {
@@ -1573,7 +1573,7 @@ public class MethodExecutor {
                                     break;
                             }
                         }else {
-                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.name + cast.desc).setThrownFromInvoke(true);
+                            throw new NoSuchMethodHandlerException("Could not find invoker for " + args.get(args.size() - 1).type() + " " + cast.owner + " " + cast.name + cast.desc).setThrownFromInvoke(true);
                         }
                         break;
                     }
