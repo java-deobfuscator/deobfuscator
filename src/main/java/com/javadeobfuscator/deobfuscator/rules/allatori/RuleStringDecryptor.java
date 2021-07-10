@@ -25,7 +25,7 @@ import com.javadeobfuscator.deobfuscator.rules.Rule;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.transformers.allatori.string.StringEncryptionTransformer;
 import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
-import org.assertj.core.internal.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;

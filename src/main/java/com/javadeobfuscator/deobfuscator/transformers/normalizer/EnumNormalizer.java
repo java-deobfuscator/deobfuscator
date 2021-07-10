@@ -4,8 +4,8 @@ import com.javadeobfuscator.deobfuscator.analyzer.FlowAnalyzer;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
-import org.assertj.core.internal.asm.Opcodes;
-import org.assertj.core.internal.asm.Type;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;

@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.tuple.Triple;
-import org.assertj.core.internal.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
 import com.javadeobfuscator.deobfuscator.analyzer.FlowAnalyzer;

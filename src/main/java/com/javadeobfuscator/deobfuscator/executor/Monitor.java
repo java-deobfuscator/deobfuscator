@@ -4,12 +4,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
+
 public class Monitor {
     private final Map<Object, Thread> locks = new HashMap<>();
     private final Map<Thread, AtomicInteger> counters = new HashMap<>();
 
     public void enter(Object obj) {
-        if (obj == null) throw new NullPointerException();
+    	if (((JavaValue)obj).value() == null) throw new NullPointerException();
 
         while (true) {
             synchronized (locks) {
@@ -35,7 +37,7 @@ public class Monitor {
     }
 
     public void exit(Object obj) {
-        if (obj == null) throw new NullPointerException();
+    	if (((JavaValue)obj).value() == null) throw new NullPointerException();
 
         boolean notify = false;
         Thread current = Thread.currentThread();

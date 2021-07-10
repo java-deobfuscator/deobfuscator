@@ -15,7 +15,7 @@ import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.transformers.dasho.FlowObfuscationTransformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.apache.commons.lang3.tuple.Triple;
-import org.assertj.core.internal.asm.Opcodes;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.IincInsnNode;

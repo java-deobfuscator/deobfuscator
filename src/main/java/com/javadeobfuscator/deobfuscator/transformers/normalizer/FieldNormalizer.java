@@ -19,7 +19,7 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 
-import org.assertj.core.internal.asm.Type;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 
