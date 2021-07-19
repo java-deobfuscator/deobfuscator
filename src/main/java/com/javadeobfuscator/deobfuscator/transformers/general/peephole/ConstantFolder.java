@@ -54,6 +54,8 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                             case ISHL:
                             case ISHR:
                             case IUSHR:
+                            case IOR:
+                            case IAND:
                             case IXOR: {
                                 List<Frame> frames = result.getFrames().get(ain);
                                 if (frames == null) {
@@ -86,6 +88,10 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                             results.add(bottomValue >> topValue);
                                         } else if (ain.getOpcode() == IUSHR) {
                                             results.add(bottomValue >>> topValue);
+                                        } else if (ain.getOpcode() == IOR) {
+                                            results.add(bottomValue | topValue);
+                                        } else if (ain.getOpcode() == IAND) {
+                                            results.add(bottomValue & topValue);
                                         } else if (ain.getOpcode() == IXOR) {
                                         	results.add(bottomValue ^ topValue);
                                         }
@@ -268,6 +274,106 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                 }
                                 break;
                             }
+                            case LADD:
+                            case LSUB:
+                            case LMUL:
+                            case LDIV:
+                            case LAND:
+                            case LOR:
+                            case LREM:
+                            case LXOR: {
+                                if (!getConfig().isLongFolding()) {
+                                    break;
+                                }
+                                List<Frame> frames = result.getFrames().get(ain);
+                                if (frames == null) {
+                                    break;
+                                }
+                                Set<Long> results = new HashSet<>();
+                                for (Frame frame0 : frames) {
+                                    MathFrame frame = (MathFrame) frame0;
+                                    if (frame.getTargets().size() != 2) {
+                                        throw new RuntimeException("weird: " + frame);
+                                    }
+                                    Frame top = frame.getTargets().get(0);
+                                    Frame bottom = frame.getTargets().get(1);
+                                    if (top instanceof LdcFrame && bottom instanceof LdcFrame) {
+                                        long bottomValue = ((Number) ((LdcFrame) bottom).getConstant()).longValue();
+                                        long topValue = ((Number) ((LdcFrame) top).getConstant()).longValue();
+                                        if (ain.getOpcode() == LADD) {
+                                            results.add(bottomValue + topValue);
+                                        } else if (ain.getOpcode() == LMUL) {
+                                            results.add(bottomValue * topValue);
+                                        } else if (ain.getOpcode() == LREM) {
+                                            results.add(bottomValue % topValue);
+                                        } else if (ain.getOpcode() == LSUB) {
+                                            results.add(bottomValue - topValue);
+                                        } else if (ain.getOpcode() == LDIV) {
+                                            results.add(bottomValue / topValue);
+                                        } else if (ain.getOpcode() == LXOR) {
+                                            results.add(bottomValue ^ topValue);
+                                        } else if (ain.getOpcode() == LOR) {
+                                            results.add(bottomValue | topValue);
+                                        } else if (ain.getOpcode() == LAND) {
+                                            results.add(bottomValue & topValue);
+                                        }
+                                    } else {
+                                        break opcodes;
+                                    }
+                                }
+                                if (results.size() == 1) {
+                                	InsnList replacement = new InsnList();
+                                    replacement.add(new InsnNode(POP2));
+                                    replacement.add(new InsnNode(POP2));
+                                    replacement.add(Utils.getLongInsn(results.iterator().next()));
+                                    replacements.put(ain, replacement);
+                                    folded.getAndIncrement();
+                                }
+                                break;
+                            }
+                            case LSHL:
+                            case LSHR:
+                            case LUSHR: {
+                            	if (!getConfig().isLongFolding()) {
+                                    break;
+                                }
+                            	 List<Frame> frames = result.getFrames().get(ain);
+                                 if (frames == null) {
+                                     break;
+                                 }
+                                 Set<Long> results = new HashSet<>();
+                                 for (Frame frame0 : frames) {
+                                     MathFrame frame = (MathFrame) frame0;
+                                     if (frame.getTargets().size() != 2) {
+                                         throw new RuntimeException("weird: " + frame);
+                                     }
+                                     Frame top = frame.getTargets().get(0);
+                                     Frame bottom = frame.getTargets().get(1);
+                                     if (top instanceof LdcFrame && bottom instanceof LdcFrame) {
+                                         long bottomValue = ((Number) ((LdcFrame) bottom).getConstant()).longValue();
+                                         int topValue = ((Number) ((LdcFrame) top).getConstant()).intValue();
+                                         if (ain.getOpcode() == LSHL) {
+                                             results.add(bottomValue << topValue);
+                                         } else if (ain.getOpcode() == LSHR) {
+                                             results.add(bottomValue >> topValue);
+                                         } else if (ain.getOpcode() == LUSHR) {
+                                             results.add(bottomValue >>> topValue);
+                                         	break;
+                                         }
+                                     } else {
+                                         break opcodes;
+                                     }
+                                 }
+                                 if (results.size() == 1) {
+                                	 InsnList replacement = new InsnList();
+                                     replacement.add(new InsnNode(POP));
+                                     replacement.add(new InsnNode(POP2));
+                                     replacement.add(Utils.getLongInsn(results.iterator().next()));
+                                     replacements.put(ain, replacement);
+                                     folded.getAndIncrement();
+                                 }
+                                 break;
+                            }
                             case POP:
                             case POP2: {
                                 if (!getConfig().isExperimentalPopFolding()) {
@@ -290,7 +396,14 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
                                             }
                                             remove.add(result.getMapping().get(deletedFrame));
                                         }
-                                    } else {
+                                    } else if (ain.getOpcode() == POP2 && frame.getRemoved().size() == 1 && frame.getRemoved().get(0) instanceof LdcFrame && ((LdcFrame)frame.getRemoved().get(0)).getConstant() instanceof Long) {
+                                        for (Frame deletedFrame : frame.getRemoved()) {
+                                            if (deletedFrame.getChildren().size() > 1) {
+                                                break opcodes;
+                                            }
+                                            remove.add(result.getMapping().get(deletedFrame));
+                                        }
+                                    }else {
                                     	if(frame.getRemoved().size() == 1)
                                     	{
                                     		//Load + pop
@@ -357,6 +470,7 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
 
     public static class Config extends TransformerConfig {
         private boolean experimentalPopFolding;
+        private boolean longFolding = true;
 
         public Config() {
             super(ConstantFolder.class);
@@ -368,6 +482,14 @@ public class ConstantFolder extends Transformer<ConstantFolder.Config> {
 
         public void setExperimentalPopFolding(boolean experimentalPopFolding) {
             this.experimentalPopFolding = experimentalPopFolding;
+        }
+        
+        public boolean isLongFolding() {
+            return longFolding;
+        }
+
+        public void setLongFolding(boolean longFolding) {
+            this.longFolding = longFolding;
         }
     }
 }

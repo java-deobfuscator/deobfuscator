@@ -187,9 +187,9 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                         modifier.apply(m);
                     }
                 }
+                classes.remove(atOwner.name);
+                classpath.remove(atOwner.name);
             }
-            classes.remove(atOwner.name);
-            classpath.remove(atOwner.name);
         }
         //Bad Annotations
         for (ClassNode classNode : classNodes()) {
