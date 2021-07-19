@@ -403,11 +403,24 @@ public class Deobfuscator {
                 }
             }
 
+            logger.info("All detectors have been run. If you do not see anything listed, check if your file only contains name obfuscation.");
+            logger.info("Do note that some obfuscators do not have detectors.");
             return;
         }
 
         logger.info("Computing callers");
         computeCallers();
+        
+        if (configuration.isDeleteUselessClasses()) {
+        	logger.warn("Warning: You have enabled the option \"delete useless classes\".");
+        	logger.warn("This option will delete any classes whose superclasses or interfaces cannot be resolved for certain transformers.");
+        	logger.warn("This feature is only to be used when your file contains trash classes that prevent transformers from working.");
+        	logger.warn("All libraries must be added for this to work properly.");
+        }
+        
+        if (configuration.isSmartRedo()) {
+        	logger.warn("You have enabled \"smart redo\". For some transformers, this may result in an infinite loop.");
+        }
 
         logger.info("Transforming");
         if (configuration.getTransformers() != null) {
