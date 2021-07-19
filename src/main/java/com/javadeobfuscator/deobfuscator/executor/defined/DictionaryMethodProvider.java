@@ -39,7 +39,7 @@ public class DictionaryMethodProvider extends MethodProvider {
     public Object invokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         ClassNode classNode = classes.get(className);
         if (classNode != null) {
-            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElseGet(null);
+            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
             if (methodNode != null) {
                 List<JavaValue> argsClone = new ArrayList<>();
                 for (JavaValue arg : args) {
@@ -54,7 +54,7 @@ public class DictionaryMethodProvider extends MethodProvider {
     public boolean canInvokeMethod(String className, String methodName, String methodDesc, JavaValue targetObject, List<JavaValue> args, Context context) {
         ClassNode classNode = classes.get(className);
         if (classNode != null) {
-            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElseGet(null);
+            MethodNode methodNode = classNode.methods.stream().filter(mn -> mn.name.equals(methodName) && mn.desc.equals(methodDesc)).findFirst().orElse(null);
             return methodNode != null;
         }
         return false;
