@@ -382,25 +382,31 @@ public class Deobfuscator {
             logger.info("Detecting known obfuscators");
 
             for (Rule rule : Rules.RULES) {
-                String message = rule.test(this);
-                if (message == null) {
-                    continue;
-                }
-
-                logger.info("");
-                logger.info("{}: {}", rule.getClass().getSimpleName(), rule.getDescription());
-                logger.info("\t{}", message);
-                logger.info("Recommend transformers:");
-                logger.info("(Choose one transformer. If there are multiple, it's recommended to try the transformer listed first)");
-
-                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
-                if (recommended == null) {
-                    logger.info("\tNone");
-                } else {
-                    for (Class<? extends Transformer<?>> transformer : recommended) {
-                        logger.info("\t{}", transformer.getName());
-                    }
-                }
+            	try
+            	{
+	                String message = rule.test(this);
+	                if (message == null) {
+	                    continue;
+	                }
+	
+	                logger.info("");
+	                logger.info("{}: {}", rule.getClass().getSimpleName(), rule.getDescription());
+	                logger.info("\t{}", message);
+	                logger.info("Recommend transformers:");
+	                logger.info("(Choose one transformer. If there are multiple, it's recommended to try the transformer listed first)");
+	
+	                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
+	                if (recommended == null) {
+	                    logger.info("\tNone");
+	                } else {
+	                    for (Class<? extends Transformer<?>> transformer : recommended) {
+	                        logger.info("\t{}", transformer.getName());
+	                    }
+	                }
+            	}catch(Exception e)
+            	{
+            		e.printStackTrace();
+            	}
             }
 
             logger.info("All detectors have been run. If you do not see anything listed, check if your file only contains name obfuscation.");
