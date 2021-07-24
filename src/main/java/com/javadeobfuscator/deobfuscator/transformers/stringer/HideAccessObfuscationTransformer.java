@@ -53,7 +53,8 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
-public class HideAccessObfuscationTransformer extends Transformer<TransformerConfig> {
+@TransformerConfig.ConfigOptions(configClass = HideAccessObfuscationTransformer.Config.class)
+public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfuscationTransformer.Config> {
     private static final String[][] CLASS_TO_PRIMITIVE = {
             {"java/lang/Byte", "byte"},
             {"java/lang/Short", "short"},
@@ -142,7 +143,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                 args.add(JavaValue.valueOf(((InvokeDynamicInsnNode) insn).name));
                                 args.add(new JavaObject(null, "java/lang/invoke/MethodType"));
 
-                                JavaMethodHandle result = MethodExecutor.execute(classNode, bootstrapMethod, args, null, context);
+                                JavaMethodHandle result;
+                                try
+                                {
+                                	result = MethodExecutor.execute(classNode, bootstrapMethod, args, null, context);
+                                	if(result == null)
+                                		throw new NullPointerException("Null result returned");
+                                }catch(Exception e)
+                                {
+                                	if(getConfig().shouldIgnoreFailures())
+                                	{
+                                		System.out.println("Failed to decrypt invokedynamic call at class " + classNode.name
+                                			+ " method " + methodNode.name + methodNode.desc);
+                                		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                		continue;
+                                	}else
+                                		throw e;
+                                }
                                 switch (result.type) {
                                     case "virtual":
                                         methodNode.instructions.set(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, result.clazz, result.name, result.desc, false));
@@ -195,7 +212,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                             List<JavaValue> args = new ArrayList<>();
                                             args.add(new JavaInteger(value));
                                             args.add(new JavaObject(null, "java/lang/Object"));
-                                            JavaConstructor result = MethodExecutor.execute(classes.get(owner), hideAccessMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                            JavaConstructor result;
+                                            try
+                                            {
+                                            	result = MethodExecutor.execute(classes.get(owner), hideAccessMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                            	if(result == null)
+                                            		throw new NullPointerException("Null result returned");
+                                            }catch(Exception e)
+                                            {
+                                            	if(getConfig().shouldIgnoreFailures())
+                                            	{
+                                            		System.out.println("Failed to decrypt invokespecial call at class " + classNode.name
+                                            			+ " method " + methodNode.name + methodNode.desc);
+                                            		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                            		continue;
+                                            	}else
+                                            		throw e;
+                                            }
                                             hideAccessMethod.instructions.remove(returnInsert);
                                             //Remove the array of objects
                                             while (insn.getPrevious() != null) {
@@ -318,7 +351,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Method;")).findFirst().orElse(null);
                                     if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
                                         Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                        JavaMethod result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        JavaMethod result;
+                                        try
+                                        {
+                                        	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        	if(result == null)
+                                        		throw new NullPointerException("Null result returned");
+                                        }catch(Exception e)
+                                        {
+                                        	if(getConfig().shouldIgnoreFailures())
+                                        	{
+                                        		System.out.println("Failed to decrypt encrypted method call at class " + classNode.name
+                                        			+ " method " + methodNode.name + methodNode.desc);
+                                        		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		continue;
+                                        	}else
+                                        		throw e;
+                                        }
                                         //Remove the array of objects
                                         while (insn.getPrevious() != null) {
                                             if (insn.getPrevious().getOpcode() == Opcodes.ANEWARRAY) {
@@ -363,8 +412,24 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                 case "(I)Ljava/lang/Object;": {  // GETSTATIC
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
-                                    JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-
+                                    JavaField result;
+                                    try
+                                    {
+                                    	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                    	if(result == null)
+                                    		throw new NullPointerException("Null result returned");
+                                    }catch(Exception e)
+                                    {
+                                    	if(getConfig().shouldIgnoreFailures())
+                                    	{
+                                    		System.out.println("Failed to decrypt getstatic call at class " + classNode.name
+                                    			+ " method " + methodNode.name + methodNode.desc);
+                                    		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		continue;
+                                    	}else
+                                    		throw e;
+                                    }
+                                    
                                     if (insn.getNext().getOpcode() == Opcodes.CHECKCAST && isUnboxingMethod((TypeInsnNode)insn.getNext())
                                     	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((TypeInsnNode)insn.getNext()).desc))) {
                                     	methodNode.instructions.remove(insn.getNext().getNext());
@@ -379,7 +444,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
                                     if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
                                         Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                        JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        JavaField result;
+                                        try
+                                        {
+                                        	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        	if(result == null)
+                                        		throw new NullPointerException("Null result returned");
+                                        }catch(Exception e)
+                                        {
+                                        	if(getConfig().shouldIgnoreFailures())
+                                        	{
+                                        		System.out.println("Failed to decrypt putstatic call at class " + classNode.name
+                                        			+ " method " + methodNode.name + methodNode.desc);
+                                        		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		continue;
+                                        	}else
+                                        		throw e;
+                                        }
 
                                         methodNode.instructions.remove(insn.getPrevious().getPrevious());
                                         methodNode.instructions.remove(insn.getPrevious());
@@ -395,7 +476,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
                                 case "(Ljava/lang/Object;I)Ljava/lang/Object;": { // GETFIELD
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
                                     Integer value = (Integer) ((LdcInsnNode) insn.getPrevious()).cst;
-                                    JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                    JavaField result;
+                                    try
+                                    {
+                                    	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                    	if(result == null)
+                                    		throw new NullPointerException("Null result returned");
+                                    }catch(Exception e)
+                                    {
+                                    	if(getConfig().shouldIgnoreFailures())
+                                    	{
+                                    		System.out.println("Failed to decrypt getfield call at class " + classNode.name
+                                    			+ " method " + methodNode.name + methodNode.desc);
+                                    		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		continue;
+                                    	}else
+                                    		throw e;
+                                    }
 
                                     if (insn.getNext().getOpcode() == Opcodes.CHECKCAST && isUnboxingMethod((TypeInsnNode)insn.getNext())
                                     	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((TypeInsnNode)insn.getNext()).desc))) {
@@ -412,7 +509,23 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
 
                                     if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
                                         Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                        JavaField result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        JavaField result;
+                                        try
+                                        {
+                                        	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                        	if(result == null)
+                                        		throw new NullPointerException("Null result returned");
+                                        }catch(Exception e)
+                                        {
+                                        	if(getConfig().shouldIgnoreFailures())
+                                        	{
+                                        		System.out.println("Failed to decrypt putfield call at class " + classNode.name
+                                        			+ " method " + methodNode.name + methodNode.desc);
+                                        		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		continue;
+                                        	}else
+                                        		throw e;
+                                        }
 
                                         methodNode.instructions.remove(insn.getPrevious().getPrevious());
                                         methodNode.instructions.remove(insn.getPrevious());
@@ -641,5 +754,29 @@ public class HideAccessObfuscationTransformer extends Transformer<TransformerCon
     			return new BasicValue(Type.getType("Ljava/lang/Object;"));
     		return v;
     	}
+    }
+    
+    public static class Config extends TransformerConfig 
+	{
+		/**
+		 * Should we skip calls that fail to decrypt? This is useful if there are
+		 * a few encrypted calls that cannot be resolved by adding libraries.
+		 */
+        private boolean ignoreFailures = false;
+
+        public Config() 
+        {
+            super(HideAccessObfuscationTransformer.class);
+        }
+
+        public boolean shouldIgnoreFailures() 
+        {
+            return ignoreFailures;
+        }
+
+        public void setIgnoreFailures(boolean ignoreFailures) 
+        {
+            this.ignoreFailures = ignoreFailures;
+        }
     }
 }
