@@ -7,6 +7,7 @@ public class RadonV2Config extends TransformerConfig {
     private boolean antiTamper = true;
     private boolean ejector = true;
     private boolean antiDebug = true;
+    private boolean tryCatch = true;
     private boolean flowObf = true;
     private boolean stringPool = true;
     private boolean number = true;
@@ -41,6 +42,14 @@ public class RadonV2Config extends TransformerConfig {
     public void setAntiDebug(boolean antiDebug) {
         this.antiDebug = antiDebug;
     }
+    
+    public boolean isTryCatch() {
+        return tryCatch;
+    }
+
+    public void setTryCatch(boolean tryCatch) {
+        this.tryCatch = tryCatch;
+    }
 
     public boolean isFlowObf() {
         return flowObf;
@@ -49,7 +58,7 @@ public class RadonV2Config extends TransformerConfig {
     public void setFlowObf(boolean flowObf) {
         this.flowObf = flowObf;
     }
-
+    
     public boolean isStringPool() {
         return stringPool;
     }

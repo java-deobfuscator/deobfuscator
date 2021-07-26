@@ -516,7 +516,7 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                 }
             }
         }
-        if (getConfig().isFlowObf()) {
+        if (getConfig().isTryCatch()) {
             List<String> fakeExceptionClasses = new ArrayList<>();
             for (ClassNode classNode : classNodes()) {
                 try {
@@ -559,9 +559,11 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                 classes.remove(s);
                 classpath.remove(s);
             });
+        }
+        if (getConfig().isFlowObf()) {
+        	Map<ClassNode, Set<FieldNode>> remove = new HashMap<>();
             //Jumps
             for (ClassNode classNode : classNodes()) {
-                List<FieldNode> remove = new ArrayList<>();
                 for (MethodNode method : classNode.methods) {
                     LinkedHashMap<LabelNode, List<AbstractInsnNode>> res = new FlowAnalyzer(method).analyze(method.instructions.getFirst(), Arrays.asList(),
                             new HashMap<>(), true, true);
@@ -592,6 +594,9 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                                     modifier.remove(getNextFollowGoto(ain, 1));
                                     modifier.replace(ain, new JumpInsnNode(Opcodes.GOTO, ((JumpInsnNode) getNextFollowGoto(ain, 1)).label));
                                     flowObf.incrementAndGet();
+                                } else if (getNextFollowGoto(ain, 1) != null && getNextFollowGoto(ain, 1).getOpcode() == Opcodes.IFNE) {
+                                    modifier.remove(getNextFollowGoto(ain, 1));
+                                    modifier.remove(ain);
                                 } else {
                                     fail = true;
                                     break;
@@ -601,16 +606,13 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                     }
                     if (!fail) {
                         modifier.apply(method);
-                        if (!remove.contains(field)) {
-                            remove.add(field);
-                        }
+                        remove.putIfAbsent(classNode, new HashSet<>());
+                        remove.get(classNode).add(field);
                     }
                 }
-                remove.forEach(f -> classNode.fields.remove(f));
             }
             //2nd jump
             for (ClassNode classNode : classNodes()) {
-                List<FieldNode> remove = new ArrayList<>();
                 for (MethodNode method : classNode.methods) {
                     LinkedHashMap<LabelNode, List<AbstractInsnNode>> res = new FlowAnalyzer(method).analyze(method.instructions.getFirst(), Arrays.asList(),
                             new HashMap<>(), true, true);
@@ -664,9 +666,8 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                         }
                         if (pass) {
                             modifier.apply(method);
-                            if (!remove.contains(field)) {
-                                remove.add(field);
-                            }
+                            remove.putIfAbsent(classNode, new HashSet<>());
+                            remove.get(classNode).add(field);
                         }
                         //Dead code
                         InstructionModifier modifier2 = new InstructionModifier();
@@ -695,8 +696,24 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                         }
                     }
                 }
-                remove.forEach(f -> classNode.fields.remove(f));
             }
+            classNodes().forEach(node -> node.methods.forEach(methodNode -> {
+                for (AbstractInsnNode insn : methodNode.instructions) {
+                    if (insn.getOpcode() != Opcodes.GETSTATIC) {
+                        continue;
+                    }
+                    FieldInsnNode fn = (FieldInsnNode) insn;
+                    ClassNode owner = classes.get(fn.owner);
+                    if (owner == null) {
+                        continue;
+                    }
+                    FieldNode fNode = owner.fields.stream().filter(f -> f.name.equals(fn.name) && f.desc.equals(fn.desc)).findFirst().orElse(null);
+                    if(remove.containsKey(owner))
+                    	remove.get(owner).remove(fNode);
+                }
+            }));
+            for(Entry<ClassNode, Set<FieldNode>> entry : remove.entrySet())
+            	entry.getKey().fields.removeAll(entry.getValue());
             //BlockSplitter
             for (ClassNode classNode : classNodes()) {
                 for (MethodNode method : classNode.methods) {
@@ -1139,7 +1156,12 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                     method.instructions.set(ain, new LdcInsnNode(4));
                 } else if (ain instanceof MethodInsnNode && ((MethodInsnNode) ain).name.equals("getRuntime")
                            && ((MethodInsnNode) ain).owner.equals("java/lang/Runtime")) {
-                    method.instructions.set(ain, new InsnNode(Opcodes.ACONST_NULL));
+                	if(ain.getNext().getOpcode() == Opcodes.IFNULL)
+                	{
+                		method.instructions.remove(ain.getNext());
+                		method.instructions.remove(ain);
+                	}else
+                		method.instructions.set(ain, new InsnNode(Opcodes.ACONST_NULL));
                 } else if (ain.getOpcode() == Opcodes.NEW
                            && ((TypeInsnNode) ain).desc.equals("java/util/concurrent/atomic/AtomicInteger")) {
                     method.instructions.remove(Utils.getNext(ain));

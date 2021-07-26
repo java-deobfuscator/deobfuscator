@@ -231,6 +231,21 @@ public class RadonTransformer extends Transformer<RadonConfig> {
                 }
             }
         }
+        classNodes().forEach(node -> node.methods.forEach(methodNode -> {
+            for (AbstractInsnNode insn : methodNode.instructions) {
+                if (insn.getOpcode() != Opcodes.GETSTATIC) {
+                    continue;
+                }
+                FieldInsnNode fn = (FieldInsnNode) insn;
+                ClassNode owner = classes.get(fn.owner);
+                if (owner == null) {
+                    continue;
+                }
+                FieldNode fNode = owner.fields.stream().filter(f -> f.name.equals(fn.name) && f.desc.equals(fn.desc)).findFirst().orElse(null);
+                if(fakeFields.containsKey(owner))
+                	fakeFields.get(owner).remove(fNode);
+            }
+        }));
         fakeFields.entrySet().forEach(e -> e.getValue().forEach(f -> e.getKey().fields.remove(f)));
         if (getConfig().getNumberMode() == RadonConfig.NumberMode.LEGACY) {
             for (ClassNode classNode : classNodes()) {

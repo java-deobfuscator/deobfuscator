@@ -70,6 +70,8 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
     public boolean transform() throws Throwable {
         List<ClassNode> decryptors = findDecryptClass();
         List<MethodNode> decryptMethods = new ArrayList<>();
+        Set<ClassNode> failedClasses = new HashSet<>();
+        Set<MethodNode> failedDecryptors = new HashSet<>();
 
         AtomicInteger count = new AtomicInteger(0);
 
@@ -156,6 +158,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                 		System.out.println("Failed to decrypt invokedynamic call at class " + classNode.name
                                 			+ " method " + methodNode.name + methodNode.desc);
                                 		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                		failedDecryptors.add(bootstrapMethod);
                                 		continue;
                                 	}else
                                 		throw e;
@@ -225,6 +228,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                             		System.out.println("Failed to decrypt invokespecial call at class " + classNode.name
                                             			+ " method " + methodNode.name + methodNode.desc);
                                             		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                            		failedClasses.add(classes.get(owner));
                                             		continue;
                                             	}else
                                             		throw e;
@@ -364,6 +368,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                         		System.out.println("Failed to decrypt encrypted method call at class " + classNode.name
                                         			+ " method " + methodNode.name + methodNode.desc);
                                         		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		failedClasses.add(classes.get(owner));
                                         		continue;
                                         	}else
                                         		throw e;
@@ -425,6 +430,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                     		System.out.println("Failed to decrypt getstatic call at class " + classNode.name
                                     			+ " method " + methodNode.name + methodNode.desc);
                                     		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		failedClasses.add(classes.get(owner));
                                     		continue;
                                     	}else
                                     		throw e;
@@ -457,6 +463,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                         		System.out.println("Failed to decrypt putstatic call at class " + classNode.name
                                         			+ " method " + methodNode.name + methodNode.desc);
                                         		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		failedClasses.add(classes.get(owner));
                                         		continue;
                                         	}else
                                         		throw e;
@@ -489,6 +496,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                     		System.out.println("Failed to decrypt getfield call at class " + classNode.name
                                     			+ " method " + methodNode.name + methodNode.desc);
                                     		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		failedClasses.add(classes.get(owner));
                                     		continue;
                                     	}else
                                     		throw e;
@@ -522,6 +530,7 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                         		System.out.println("Failed to decrypt putfield call at class " + classNode.name
                                         			+ " method " + methodNode.name + methodNode.desc);
                                         		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                        		failedClasses.add(classes.get(owner));
                                         		continue;
                                         	}else
                                         		throw e;
@@ -543,6 +552,8 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                     }
                 }));
         castFix(context);
+        decryptors.removeAll(failedClasses);
+        decryptMethods.removeAll(failedDecryptors);
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + count.get() + " hide access");
         long cleanedup = cleanup(decryptors, decryptMethods);
         System.out.println("[Stringer] [HideAccessTransformer] Removed " + (cleanedup >> 32) + " decryptor classes");
