@@ -1,9 +1,7 @@
 package com.javadeobfuscator.deobfuscator.iterablematcher;
 
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
 
 public class ConstantIntInsnStep extends IterableStep<AbstractInsnNode> {
 

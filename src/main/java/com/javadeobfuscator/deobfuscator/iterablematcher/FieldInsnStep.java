@@ -4,8 +4,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.apache.commons.lang3.Validate;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
 
 public class FieldInsnStep extends IterableStep<FieldInsnNode> {
 

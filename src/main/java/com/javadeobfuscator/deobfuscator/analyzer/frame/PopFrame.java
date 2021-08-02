@@ -1,6 +1,5 @@
 package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
