@@ -18,7 +18,6 @@ package com.javadeobfuscator.deobfuscator.utils;
 
 import org.objectweb.asm.tree.*;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +35,7 @@ public class InstructionModifier {
     public void append(AbstractInsnNode original, InsnList append) {
         appends.put(original, append);
     }
+
     public void prepend(AbstractInsnNode original, InsnList append) {
         prepends.put(original, append);
     }

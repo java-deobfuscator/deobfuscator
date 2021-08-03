@@ -20,7 +20,6 @@ import com.javadeobfuscator.deobfuscator.*;
 import com.javadeobfuscator.deobfuscator.rules.*;
 import com.javadeobfuscator.deobfuscator.transformers.*;
 import com.javadeobfuscator.deobfuscator.transformers.classguard.*;
-import org.objectweb.asm.tree.*;
 
 import java.util.*;
 

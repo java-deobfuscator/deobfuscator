@@ -17,7 +17,6 @@
 package com.javadeobfuscator.deobfuscator.analyzer.frame;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.LabelNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +24,7 @@ import java.util.List;
 
 public class JumpFrame extends Frame {
     private List<Frame> comparators = new ArrayList<>();
-    private transient List<AbstractInsnNode> targets; 
+    private transient List<AbstractInsnNode> targets;
 
     public JumpFrame(int opcode, List<Frame> comparators, AbstractInsnNode... targets) {
         super(opcode);

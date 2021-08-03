@@ -17,12 +17,9 @@
 package com.javadeobfuscator.deobfuscator.graph;
 
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class GraphHelper {
     public static Map<String, ClassNode> validateUniqueClasses(Collection<ClassNode> nodes) {

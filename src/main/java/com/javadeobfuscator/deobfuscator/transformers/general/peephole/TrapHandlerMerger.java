@@ -27,8 +27,6 @@ import com.javadeobfuscator.deobfuscator.utils.Utils;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.objectweb.asm.Opcodes.*;
-
 public class TrapHandlerMerger extends Transformer<TransformerConfig> {
 
     @Override
