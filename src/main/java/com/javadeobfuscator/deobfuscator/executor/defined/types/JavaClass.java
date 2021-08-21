@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.executor.Context;
+import com.javadeobfuscator.deobfuscator.executor.providers.Provider;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
@@ -32,6 +33,8 @@ import com.javadeobfuscator.deobfuscator.utils.PrimitiveUtils;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
 public class JavaClass {
+
+    private static final WeakHashMap<Provider, Set<String>> notFound = new WeakHashMap<>();
 
     private final String name;
     private final Type type;
@@ -57,7 +60,13 @@ public class JavaClass {
             if (primitive == null) {
                 this.classNode = context.dictionary.get(elementType.getInternalName());
                 if (this.classNode == null) {
-                    System.out.println("Could not find classnode " + this.name);
+                    notFound.compute(context.provider, (ctx, set) -> {
+                        if (set == null) set = new HashSet<>();
+                        if (set.add(internalName)) {
+                            System.out.println("Could not find classnode " + this.name);
+                        }
+                        return set;
+                    });
                     throw new NoClassInPathException(this.name);
                 }
                 this.isPrimitive = false;
