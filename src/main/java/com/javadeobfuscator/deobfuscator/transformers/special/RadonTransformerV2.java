@@ -561,7 +561,7 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
             });
         }
         if (getConfig().isFlowObf()) {
-        	Map<ClassNode, Set<FieldNode>> remove = new HashMap<>();
+            Map<ClassNode, Set<FieldNode>> remove = new HashMap<>();
             //Jumps
             for (ClassNode classNode : classNodes()) {
                 for (MethodNode method : classNode.methods) {
@@ -1156,12 +1156,12 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                     method.instructions.set(ain, new LdcInsnNode(4));
                 } else if (ain instanceof MethodInsnNode && ((MethodInsnNode) ain).name.equals("getRuntime")
                            && ((MethodInsnNode) ain).owner.equals("java/lang/Runtime")) {
-                	if(ain.getNext().getOpcode() == Opcodes.IFNULL)
-                	{
-                		method.instructions.remove(ain.getNext());
-                		method.instructions.remove(ain);
-                	}else
-                		method.instructions.set(ain, new InsnNode(Opcodes.ACONST_NULL));
+                    if (ain.getNext().getOpcode() == Opcodes.IFNULL) {
+                        method.instructions.remove(ain.getNext());
+                        method.instructions.remove(ain);
+                    } else {
+                        method.instructions.set(ain, new InsnNode(Opcodes.ACONST_NULL));
+                    }
                 } else if (ain.getOpcode() == Opcodes.NEW
                            && ((TypeInsnNode) ain).desc.equals("java/util/concurrent/atomic/AtomicInteger")) {
                     method.instructions.remove(Utils.getNext(ain));
