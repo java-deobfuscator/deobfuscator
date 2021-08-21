@@ -16,8 +16,28 @@
 
 package com.javadeobfuscator.deobfuscator.transformers.zelix;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
+import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
-import com.javadeobfuscator.deobfuscator.executor.defined.*;
+import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.MappedFieldProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.defined.PrimitiveFieldProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaClass;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaField;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaFieldHandle;
@@ -26,19 +46,11 @@ import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethod;
 import com.javadeobfuscator.deobfuscator.executor.defined.types.JavaMethodHandle;
 import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
-import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
-import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaLong;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaObject;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -48,7 +60,24 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
-public class ReflectionObfuscationTransformer extends Transformer<TransformerConfig> {
+@TransformerConfig.ConfigOptions(configClass = ReflectionObfuscationTransformer.Config.class)
+public class ReflectionObfuscationTransformer extends Transformer<ReflectionObfuscationTransformer.Config> {
+	public static class Config extends TransformerConfig {
+		private boolean cleanup = true;
+
+		public Config() {
+			super(ReflectionObfuscationTransformer.class);
+		}
+
+		public boolean isCleanup() {
+			return cleanup;
+		}
+
+		public void setCleanup(boolean cleanup) {
+			this.cleanup = cleanup;
+		}
+	}
+
     static Map<String, String> PRIMITIVES = new HashMap<>();
 
     static {
@@ -255,8 +284,16 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                             MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                             Context ctx = new Context(provider);
                             ctx.dictionary = classpath;
-                            JavaMethod javaMethod = MethodExecutor.execute(innerClassNode, decrypterNode, Arrays.asList(new JavaLong(ldc)), null, ctx);
-                            if(!methodReflectionMethod.containsKey(innerClassNode))
+                            JavaMethod javaMethod;
+                            try {
+								javaMethod = MethodExecutor.execute(innerClassNode, decrypterNode, Arrays.asList(new JavaLong(ldc)), null, ctx);
+							} catch (Exception ex) {
+                            	if (!(ex instanceof NoClassInPathException)) {
+                            		ex.printStackTrace();
+								}
+                            	continue;
+							}
+							if(!methodReflectionMethod.containsKey(innerClassNode))
                             	methodReflectionMethod.put(innerClassNode, decrypterNode);
                             MethodInsnNode methodInsn = null;
                             if(current.getPrevious().getPrevious().getOpcode() == Opcodes.CHECKCAST)
@@ -450,8 +487,14 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                             MethodNode decrypterNode = innerClassNode.methods.stream().filter(mn -> mn.name.equals(methodInsnNode.name) && mn.desc.equals(methodInsnNode.desc)).findFirst().orElse(null);
                             Context ctx = new Context(provider);
                             ctx.dictionary = classpath;
-                            JavaField javaField = MethodExecutor.execute(innerClassNode, decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, ctx);
-                            if(!fieldReflectionMethod.containsKey(innerClassNode))
+                            JavaField javaField;
+                            try {
+								javaField = MethodExecutor.execute(innerClassNode, decrypterNode, Collections.singletonList(new JavaLong(ldc)), null, ctx);
+							} catch (Exception ex) {
+                            	ex.printStackTrace();
+                            	continue;
+							}
+							if(!fieldReflectionMethod.containsKey(innerClassNode))
                             	fieldReflectionMethod.put(innerClassNode, decrypterNode);
                             methodNode.instructions.remove(current.getPrevious());
                             if(current.getNext().getNext().getOpcode() == Opcodes.INVOKEVIRTUAL)
@@ -715,101 +758,89 @@ public class ReflectionObfuscationTransformer extends Transformer<TransformerCon
                     }
         		}
         //Remove all decryption class/methods
-        Set<ClassNode> remove = classNodes().stream().filter(classNode -> reflectionClasses.contains(classNode)).collect(Collectors.toSet());
-        classNodes().removeAll(remove);
-        for(Entry<ClassNode, Set<MethodNode>> entry : argsReflectionMethods.entrySet())
-        	for(MethodNode method : entry.getValue())
-        		entry.getKey().methods.remove(method);
-        for(Entry<ClassNode, Set<MethodNode>> entry : indyReflectionMethods.entrySet())
-        	for(MethodNode method : entry.getValue())
-        		entry.getKey().methods.remove(method);
-        for(Entry<ClassNode, Set<MethodNode>> entry : initReflectionMethod.entrySet())
-        {
-        	List<MethodNode> list = new ArrayList<>(entry.getValue());
-        	for(MethodNode method : list)
-        	{
-	        	int fieldCount = 0;
-	        	if(list.indexOf(method) == 0)
-		        	for(AbstractInsnNode ain : method.instructions.toArray())
-		        	{
-		        		if(ain.getOpcode() == Opcodes.PUTSTATIC)
-		        		{
-		        			FieldInsnNode fieldInsn = (FieldInsnNode)ain;
-		        			FieldNode field = entry.getKey().fields.stream().filter(f -> 
-		        			f.name.equals(fieldInsn.name) && f.desc.equals(fieldInsn.desc)).findFirst().orElse(null);
-		        			entry.getKey().fields.remove(field);
-		        		}
-		        		if(fieldCount >= 2)
-		        			break;
-		        	}
-	        	MethodNode clinit = entry.getKey().methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
-	        	if(clinit != null)
-		        	for(AbstractInsnNode ain : clinit.instructions.toArray())
-		        		if(ain.getOpcode() == Opcodes.INVOKESTATIC)
-		        		{
-		        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
-		        			if(methodInsn.desc.equals(method.desc) && methodInsn.name.equals(method.name))
-		        			{
-		        				clinit.instructions.remove(methodInsn);
-		        				break;
-		        			}
-		        		}
-	        	entry.getKey().methods.remove(method);
-        	}
-        }
-        for(Entry<ClassNode, MethodNode> entry : methodReflectionMethod.entrySet())
-        {
-        	List<MethodNode> reflectionReferences = new ArrayList<>();
-        	for(AbstractInsnNode ain : entry.getValue().instructions.toArray())
-        	{
-        		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
-        		{
-        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
-        			MethodNode method = entry.getKey().methods.stream().filter(
-        				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
-        			if(!reflectionReferences.contains(method))
-        				reflectionReferences.add(method);
-        		}
-        		if(reflectionReferences.size() >= 4)
-        			break;
-        	}
-        	for(int i = 0; i < reflectionReferences.size(); i++)
-        	{
-        		MethodNode method = reflectionReferences.get(i);
-        		if(i == 2)
-        			for(AbstractInsnNode ain : method.instructions.toArray())
-                		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
-                		{
-                			MethodInsnNode methodInsn = (MethodInsnNode)ain;
-                			MethodNode method1 = entry.getKey().methods.stream().filter(
-                				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
-                			if(method1 != null)
-                				entry.getKey().methods.remove(method1);
-                		}
-        		entry.getKey().methods.remove(method);
-        	}
-        	entry.getKey().methods.remove(entry.getValue());
-        }
-        for(Entry<ClassNode, MethodNode> entry : fieldReflectionMethod.entrySet())
-        {
-        	List<MethodNode> reflectionReferences = new ArrayList<>();
-        	for(AbstractInsnNode ain : entry.getValue().instructions.toArray())
-        	{
-        		if(ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode)ain).owner.equals(entry.getKey().name))
-        		{
-        			MethodInsnNode methodInsn = (MethodInsnNode)ain;
-        			MethodNode method = entry.getKey().methods.stream().filter(
-        				m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
-        			if(method != null && !reflectionReferences.contains(method))
-        				reflectionReferences.add(method);
-        		}
-        		if(reflectionReferences.size() >= 4)
-        			break;
-        	}
-        	for(MethodNode method : reflectionReferences)
-        		entry.getKey().methods.remove(method);
-        	entry.getKey().methods.remove(entry.getValue());
-        }
+		if (getConfig().isCleanup()) {
+			Set<ClassNode> remove = classNodes().stream().filter(classNode -> reflectionClasses.contains(classNode)).collect(Collectors.toSet());
+			classNodes().removeAll(remove);
+			for (Entry<ClassNode, Set<MethodNode>> entry : argsReflectionMethods.entrySet())
+				for (MethodNode method : entry.getValue())
+					entry.getKey().methods.remove(method);
+			for (Entry<ClassNode, Set<MethodNode>> entry : indyReflectionMethods.entrySet())
+				for (MethodNode method : entry.getValue())
+					entry.getKey().methods.remove(method);
+			for (Entry<ClassNode, Set<MethodNode>> entry : initReflectionMethod.entrySet()) {
+				List<MethodNode> list = new ArrayList<>(entry.getValue());
+				for (MethodNode method : list) {
+					int fieldCount = 0;
+					if (list.indexOf(method) == 0)
+						for (AbstractInsnNode ain : method.instructions.toArray()) {
+							if (ain.getOpcode() == Opcodes.PUTSTATIC) {
+								FieldInsnNode fieldInsn = (FieldInsnNode) ain;
+								FieldNode field = entry.getKey().fields.stream().filter(f ->
+										f.name.equals(fieldInsn.name) && f.desc.equals(fieldInsn.desc)).findFirst().orElse(null);
+								entry.getKey().fields.remove(field);
+							}
+							if (fieldCount >= 2)
+								break;
+						}
+					MethodNode clinit = entry.getKey().methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
+					if (clinit != null)
+						for (AbstractInsnNode ain : clinit.instructions.toArray())
+							if (ain.getOpcode() == Opcodes.INVOKESTATIC) {
+								MethodInsnNode methodInsn = (MethodInsnNode) ain;
+								if (methodInsn.desc.equals(method.desc) && methodInsn.name.equals(method.name)) {
+									clinit.instructions.remove(methodInsn);
+									break;
+								}
+							}
+					entry.getKey().methods.remove(method);
+				}
+			}
+			for (Entry<ClassNode, MethodNode> entry : methodReflectionMethod.entrySet()) {
+				List<MethodNode> reflectionReferences = new ArrayList<>();
+				for (AbstractInsnNode ain : entry.getValue().instructions.toArray()) {
+					if (ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode) ain).owner.equals(entry.getKey().name)) {
+						MethodInsnNode methodInsn = (MethodInsnNode) ain;
+						MethodNode method = entry.getKey().methods.stream().filter(
+								m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+						if (!reflectionReferences.contains(method))
+							reflectionReferences.add(method);
+					}
+					if (reflectionReferences.size() >= 4)
+						break;
+				}
+				for (int i = 0; i < reflectionReferences.size(); i++) {
+					MethodNode method = reflectionReferences.get(i);
+					if (i == 2)
+						for (AbstractInsnNode ain : method.instructions.toArray())
+							if (ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode) ain).owner.equals(entry.getKey().name)) {
+								MethodInsnNode methodInsn = (MethodInsnNode) ain;
+								MethodNode method1 = entry.getKey().methods.stream().filter(
+										m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+								if (method1 != null)
+									entry.getKey().methods.remove(method1);
+							}
+					entry.getKey().methods.remove(method);
+				}
+				entry.getKey().methods.remove(entry.getValue());
+			}
+			for (Entry<ClassNode, MethodNode> entry : fieldReflectionMethod.entrySet()) {
+				List<MethodNode> reflectionReferences = new ArrayList<>();
+				for (AbstractInsnNode ain : entry.getValue().instructions.toArray()) {
+					if (ain.getOpcode() == Opcodes.INVOKESTATIC && ((MethodInsnNode) ain).owner.equals(entry.getKey().name)) {
+						MethodInsnNode methodInsn = (MethodInsnNode) ain;
+						MethodNode method = entry.getKey().methods.stream().filter(
+								m -> m.name.equals(methodInsn.name) && m.desc.equals(methodInsn.desc)).findFirst().orElse(null);
+						if (method != null && !reflectionReferences.contains(method))
+							reflectionReferences.add(method);
+					}
+					if (reflectionReferences.size() >= 4)
+						break;
+				}
+				for (MethodNode method : reflectionReferences)
+					entry.getKey().methods.remove(method);
+				entry.getKey().methods.remove(entry.getValue());
+			}
+		}
         return count.get();
     }
 
