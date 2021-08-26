@@ -167,23 +167,25 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 	                remove.add(classNode.name);
 	            }
 	        });
-        decryptors.forEach(classNode ->
-        {
-        	boolean resource = false;
-        	for(MethodNode node : classNode.methods)
-        		if(node.desc.equals("(Ljava/io/InputStream;)V")) //Don't delete resource decryptors yet
-        		{
-        			resource = true;
-        			break;
-        		}
-        	if(!resource)
-        		remove.add(classNode.name);
-        });
-        remove.forEach(str -> {
-            total.incrementAndGet();
-            classes.remove(str);
-            classpath.remove(str);
-        });
+        if (!getConfig().keepDecryptorClasses()) {
+            decryptors.forEach(classNode ->
+            {
+                boolean resource = false;
+                for (MethodNode node : classNode.methods)
+                    if (node.desc.equals("(Ljava/io/InputStream;)V")) //Don't delete resource decryptors yet
+                    {
+                        resource = true;
+                        break;
+                    }
+                if (!resource)
+                    remove.add(classNode.name);
+            });
+            remove.forEach(str -> {
+                total.incrementAndGet();
+                classes.remove(str);
+                classpath.remove(str);
+            });
+        }
         return total.get();
     }
 
@@ -602,6 +604,7 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 		 * If you are dealing with multiple layers of stringer, it is best to keep this off.
 		 */
         private boolean removeAllStringerClasses = true;
+        private boolean keepDecryptorClasses = false;
 
         public Config() 
         {
@@ -616,6 +619,14 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
         public void setRemoveAllStringerClasses(boolean removeAllStringerClasses) 
         {
             this.removeAllStringerClasses = removeAllStringerClasses;
+        }
+
+        public boolean keepDecryptorClasses() {
+            return keepDecryptorClasses;
+        }
+
+        public void setKeepDecryptorClasses(boolean keepDecryptorClasses) {
+            this.keepDecryptorClasses = keepDecryptorClasses;
         }
     }
 }

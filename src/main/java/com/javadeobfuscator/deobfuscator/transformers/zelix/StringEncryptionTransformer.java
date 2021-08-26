@@ -31,8 +31,25 @@ import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 
-public class StringEncryptionTransformer extends Transformer<TransformerConfig>
+@TransformerConfig.ConfigOptions(configClass = StringEncryptionTransformer.Config.class)
+public class StringEncryptionTransformer extends Transformer<StringEncryptionTransformer.Config>
 {
+	public static class Config extends TransformerConfig {
+		private boolean cleanup = true;
+
+		public Config() {
+			super(StringEncryptionTransformer.class);
+		}
+
+		public boolean isCleanup() {
+			return cleanup;
+		}
+
+		public void setCleanup(boolean cleanup) {
+			this.cleanup = cleanup;
+		}
+	}
+
 	public static List<String> includeOnly;
 	
 	@Override
@@ -93,8 +110,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig>
 		context.dictionary = classes;
 		AtomicInteger encClasses = new AtomicInteger();
 		AtomicInteger encStrings = new AtomicInteger();
-		System.out
-			.println("[Zelix] [StringEncryptionTransformer] Starting");
+		System.out.println("[Zelix] [StringEncryptionTransformer] Starting");
 		classNodes().forEach(classNode -> {
 			MethodNode clinit = classNode.methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
 			if(clinit != null && (includeOnly == null || includeOnly.contains(classNode.name)))
@@ -1007,14 +1023,15 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig>
 												}
 											}
 									// Remove the string encryption method
-									Iterator<MethodNode> it =
-										classNode.methods.iterator();
-									while(it.hasNext())
-									{
-										MethodNode node = it.next();
-										for(MethodNode decrypt : decryptorMethods)
-											if(node.equals(decrypt))
-												it.remove();
+									if (getConfig().isCleanup()) {
+										Iterator<MethodNode> it =
+												classNode.methods.iterator();
+										while (it.hasNext()) {
+											MethodNode node = it.next();
+											for (MethodNode decrypt : decryptorMethods)
+												if (node.equals(decrypt))
+													it.remove();
+										}
 									}
 									AbstractInsnNode last = start.getNext().getNext().getNext().getNext().getNext();
 									while(firstZKMInstr.getNext() != last)
@@ -1771,9 +1788,11 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig>
 					if(modified)
 						ran.add(mode);
 				}while(modified);
-				for(Entry<ClassNode, List<MethodNode>> entry : toRemove.entrySet())
-					for(MethodNode m : entry.getValue())
-						entry.getKey().methods.remove(m);
+				if (getConfig().isCleanup()) {
+					for (Entry<ClassNode, List<MethodNode>> entry : toRemove.entrySet())
+						for (MethodNode m : entry.getValue())
+							entry.getKey().methods.remove(m);
+				}
 				//Inline
 				boolean inline = false;
 				int total = Integer.MIN_VALUE;
@@ -1879,7 +1898,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig>
 						final FieldInsnNode fieldF = field;
 						FieldNode decryptedField = classNode.fields.stream().filter(f -> f.name.equals(fieldF.name)
 							&& f.desc.equals(fieldF.desc)).findFirst().orElse(null);
-						classNode.fields.remove(decryptedField);
+						if (getConfig().isCleanup()) classNode.fields.remove(decryptedField);
 						AbstractInsnNode start2 = start;
 						while(start.getNext() != end)
 							if(!exempt.contains(start.getNext()))
@@ -1933,21 +1952,16 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig>
 										methodNode.instructions.set(ain, new LdcInsnNode(cst));
 								clinit.instructions.remove(clinit.instructions.get(lastIndex + 1));
 								clinit.instructions.remove(clinit.instructions.get(lastIndex));
-								classNode.fields.remove(decryptedString);
+								if (getConfig().isCleanup()) classNode.fields.remove(decryptedString);
 							}
 						}
 					}
 				}
 			}
 		});
-		System.out.println(
-			"[Zelix] [StringEncryptionTransformer] Decrypted strings from "
-				+ encClasses.get() + " encrypted classes");
-		System.out
-			.println("[Zelix] [StringEncryptionTransformer] Decrypted "
-				+ encStrings.get() + " strings");
-		System.out
-			.println("[Zelix] [StringEncryptionTransformer] Done");
+		System.out.println("[Zelix] [StringEncryptionTransformer] Decrypted strings from " + encClasses.get() + " encrypted classes");
+		System.out.println("[Zelix] [StringEncryptionTransformer] Decrypted " + encStrings.get() + " strings");
+		System.out.println("[Zelix] [StringEncryptionTransformer] Done");
 		return encStrings.get() > 0;
 	}
 	
