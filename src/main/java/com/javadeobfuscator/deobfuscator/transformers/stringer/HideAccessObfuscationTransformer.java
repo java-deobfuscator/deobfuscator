@@ -448,36 +448,37 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                 }
                                 case "(ILjava/lang/Object;)V": { // PUTSTATIC
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
-                                    if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
-                                        Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                        JavaField result;
-                                        try
-                                        {
-                                        	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-                                        	if(result == null)
-                                        		throw new NullPointerException("Null result returned");
-                                        }catch(Exception e)
-                                        {
-                                        	if(getConfig().shouldIgnoreFailures())
-                                        	{
-                                        		System.out.println("Failed to decrypt putstatic call at class " + classNode.name
-                                        			+ " method " + methodNode.name + methodNode.desc);
-                                        		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
-                                        		failedClasses.add(classes.get(owner));
-                                        		continue;
-                                        	}else
-                                        		throw e;
-                                        }
-
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                                        methodNode.instructions.remove(insn.getPrevious());
-
-                                        if (isValueOf(insn.getPrevious())
-                                        	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
-                                        	methodNode.instructions.remove(insn.getPrevious());
-                                        methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTSTATIC, result.getClassName(), result.getName(), result.getDesc()));
-                                        count.getAndIncrement();
+                                    
+                                    boolean swap = insn.getPrevious().getOpcode() == Opcodes.SWAP;
+                                    Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                    JavaField result;
+                                    try
+                                    {
+                                    	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                    	if(result == null)
+                                    		throw new NullPointerException("Null result returned");
+                                    }catch(Exception e)
+                                    {
+                                    	if(getConfig().shouldIgnoreFailures())
+                                    	{
+                                    		System.out.println("Failed to decrypt putstatic call at class " + classNode.name
+                                    			+ " method " + methodNode.name + methodNode.desc);
+                                    		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		failedClasses.add(classes.get(owner));
+                                    		continue;
+                                    	}else
+                                    		throw e;
                                     }
+
+                                    methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                    if(swap)
+                                    	methodNode.instructions.remove(insn.getPrevious());
+
+                                    if (isValueOf(insn.getPrevious())
+                                    	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
+                                    	methodNode.instructions.remove(insn.getPrevious());
+                                    methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTSTATIC, result.getClassName(), result.getName(), result.getDesc()));
+                                    count.getAndIncrement();
                                     break;
                                 }
                                 case "(Ljava/lang/Object;I)Ljava/lang/Object;": { // GETFIELD
@@ -515,36 +516,36 @@ public class HideAccessObfuscationTransformer extends Transformer<HideAccessObfu
                                 case "(Ljava/lang/Object;ILjava/lang/Object;)V": { // PUTFIELD
                                     MethodNode decryptMethod = classes.get(owner).methods.stream().filter(m -> m.desc.equals("(I)Ljava/lang/reflect/Field;")).findFirst().orElse(null);
 
-                                    if (insn.getPrevious().getOpcode() == Opcodes.SWAP) {
-                                        Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
-                                        JavaField result;
-                                        try
-                                        {
-                                        	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
-                                        	if(result == null)
-                                        		throw new NullPointerException("Null result returned");
-                                        }catch(Exception e)
-                                        {
-                                        	if(getConfig().shouldIgnoreFailures())
-                                        	{
-                                        		System.out.println("Failed to decrypt putfield call at class " + classNode.name
-                                        			+ " method " + methodNode.name + methodNode.desc);
-                                        		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
-                                        		failedClasses.add(classes.get(owner));
-                                        		continue;
-                                        	}else
-                                        		throw e;
-                                        }
-
-                                        methodNode.instructions.remove(insn.getPrevious().getPrevious());
-                                        methodNode.instructions.remove(insn.getPrevious());
-
-                                        if (isValueOf(insn.getPrevious())
-                                        	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
-                                        	methodNode.instructions.remove(insn.getPrevious());
-                                        methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTFIELD, result.getClassName(), result.getName(), result.getDesc()));
-                                        count.getAndIncrement();
+                                    boolean swap = insn.getPrevious().getOpcode() == Opcodes.SWAP;
+                                    Integer value = (Integer) ((LdcInsnNode) insn.getPrevious().getPrevious()).cst;
+                                    JavaField result;
+                                    try
+                                    {
+                                    	result = MethodExecutor.execute(classes.get(owner), decryptMethod, Collections.singletonList(new JavaInteger(value)), null, context);
+                                    	if(result == null)
+                                    		throw new NullPointerException("Null result returned");
+                                    }catch(Exception e)
+                                    {
+                                    	if(getConfig().shouldIgnoreFailures())
+                                    	{
+                                    		System.out.println("Failed to decrypt putfield call at class " + classNode.name
+                                    			+ " method " + methodNode.name + methodNode.desc);
+                                    		System.out.println(e.toString() + " @ " + e.getStackTrace()[0].toString());
+                                    		failedClasses.add(classes.get(owner));
+                                    		continue;
+                                    	}else
+                                    		throw e;
                                     }
+
+                                    methodNode.instructions.remove(insn.getPrevious().getPrevious());
+                                    if(swap)
+                                    	methodNode.instructions.remove(insn.getPrevious());
+
+                                    if (isValueOf(insn.getPrevious())
+                                    	&& Type.getType(result.getDesc()).getClassName().equals(getPrimitiveFromClass(((MethodInsnNode)insn.getPrevious()).owner)))
+                                    	methodNode.instructions.remove(insn.getPrevious());
+                                    methodNode.instructions.set(insn, new FieldInsnNode(Opcodes.PUTFIELD, result.getClassName(), result.getName(), result.getDesc()));
+                                    count.getAndIncrement();
                                     break;
                                 }
                             }
