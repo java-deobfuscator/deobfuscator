@@ -41,6 +41,10 @@ public class TransformerConfig {
         this.implementation = implementation;
     }
 
+    public boolean useCustomProgressMonitor() {
+        return false;
+    }
+
     public Class<? extends Transformer> getImplementation() {
         return implementation;
     }

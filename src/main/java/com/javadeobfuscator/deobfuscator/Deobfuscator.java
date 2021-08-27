@@ -34,6 +34,14 @@ import com.javadeobfuscator.deobfuscator.asm.ConstantPool;
 import com.javadeobfuscator.deobfuscator.config.Configuration;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
+import com.javadeobfuscator.deobfuscator.progress.ProgressChangeListener;
+import com.javadeobfuscator.deobfuscator.progress.ProgressMonitor;
+import com.javadeobfuscator.deobfuscator.progress.ProgressMonitorState;
+import com.javadeobfuscator.deobfuscator.progress.collection.MonitoredIterator;
+import com.javadeobfuscator.deobfuscator.progress.collection.WrappedMap;
+import com.javadeobfuscator.deobfuscator.progress.collection.WrappedSet;
+import com.javadeobfuscator.deobfuscator.progress.task.StateProgressTask;
+import com.javadeobfuscator.deobfuscator.progress.task.TransformerProgressTask;
 import com.javadeobfuscator.deobfuscator.rules.Rule;
 import com.javadeobfuscator.deobfuscator.rules.Rules;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -62,6 +70,8 @@ public class Deobfuscator {
     private final Logger logger = LoggerFactory.getLogger(Deobfuscator.class);
 
     private final Configuration configuration;
+
+    private final ProgressMonitor progressMonitor = new ProgressMonitor();
 
     private final Map<String, ClassNode> classpath = new HashMap<>();
     private final Map<String, ClassNode> libraries = new HashMap<>();
@@ -142,15 +152,23 @@ public class Deobfuscator {
     }
 
     private void loadClasspath() throws IOException {
+        int pathCount = configuration.getPath() != null ? configuration.getPath().size() : 0;
+        int libraryCount = configuration.getLibraries() != null ? configuration.getLibraries().size() : 0;
+
+        ProgressMonitor.TaskWrapper<StateProgressTask> task = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.LOADING_CLASSPATH, pathCount + libraryCount)
+        );
         if (configuration.getPath() != null) {
             for (File file : configuration.getPath()) {
                 if (file.isFile()) {
                     classpath.putAll(loadClasspathFile(file, true));
+                    task.increment();
                 } else {
                     File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
                     if (files != null) {
                         for (File child : files) {
                             classpath.putAll(loadClasspathFile(child, true));
+                            task.increment();
                         }
                     }
                 }
@@ -160,11 +178,13 @@ public class Deobfuscator {
             for (File file : configuration.getLibraries()) {
                 if (file.isFile()) {
                     libraries.putAll(loadClasspathFile(file, false));
+                    task.increment();
                 } else {
                     File[] files = file.listFiles(child -> child.getName().endsWith(".jar"));
                     if (files != null) {
                         for (File child : files) {
                             libraries.putAll(loadClasspathFile(child, false));
+                            task.increment();
                         }
                     }
                 }
@@ -172,6 +192,7 @@ public class Deobfuscator {
         }
         classpath.putAll(libraries);
         libraryClassnodes.addAll(classpath.values());
+        task.close();
     }
 
     private boolean isClassIgnored(ClassNode classNode) {
@@ -196,6 +217,10 @@ public class Deobfuscator {
     }
 
     private void loadInput() throws IOException {
+        ProgressMonitor.TaskWrapper<StateProgressTask> task = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.LOADING_INPUT, -1)
+        );
+
         if (this.configuration.isParamorphismV2()) {
             //Load folder "classes"
             try (ZipFile zipIn = new ZipFile(configuration.getInput())) {
@@ -205,6 +230,7 @@ public class Deobfuscator {
                     if (next.isDirectory() && next.getName().endsWith(".class/")) {
                         byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
                         loadInput(next.getName().substring(0, next.getName().length() - 1), data);
+                        task.increment();
                     } else if (!next.isDirectory() && next.getName().contains(".class/")) {
                         junkFiles.add(next.getName());
                     }
@@ -264,8 +290,10 @@ public class Deobfuscator {
 
                 byte[] data = IOUtils.toByteArray(zipIn.getInputStream(next));
                 loadInput(next.getName(), data);
+                task.increment();
             }
         }
+        task.close();
     }
 
     public void loadInput(String name, byte[] data) {
@@ -344,6 +372,10 @@ public class Deobfuscator {
      */
     @Deprecated
     private void computeCallers() {
+        ProgressMonitor.TaskWrapper<StateProgressTask> task = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.COMPUTING_CALLERS, -1)
+        );
+
         Map<MethodNode, List<Entry<ClassNode, MethodNode>>> callers = new HashMap<>();
         classes.values().forEach(classNode -> {
             classNode.methods.forEach(methodNode -> {
@@ -360,11 +392,13 @@ public class Deobfuscator {
                                         callers.computeIfAbsent(targetMethod, k -> new ArrayList<>())
                                                 .add(new SimpleEntry<>(classNode, methodNode));
                                     });
+                            task.increment();
                         }
                     }
                 }
             });
         });
+        task.close();
     }
 
     public boolean isLibrary(ClassNode classNode) {
@@ -429,18 +463,26 @@ public class Deobfuscator {
         }
 
         logger.info("Transforming");
+        ProgressMonitor.TaskWrapper<StateProgressTask> transformingTask = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.TRANSFORMING, configuration.getTransformers().size())
+        );
         if (configuration.getTransformers() != null) {
             for (TransformerConfig config : configuration.getTransformers()) {
                 logger.info("Running {}", config.getImplementation().getCanonicalName());
                 runFromConfig(config);
+                transformingTask.increment();
             }
         }
+        transformingTask.close();
 
         logger.info("Writing");
         if (DEBUG) {
             classes.values().forEach(Utils::printClass);
         }
 
+        ProgressMonitor.TaskWrapper<StateProgressTask> writingPassthroughTask = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.WRITING_PASSTHROUGH, inputPassthrough.size())
+        );
         ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(configuration.getOutput()));
         inputPassthrough.forEach((name, val) -> {
             ZipEntry entry = new ZipEntry(name);
@@ -448,11 +490,16 @@ public class Deobfuscator {
                 zipOut.putNextEntry(entry);
                 zipOut.write(val);
                 zipOut.closeEntry();
+                writingPassthroughTask.increment();
             } catch (IOException e) {
                 logger.error("Error writing entry {}", name, e);
             }
         });
+        writingPassthroughTask.close();
 
+        ProgressMonitor.TaskWrapper<StateProgressTask> writingClassesTask = progressMonitor.createObjective(
+                new StateProgressTask(ProgressMonitorState.WRITING_CLASSES, classes.size())
+        );
         classes.values().forEach(classNode -> {
             try {
                 byte[] b = toByteArray(classNode);
@@ -460,24 +507,45 @@ public class Deobfuscator {
                     zipOut.putNextEntry(new ZipEntry(classNode.name + ".class"));
                     zipOut.write(b);
                     zipOut.closeEntry();
+                    writingClassesTask.increment();
                 }
             } catch (IOException e) {
                 logger.error("Error writing entry {}", classNode.name, e);
             }
         });
+        writingClassesTask.close();
 
         zipOut.close();
     }
 
     public boolean runFromConfig(TransformerConfig config) throws Throwable {
         Transformer<?> transformer = config.getImplementation().newInstance();
-        transformer.init(this, config, classes, classpath, readers);
+
+        ProgressMonitor.TaskWrapper<TransformerProgressTask> task = null;
+        if(config.useCustomProgressMonitor()) {
+            transformer.init(this, config, classes, classpath, readers);
+        } else {
+            task = progressMonitor.createObjective(
+                    new TransformerProgressTask(classes.size(), config.getImplementation())
+            );
+            transformer.init(this, config, new WrappedMap<>(
+                    new WrappedSet<>(
+                            new MonitoredIterator<>(task::increment, classes.entrySet().iterator()),
+                            classes.size()
+                    )
+            ), classpath, readers);
+        }
+
         boolean madeChangesAtLeastOnce = false;
         boolean madeChanges;
         do {
             madeChanges = transformer.transform();
             madeChangesAtLeastOnce = madeChangesAtLeastOnce || madeChanges;
         } while (madeChanges && getConfig().isSmartRedo());
+
+        if(task != null)
+            task.close();
+
         return madeChangesAtLeastOnce;
     }
 
@@ -664,6 +732,10 @@ public class Deobfuscator {
         }
 
         return classBytes;
+    }
+
+    public void setMonitorChangeListener(ProgressChangeListener changeListener) {
+        this.progressMonitor.setChangeListener(changeListener);
     }
 
     public class CustomClassWriter extends ClassWriter {

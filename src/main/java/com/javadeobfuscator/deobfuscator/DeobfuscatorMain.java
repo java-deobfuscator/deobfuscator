@@ -24,6 +24,8 @@ import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfigDeserializer;
 import com.javadeobfuscator.deobfuscator.exceptions.NoClassInPathException;
 import com.javadeobfuscator.deobfuscator.exceptions.PreventableStackOverflowError;
+import com.javadeobfuscator.deobfuscator.progress.impl.CliProgressChangeListener;
+import me.tongfei.progressbar.ProgressBarStyle;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +104,7 @@ public class DeobfuscatorMain {
     private static int run(Configuration configuration) {
         Deobfuscator deobfuscator = new Deobfuscator(configuration);
 
+        deobfuscator.setMonitorChangeListener(new CliProgressChangeListener(ProgressBarStyle.ASCII));
         try {
             deobfuscator.start();
             return 0;
