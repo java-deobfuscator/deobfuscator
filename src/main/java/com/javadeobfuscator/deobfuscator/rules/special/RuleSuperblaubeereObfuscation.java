@@ -20,8 +20,7 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 
 	@Override
 	public String getDescription() {
-		return "Superblaubeere obfuscator uses a variety of methods. It can obfuscate numbers, add redundant ifs, encrypt strings, pool numbers & strings into an" +
-			   " " +
+		return "Superblaubeere obfuscator uses a variety of methods. It can obfuscate numbers, add redundant ifs, encrypt strings, pool numbers & strings into an " +
 			   "array per class and obfuscate method calls with invokedynamic instructions.";
 	}
 

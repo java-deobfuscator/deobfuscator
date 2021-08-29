@@ -19,6 +19,7 @@ import com.javadeobfuscator.deobfuscator.analyzer.frame.MethodFrame;
 import com.javadeobfuscator.deobfuscator.analyzer.frame.NewArrayFrame;
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnNode;
@@ -49,18 +50,11 @@ public class ByteArrayStringTransformer extends Transformer<TransformerConfig> {
                         }
 
                         MethodInsnNode min = (MethodInsnNode) ain;
-                        if (min.getOpcode() != INVOKESPECIAL) {
+
+                        if (!TransformerHelper.isInvokeSpecial(min,"java/lang/String", "<init>", "([B)V")) {
                             continue;
                         }
-                        if (!min.owner.equals("java/lang/String")) {
-                            continue;
-                        }
-                        if (!min.name.equals("<init>")) {
-                            continue;
-                        }
-                        if (!min.desc.equals("([B)V")) {
-                            continue;
-                        }
+
                         if (result == null) {
                             result = MethodAnalyzer.analyze(classNode, methodNode);
                         }

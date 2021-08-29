@@ -114,6 +114,8 @@ public class IterableInsnMatcher {
     }
 
     /**
+     * perform previously set up replacement / removal
+     * 
      * iterator afterwards will be just after the last matched step
      *
      * @param iterator must be in same state as it was after match was called
