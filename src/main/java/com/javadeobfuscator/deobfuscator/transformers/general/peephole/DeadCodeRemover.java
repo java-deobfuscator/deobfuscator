@@ -32,7 +32,13 @@ public class DeadCodeRemover extends Transformer<TransformerConfig> {
 
                 InstructionModifier modifier = new InstructionModifier();
 
-                Frame<BasicValue>[] frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, methodNode);
+                Frame<BasicValue>[] frames;
+                try {
+                	frames = new Analyzer<>(new BasicInterpreter()).analyze(classNode.name, methodNode);
+                } catch (AnalyzerException e) {
+                    oops("unexpected analyzer exception", e);
+                    continue;
+                }
                 for (int i = 0; i < methodNode.instructions.size(); i++) {
                     if (!Utils.isInstruction(methodNode.instructions.get(i))) continue;
                     if (frames[i] != null) continue;
