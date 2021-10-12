@@ -175,240 +175,239 @@ public class BinscureTransformer extends Transformer<BinscureTransformer.Config>
 	@Override
 	public boolean transform() throws Throwable
 	{
-        DelegatingProvider provider = new DelegatingProvider();
-        provider.register(new MappedFieldProvider());
-        provider.register(new JVMMethodProvider());
-        provider.register(new JVMComparisonProvider());
-        provider.register(new MappedMethodProvider(classes));
-        provider.register(new ComparisonProvider() {
-            @Override
-            public boolean instanceOf(JavaValue target, Type type, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean checkcast(JavaValue target, Type type, Context context) {
-                return true;
-            }
-
-            @Override
-            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
-                return false;
-            }
-
-            @Override
-            public boolean canCheckcast(JavaValue target, Type type, Context context) {
-                return true;
-            }
-
-            @Override
-            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
-                return false;
-            }
-        });
-        
-        AtomicInteger fakeStatic = new AtomicInteger();
-        AtomicInteger arthIndir = new AtomicInteger();
-        AtomicInteger fieldIfs = new AtomicInteger();
-        AtomicInteger trycatch = new AtomicInteger();
-        AtomicInteger xorSwitches = new AtomicInteger();
-        AtomicInteger string = new AtomicInteger();
-        AtomicInteger methodRedir = new AtomicInteger();
-        System.out.println("[Special] [BinscureTransformer] Starting");
-        //Fake static blocks
-        for(ClassNode classNode : classNodes())
-        {
-        	Iterator<MethodNode> itr = classNode.methods.iterator();
-        	while(itr.hasNext())
-        	{
-        		MethodNode mn = itr.next();
-        		if(mn.name.equals("<clinit>") && !mn.desc.equals("()V"))
-        		{
-        			itr.remove();
-        			fakeStatic.incrementAndGet();
-        		}
-        	}
-        }
-        
-        //Arithmetic indirection
-        for(ClassNode classNode : classNodes())
-        	for(MethodNode method : classNode.methods)
-        	{
-        		if(method.instructions == null)
-        			continue;
-        		boolean modified;
-        		do
-        		{
-        			modified = false;
-        			Iterator<AbstractInsnNode> itr = method.instructions.iterator();
-        			InstructionModifier modifier = new InstructionModifier();
-        			
-        			while(itr.hasNext())
-        			{
-        				AbstractInsnNode ain = itr.next();
-        				InstructionMatcher matcher = null;
-        				int[] replacementOpcodes = null;
-        				search:
-        				for(Entry<InstructionPattern, int[]> pattern : ARTH_REDUCER.entrySet())
-        				{
-        					InstructionMatcher matcherNow = pattern.getKey().matcher(ain);
-        					if(matcherNow.find() && (matcher == null
-        						|| matcher.getPattern().getSteps().length < matcherNow.getPattern().getSteps().length))
-        					{
-        						AbstractInsnNode first = matcherNow.getStart();
-        						while(first != matcherNow.getEnd())
-        						{
-        							first = first.getNext();
-        							if(first instanceof LabelNode)
-        								continue search;
-        						}
-        						matcher = matcherNow;
-        						replacementOpcodes = pattern.getValue();
-        					}
-        				}
-        				if(matcher != null)
-        				{
-        					List<AbstractInsnNode> list = matcher.getCapturedInstructions("all");
-        					//Skip instructions that are going to be removed
-        					for(int i = 0; i < replacementOpcodes.length - 1; i++)
-        						itr.next();
-        					InsnList replace = new InsnList();
-        					for(int opcode : replacementOpcodes)
-        						replace.add(new InsnNode(opcode));
-        					modifier.replace(list.remove(0), replace);
-        					modifier.removeAll(list);
-        					modified = true;
-        					arthIndir.incrementAndGet();
-        				}
-        			}
-        			modifier.apply(method);
-        		}while(modified);
-        	}
-        
-        //Fake fields
-        Map<FieldNode, Integer> fakeFields = new HashMap<>();
-        for(ClassNode classNode : classNodes())
-        	for(MethodNode method : classNode.methods)
-        		for(AbstractInsnNode ain : method.instructions.toArray())
-        			if(ain.getOpcode() == Opcodes.GETSTATIC && ((FieldInsnNode)ain).desc.equals("I")
-        				&& ain.getNext().getOpcode() >= Opcodes.IFEQ && ain.getNext().getOpcode() <= Opcodes.IFLE)
-        			{
-        				ClassNode fieldOwner = classNodes().stream().filter(
-        					f -> f.name.equals(((FieldInsnNode)ain).owner)).findFirst().orElse(null);
-        				if(fieldOwner == null)
-        					continue;
-        				FieldNode field = fieldOwner.fields.stream().filter(f -> f.name.equals(((FieldInsnNode)ain).name)
-        					&& f.desc.equals(((FieldInsnNode)ain).desc)).findFirst().orElse(null);
-        				if(field == null)
-        					continue;
-        				Integer value;
-        				if(!fakeFields.containsKey(field))
-        				{
-        					value = isFakeField(fieldOwner, field);
-        					if(value == null)
-        						continue;
-        					fakeFields.put(field, value);
-        				}else
-        					value = fakeFields.get(field);
-        				if(runSingleIf(value, ain.getNext()))
-        				{
-        					JumpInsnNode jump = (JumpInsnNode)ain.getNext();
-        					jump.setOpcode(Opcodes.GOTO);
-        					method.instructions.remove(ain);
-        					while(jump.getNext() != null &&!(jump.getNext() instanceof LabelNode))
-        						method.instructions.remove(jump.getNext());
-        				}else
-        				{
-        					method.instructions.remove(ain.getNext());
-        					method.instructions.remove(ain);
-        				}
-        				fieldIfs.incrementAndGet();
-        			}
-        //Useless pops
-        for(ClassNode classNode : classNodes())
-        	for(MethodNode method : classNode.methods)
-        		for(AbstractInsnNode ain : method.instructions.toArray())
-        			if(Utils.willPushToStack(ain.getOpcode()) 
-        				&& ain.getNext() != null && ain.getNext().getOpcode() == Opcodes.POP)
-        			{
-        				method.instructions.remove(ain.getNext());
-        				method.instructions.remove(ain);
-        			}
-        //Useless try-catches (and try-catch rerouting)
-        for(ClassNode classNode : classNodes())
-        	for(MethodNode method : classNode.methods)
-        	{
-        		Iterator<TryCatchBlockNode> itr = method.tryCatchBlocks.iterator();
-        		List<LabelNode> processedLabels = new ArrayList<>();
-        		while(itr.hasNext())
-        		{
-        			TryCatchBlockNode tcbn = itr.next();
-        			LabelNode handler = tcbn.handler;
-        			if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.ATHROW)
-        			{
-        				itr.remove();
-        				trycatch.incrementAndGet();
-        			}
-        			else if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.DUP
-        				&& handler.getNext().getNext() != null && handler.getNext().getNext().getOpcode() == Opcodes.IFNULL
-        				&& handler.getNext().getNext().getNext() != null
-        				&& ((handler.getNext().getNext().getNext().getOpcode() == Opcodes.CHECKCAST
-        				&& ((TypeInsnNode)handler.getNext().getNext().getNext()).desc.equals("java/lang/Throwable")
-        				&& handler.getNext().getNext().getNext().getNext() != null
-        				&& handler.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW)
-        					|| handler.getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW))
-        			{
-        				itr.remove();
-        				trycatch.incrementAndGet();
-        				if(processedLabels.contains(handler))
-        					continue;
-        				for(AbstractInsnNode ain : method.instructions.toArray())
-        					if(ain.getOpcode() == Opcodes.GOTO && ((JumpInsnNode)ain).label == handler
-        						&& ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ACONST_NULL
-        						&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext() != null
-        						&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext().getOpcode() == Opcodes.POP)
-        					{
-        						method.instructions.remove(((JumpInsnNode)handler.getNext().getNext()).label.getNext());
-        						method.instructions.remove(ain.getPrevious());
-        						((JumpInsnNode)ain).label = ((JumpInsnNode)handler.getNext().getNext()).label;
-        					}
-        				processedLabels.add(handler);
-        			}
-        		}
-        		for(AbstractInsnNode ain : method.instructions.toArray())
-        		{
-        			if(!(ain instanceof LabelNode) || processedLabels.contains(ain))
-        				continue;
-        			LabelNode handler = (LabelNode)ain;
-        			if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.DUP
-        				&& handler.getNext().getNext() != null && handler.getNext().getNext().getOpcode() == Opcodes.IFNULL
-        				&& handler.getNext().getNext().getNext() != null
-        				&& ((handler.getNext().getNext().getNext().getOpcode() == Opcodes.CHECKCAST
-        				&& ((TypeInsnNode)handler.getNext().getNext().getNext()).desc.equals("java/lang/Throwable")
-        				&& handler.getNext().getNext().getNext().getNext() != null
-        				&& handler.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW)
-        					|| handler.getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW))
-        			{
-        				for(AbstractInsnNode ain2 : method.instructions.toArray())
-        					if(ain2.getOpcode() == Opcodes.GOTO && ((JumpInsnNode)ain2).label == handler
-        						&& ain2.getPrevious() != null && ain2.getPrevious().getOpcode() == Opcodes.ACONST_NULL
-        						&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext() != null
-        						&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext().getOpcode() == Opcodes.POP)
-        					{
-        						method.instructions.remove(((JumpInsnNode)handler.getNext().getNext()).label.getNext());
-        						method.instructions.remove(ain2.getPrevious());
-        						((JumpInsnNode)ain2).label = ((JumpInsnNode)handler.getNext().getNext()).label;
-        					}
-        				processedLabels.add(handler);
-        			}
-        		}
-        	}
-        //Fix L2I
+		DelegatingProvider provider = new DelegatingProvider();
+		provider.register(new MappedFieldProvider());
+		provider.register(new JVMMethodProvider());
+		provider.register(new JVMComparisonProvider());
+		provider.register(new MappedMethodProvider(classes));
+		provider.register(new ComparisonProvider() {
+			@Override
+			public boolean instanceOf(JavaValue target, Type type, Context context) {
+				return false;
+			}
+			
+			@Override
+			public boolean checkcast(JavaValue target, Type type, Context context) {
+				return true;
+			}
+			
+			@Override
+			public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
+				return false;
+			}
+			
+			@Override
+			public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
+				return false;
+			}
+			
+			@Override
+			public boolean canCheckcast(JavaValue target, Type type, Context context) {
+				return true;
+			}
+			
+			@Override
+			public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
+				return false;
+			}
+		});
+		
+		AtomicInteger fakeStatic = new AtomicInteger();
+		AtomicInteger arthIndir = new AtomicInteger();
+		AtomicInteger fieldIfs = new AtomicInteger();
+		AtomicInteger trycatch = new AtomicInteger();
+		AtomicInteger xorSwitches = new AtomicInteger();
+		AtomicInteger string = new AtomicInteger();
+		AtomicInteger methodRedir = new AtomicInteger();
+		System.out.println("[Special] [BinscureTransformer] Starting");
+		//Fake static blocks
+		for(ClassNode classNode : classNodes())
+		{
+			Iterator<MethodNode> itr = classNode.methods.iterator();
+			while(itr.hasNext())
+			{
+				MethodNode mn = itr.next();
+				if(mn.name.equals("<clinit>") && !mn.desc.equals("()V"))
+				{
+					itr.remove();
+					fakeStatic.incrementAndGet();
+				}
+			}
+		}
+		
+		//Arithmetic indirection
+		for(ClassNode classNode : classNodes())
+			for(MethodNode method : classNode.methods)
+			{
+				if(method.instructions == null)
+					continue;
+				boolean modified;
+				do
+				{
+					modified = false;
+					Iterator<AbstractInsnNode> itr = method.instructions.iterator();
+					InstructionModifier modifier = new InstructionModifier();
+					
+					while(itr.hasNext())
+					{
+						AbstractInsnNode ain = itr.next();
+						InstructionMatcher matcher = null;
+						int[] replacementOpcodes = null;
+						search:
+						for(Entry<InstructionPattern, int[]> pattern : ARTH_REDUCER.entrySet())
+						{
+							InstructionMatcher matcherNow = pattern.getKey().matcher(ain);
+							if(matcherNow.find() && (matcher == null
+								|| matcher.getPattern().getSteps().length < matcherNow.getPattern().getSteps().length))
+							{
+								AbstractInsnNode first = matcherNow.getStart();
+								while(first != matcherNow.getEnd())
+								{
+									first = first.getNext();
+									if(first instanceof LabelNode)
+										continue search;
+								}
+								matcher = matcherNow;
+								replacementOpcodes = pattern.getValue();
+							}
+						}
+						if(matcher != null)
+						{
+							List<AbstractInsnNode> list = matcher.getCapturedInstructions("all");
+							//Skip instructions that are going to be removed
+							for(int i = 0; i < replacementOpcodes.length - 1; i++)
+								itr.next();
+							InsnList replace = new InsnList();
+							for(int opcode : replacementOpcodes)
+								replace.add(new InsnNode(opcode));
+							modifier.replace(list.remove(0), replace);
+							modifier.removeAll(list);
+							modified = true;
+							arthIndir.incrementAndGet();
+						}
+					}
+					modifier.apply(method);
+				}while(modified);
+			}
+		
+		//Fake fields
+		Map<FieldNode, Integer> fakeFields = new HashMap<>();
+		for(ClassNode classNode : classNodes())
+			for(MethodNode method : classNode.methods)
+				for(AbstractInsnNode ain : method.instructions.toArray())
+					if(ain.getOpcode() == Opcodes.GETSTATIC && ((FieldInsnNode)ain).desc.equals("I")
+						&& ain.getNext().getOpcode() >= Opcodes.IFEQ && ain.getNext().getOpcode() <= Opcodes.IFLE)
+					{
+						ClassNode fieldOwner = classNodes().stream().filter(
+							f -> f.name.equals(((FieldInsnNode)ain).owner)).findFirst().orElse(null);
+						if(fieldOwner == null)
+							continue;
+						FieldNode field = fieldOwner.fields.stream().filter(f -> f.name.equals(((FieldInsnNode)ain).name)
+							&& f.desc.equals(((FieldInsnNode)ain).desc)).findFirst().orElse(null);
+						if(field == null)
+							continue;
+						Integer value;
+						if(!fakeFields.containsKey(field))
+						{
+							value = isFakeField(fieldOwner, field);
+							if(value == null)
+								continue;
+							fakeFields.put(field, value);
+						}else
+							value = fakeFields.get(field);
+						if(runSingleIf(value, ain.getNext()))
+						{
+							JumpInsnNode jump = (JumpInsnNode)ain.getNext();
+							jump.setOpcode(Opcodes.GOTO);
+							method.instructions.remove(ain);
+							while(jump.getNext() != null &&!(jump.getNext() instanceof LabelNode))
+								method.instructions.remove(jump.getNext());
+						}else
+						{
+							method.instructions.remove(ain.getNext());
+							method.instructions.remove(ain);
+						}
+						fieldIfs.incrementAndGet();
+					}
+		//Useless pops
+		for(ClassNode classNode : classNodes())
+			for(MethodNode method : classNode.methods)
+				for(AbstractInsnNode ain : method.instructions.toArray())
+					if(Utils.willPushToStack(ain.getOpcode()) 
+						&& ain.getNext() != null && ain.getNext().getOpcode() == Opcodes.POP)
+					{
+						method.instructions.remove(ain.getNext());
+						method.instructions.remove(ain);
+					}
+		//Useless try-catches (and try-catch rerouting)
+		for(ClassNode classNode : classNodes())
+			for(MethodNode method : classNode.methods)
+			{
+				Iterator<TryCatchBlockNode> itr = method.tryCatchBlocks.iterator();
+				List<LabelNode> processedLabels = new ArrayList<>();
+				while(itr.hasNext())
+				{
+					TryCatchBlockNode tcbn = itr.next();
+					LabelNode handler = tcbn.handler;
+					if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.ATHROW)
+					{
+						itr.remove();
+						trycatch.incrementAndGet();
+					}else if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.DUP
+						&& handler.getNext().getNext() != null && handler.getNext().getNext().getOpcode() == Opcodes.IFNULL
+						&& handler.getNext().getNext().getNext() != null
+						&& ((handler.getNext().getNext().getNext().getOpcode() == Opcodes.CHECKCAST
+						&& ((TypeInsnNode)handler.getNext().getNext().getNext()).desc.equals("java/lang/Throwable")
+						&& handler.getNext().getNext().getNext().getNext() != null
+						&& handler.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW)
+							|| handler.getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW))
+					{
+						itr.remove();
+						trycatch.incrementAndGet();
+						if(processedLabels.contains(handler))
+							continue;
+						for(AbstractInsnNode ain : method.instructions.toArray())
+							if(ain.getOpcode() == Opcodes.GOTO && ((JumpInsnNode)ain).label == handler
+								&& ain.getPrevious() != null && ain.getPrevious().getOpcode() == Opcodes.ACONST_NULL
+								&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext() != null
+								&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext().getOpcode() == Opcodes.POP)
+							{
+								method.instructions.remove(((JumpInsnNode)handler.getNext().getNext()).label.getNext());
+								method.instructions.remove(ain.getPrevious());
+								((JumpInsnNode)ain).label = ((JumpInsnNode)handler.getNext().getNext()).label;
+							}
+						processedLabels.add(handler);
+					}
+				}
+				for(AbstractInsnNode ain : method.instructions.toArray())
+				{
+					if(!(ain instanceof LabelNode) || processedLabels.contains(ain))
+						continue;
+					LabelNode handler = (LabelNode)ain;
+					if(handler.getNext() != null && handler.getNext().getOpcode() == Opcodes.DUP
+						&& handler.getNext().getNext() != null && handler.getNext().getNext().getOpcode() == Opcodes.IFNULL
+						&& handler.getNext().getNext().getNext() != null
+						&& ((handler.getNext().getNext().getNext().getOpcode() == Opcodes.CHECKCAST
+						&& ((TypeInsnNode)handler.getNext().getNext().getNext()).desc.equals("java/lang/Throwable")
+						&& handler.getNext().getNext().getNext().getNext() != null
+						&& handler.getNext().getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW)
+							|| handler.getNext().getNext().getNext().getOpcode() == Opcodes.ATHROW))
+					{
+						for(AbstractInsnNode ain2 : method.instructions.toArray())
+							if(ain2.getOpcode() == Opcodes.GOTO && ((JumpInsnNode)ain2).label == handler
+								&& ain2.getPrevious() != null && ain2.getPrevious().getOpcode() == Opcodes.ACONST_NULL
+								&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext() != null
+								&& ((JumpInsnNode)handler.getNext().getNext()).label.getNext().getOpcode() == Opcodes.POP)
+							{
+								method.instructions.remove(((JumpInsnNode)handler.getNext().getNext()).label.getNext());
+								method.instructions.remove(ain2.getPrevious());
+								((JumpInsnNode)ain2).label = ((JumpInsnNode)handler.getNext().getNext()).label;
+							}
+						processedLabels.add(handler);
+					}
+				}
+			}
+		//Fix L2I
 		for(ClassNode classNode : classNodes())
 			for(MethodNode method : classNode.methods)
 				for(AbstractInsnNode ain : method.instructions.toArray())
@@ -1203,18 +1202,18 @@ public class BinscureTransformer extends Transformer<BinscureTransformer.Config>
 		private boolean cleanup = true;
 		
 		public Config() 
-        {
-            super(BinscureTransformer.class);
-        }
-		  
-        public boolean shouldCleanup() 
-        {
-            return cleanup;
-        }
-
-        public void setCleanup(boolean cleanup) 
-        {
-            this.cleanup = cleanup;
-        }
+		{
+			super(BinscureTransformer.class);
+		}
+		
+		public boolean shouldCleanup() 
+		{
+			return cleanup;
+		}
+		
+		public void setCleanup(boolean cleanup) 
+		{
+			this.cleanup = cleanup;
+		}
 	}
 }
