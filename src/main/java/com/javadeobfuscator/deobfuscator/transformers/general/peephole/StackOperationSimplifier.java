@@ -30,7 +30,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             SimpleStep step1 = new SimpleStep(POP);
             SimpleStep step2 = new SimpleStep(POP);
-            operations.add(new Tuple3<>("Simplified %1$ POP-POP to POP2", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s POP-POP to POP2", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
             }), m -> {
@@ -43,7 +43,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(false);
             SimpleStep step2 = new SimpleStep(DUP);
-            operations.add(new Tuple3<>("Simplified %1$ LDC1-DUP to LDC1-LDC1", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s LDC1-DUP to LDC1-LDC1", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
             }), m -> {
@@ -55,7 +55,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad2SlotStep step1 = new NoSideEffectLoad2SlotStep(false);
             SimpleStep step2 = new SimpleStep(DUP2);
-            operations.add(new Tuple3<>("Simplified %1$ LDC2-DUP2 to LDC2-LDC2", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s LDC2-DUP2 to LDC2-LDC2", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
             }), m -> {
@@ -65,7 +65,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // INEG - INEG => nothing
         {
-            operations.add(new Tuple3<>("Removed %1$ double INEG", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Removed %1$s double INEG", new IterableInsnMatcher(m -> {
                 m.addStep(new SimpleStep(INEG));
                 m.addStep(new SimpleStep(INEG));
             }), m -> {
@@ -75,7 +75,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // LNEG - LNEG => nothing
         {
-            operations.add(new Tuple3<>("Removed %1$ double LNEG", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Removed %1$s double LNEG", new IterableInsnMatcher(m -> {
                 m.addStep(new SimpleStep(LNEG));
                 m.addStep(new SimpleStep(LNEG));
             }), m -> {
@@ -85,7 +85,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // DUP - POP2 => POP
         {
-            operations.add(new Tuple3<>("Simplified %1$ DUP-POP2 to POP", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s DUP-POP2 to POP", new IterableInsnMatcher(m -> {
                 m.addStep(new SimpleStep(DUP));
                 m.addStep(new SimpleStep(POP2));
             }), m -> {
@@ -96,7 +96,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // LDC1 - POP => nothing
         {
-            operations.add(new Tuple3<>("Removed %1$ LDC1-POP", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Removed %1$s LDC1-POP", new IterableInsnMatcher(m -> {
                 m.addStep(new NoSideEffectLoad1SlotStep(true));
                 m.addStep(new SimpleStep(POP));
             }), m -> {
@@ -106,7 +106,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // LDC1 - LDC1 - POP2 => nothing
         {
-            operations.add(new Tuple3<>("Removed %1$ LDC1-LDC1-POP2", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Removed %1$s LDC1-LDC1-POP2", new IterableInsnMatcher(m -> {
                 m.addStep(new NoSideEffectLoad1SlotStep(true));
                 m.addStep(new NoSideEffectLoad1SlotStep(true));
                 m.addStep(new SimpleStep(POP2));
@@ -117,7 +117,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         }
         // LDC2 - POP2 => nothing
         {
-            operations.add(new Tuple3<>("Removed %1$ LDC2-POP2", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Removed %1$s LDC2-POP2", new IterableInsnMatcher(m -> {
                 m.addStep(new NoSideEffectLoad2SlotStep(true));
                 m.addStep(new SimpleStep(POP2));
             }), m -> {
@@ -129,7 +129,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(true);
             SimpleStep step2 = new SimpleStep(POP2);
-            operations.add(new Tuple3<>("Simplified %1$ LDC1-POP2 to POP", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s LDC1-POP2 to POP", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
             }), m -> {
@@ -142,10 +142,10 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad2SlotStep step1 = new NoSideEffectLoad2SlotStep(true);
             NoSideEffectLoad2SlotStep step2 = new NoSideEffectLoad2SlotStep(true);
-            SimpleStep step3 = new SimpleStep(Opcodes.DUP2_X2);
-            SimpleStep step4 = new SimpleStep(Opcodes.POP2);
-            SimpleStep step5 = new SimpleStep(Opcodes.POP2);
-            operations.add(new Tuple3<>("Simplified %1$ LDC2-LDC2-DUP2_X2-POP2-POP2 to LDC2 (2nd LDC)", new IterableInsnMatcher(m -> {
+            SimpleStep step3 = new SimpleStep(DUP2_X2);
+            SimpleStep step4 = new SimpleStep(POP2);
+            SimpleStep step5 = new SimpleStep(POP2);
+            operations.add(new Tuple3<>("Simplified %1$s LDC2-LDC2-DUP2_X2-POP2-POP2 to LDC2 (2nd LDC)", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
                 m.addStep(step3);
@@ -164,9 +164,9 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(true);
             NoSideEffectLoad1SlotStep step2 = new NoSideEffectLoad1SlotStep(true);
-            SimpleStep step3 = new SimpleStep(Opcodes.DUP_X1);
-            SimpleStep step4 = new SimpleStep(Opcodes.POP);
-            operations.add(new Tuple3<>("Simplified %1$ LDC1-LDC1-DUP_X1-POP to LDC1-LDC1 (swapped)", new IterableInsnMatcher(m -> {
+            SimpleStep step3 = new SimpleStep(DUP_X1);
+            SimpleStep step4 = new SimpleStep(POP);
+            operations.add(new Tuple3<>("Simplified %1$s LDC1-LDC1-DUP_X1-POP to LDC1-LDC1 (swapped)", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
                 m.addStep(step3);
@@ -183,12 +183,12 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(true);
             NoSideEffectLoad1SlotStep step2 = new NoSideEffectLoad1SlotStep(true);
-            SimpleStep step3 = new SimpleStep(Opcodes.SWAP);
-            SimpleStep step4 = new SimpleStep(Opcodes.DUP_X1);
-            SimpleStep step5 = new SimpleStep(Opcodes.POP2);
+            SimpleStep step3 = new SimpleStep(SWAP);
+            SimpleStep step4 = new SimpleStep(DUP_X1);
+            SimpleStep step5 = new SimpleStep(POP2);
             NoSideEffectLoad1SlotStep step6 = new NoSideEffectLoad1SlotStep(true);
-            SimpleStep step7 = new SimpleStep(Opcodes.POP2);
-            operations.add(new Tuple3<>("Removed %1$ LDC1-LDC1-SWAP-DUP_X1-POP2-LDC1-POP2", new IterableInsnMatcher(m -> {
+            SimpleStep step7 = new SimpleStep(POP2);
+            operations.add(new Tuple3<>("Removed %1$s LDC1-LDC1-SWAP-DUP_X1-POP2-LDC1-POP2", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
                 m.addStep(step3);
@@ -205,12 +205,15 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
         {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(true);
             NoSideEffectLoad1SlotStep step2 = new NoSideEffectLoad1SlotStep(true);
-            operations.add(new Tuple3<>("Simplified %1$ LDC1-LDC1-SWAP to LDC1-LDC1 (swapped)", new IterableInsnMatcher(m -> {
+            SimpleStep step3 = new SimpleStep(SWAP);
+            operations.add(new Tuple3<>("Simplified %1$s LDC1-LDC1-SWAP to LDC1-LDC1 (swapped)", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
+                m.addStep(step3);
             }), m -> {
                 m.addReplacement(step1, step2.getCaptured().clone(null));
                 m.addReplacement(step2, step1.getCaptured().clone(null));
+                m.addRemoval(step3);
                 return true;
             }));
         }
@@ -219,7 +222,7 @@ public class StackOperationSimplifier extends Transformer<TransformerConfig> {
             NoSideEffectLoad1SlotStep step1 = new NoSideEffectLoad1SlotStep(true);
             SimpleStep step2 = new SimpleStep(SWAP);
             SimpleStep step3 = new SimpleStep(POP);
-            operations.add(new Tuple3<>("Simplified %1$ LDC1-SWAP-POP to POP-LDC1", new IterableInsnMatcher(m -> {
+            operations.add(new Tuple3<>("Simplified %1$s LDC1-SWAP-POP to POP-LDC1", new IterableInsnMatcher(m -> {
                 m.addStep(step1);
                 m.addStep(step2);
                 m.addStep(step3);
