@@ -17,16 +17,30 @@ public class Context { //FIXME clinit classes
     public Provider provider;
     public Map<String, ClassNode> dictionary;
     public Map<ClassNode, ConstantPool> constantPools;
-    public final Map<AbstractInsnNode, BiFunction<List<JavaValue>, Context, JavaValue>> customMethodFunc = new HashMap<>();
-    public final ThreadStore threadStore = new ThreadStore();
-    public final Monitor monitor = new Monitor();
+    public Map<AbstractInsnNode, BiFunction<List<JavaValue>, Context, JavaValue>> customMethodFunc = new HashMap<>();
+    public ThreadStore threadStore = new ThreadStore();
+    public Monitor monitor = new Monitor();
 
-    public Set<String> clinit = new HashSet<>();
+    public Set<String> clinit = Collections.synchronizedSet(new HashSet<>());
 
     public File file;
 
     public Context(Provider provider) {
         this.provider = provider;
+    }
+
+    public Context copyForNewThread() {
+        Context threadContext = new Context(provider);
+        threadContext.dictionary = dictionary;
+        threadContext.constantPools = constantPools;
+        threadContext.customMethodFunc = customMethodFunc;
+        threadContext.threadStore = threadStore;
+        threadContext.monitor = monitor;
+        threadContext.clinit = clinit;
+        threadContext.file = file;
+        threadContext.breakpointsBefore = breakpointsBefore;
+        threadContext.breakpointsAfter = breakpointsAfter;
+        return threadContext;
     }
 
     public StackTraceElement at(int index) {
@@ -64,8 +78,8 @@ public class Context { //FIXME clinit classes
         stackTrace.clear();
     }
 
-    private final Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsBefore = new HashMap<>();
-    private final Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsAfter = new HashMap<>();
+    private Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsBefore = new HashMap<>();
+    private Map<AbstractInsnNode, Consumer<BreakpointInfo>> breakpointsAfter = new HashMap<>();
 
     public void doBreakpoint(AbstractInsnNode now, boolean before, List<JavaValue> stack, List<JavaValue> locals, Object tothrow) {
         if (before && breakpointsBefore.containsKey(now)) {
