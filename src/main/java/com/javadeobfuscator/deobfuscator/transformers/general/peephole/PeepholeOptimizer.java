@@ -44,6 +44,7 @@ public class PeepholeOptimizer extends Transformer<TransformerConfig> {
     }
 
     static {
+        PEEPHOLE_TRANSFORMERS.add(NopRemover.class);
         PEEPHOLE_TRANSFORMERS.add(RedundantTrapRemover.class);
 //        PEEPHOLE_TRANSFORMERS.add(TrapHandlerMerger.class); // still experimental
         PEEPHOLE_TRANSFORMERS.add(GotoRearranger.class);
