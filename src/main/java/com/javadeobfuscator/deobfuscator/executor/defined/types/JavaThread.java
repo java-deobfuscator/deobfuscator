@@ -44,9 +44,7 @@ public class JavaThread {
             if (classNode != null) {
                 MethodNode method = classNode.methods.stream().filter(mn -> mn.name.equals("run") && mn.desc.equals("()V")).findFirst().orElse(null);
                 if (method != null) {
-                    Context threadContext = new Context(context.provider);
-                    threadContext.dictionary = context.dictionary;
-                    threadContext.file = context.file;
+                    Context threadContext = context.copyForNewThread();
 
                     thread = new Thread(() -> MethodExecutor.execute(classNode, method, Collections.emptyList(), instance, threadContext));
                     context.threadStore.addThread(thread.getId(), this);
