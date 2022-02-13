@@ -39,10 +39,11 @@ import com.javadeobfuscator.deobfuscator.rules.Rules;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
-import me.coley.cafedude.ClassFile;
+import me.coley.cafedude.classfile.ClassFile;
 import me.coley.cafedude.InvalidClassException;
 import me.coley.cafedude.io.ClassFileReader;
 import me.coley.cafedude.io.ClassFileWriter;
+import me.coley.cafedude.transform.IllegalStrippingTransformer;
 import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -290,7 +291,9 @@ public class Deobfuscator {
                     // Check and see if Cafedood can patch out ASM crashing data
                     ClassFileReader cfr = new ClassFileReader();
                     cfr.setDropForwardVersioned(true);
+                    cfr.setDropEofAttributes(true);
                     ClassFile cf = cfr.read(data);
+                    new IllegalStrippingTransformer(cf).transform();
                     ClassFileWriter cfw = new ClassFileWriter();
                     byte[] fixedData = cfw.write(cf);
                     // Should be compliant now unless a new crash is discovered.
