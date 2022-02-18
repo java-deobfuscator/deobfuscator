@@ -280,29 +280,20 @@ public class Deobfuscator {
             }
 
             try {
-
-                ClassReader reader;
-                ClassNode node;
-                try {
-                    reader = new ClassReader(data);
-                    node = new ClassNode();
-                    reader.accept(node, ClassReader.SKIP_FRAMES);
-                } catch (Throwable t) {
-                    // Check and see if Cafedood can patch out ASM crashing data
-                    ClassFileReader cfr = new ClassFileReader();
-                    cfr.setDropForwardVersioned(true);
-                    cfr.setDropEofAttributes(true);
-                    ClassFile cf = cfr.read(data);
-                    new IllegalStrippingTransformer(cf).transform();
-                    ClassFileWriter cfw = new ClassFileWriter();
-                    byte[] fixedData = cfw.write(cf);
-                    // Should be compliant now unless a new crash is discovered.
-                    // Check for updates or open an issue on the CAFED00D project if this occurs
-                    reader = new ClassReader(fixedData);
-                    node = new ClassNode();
-                    reader.accept(node, ClassReader.SKIP_FRAMES);
-                }
-
+                // Pass the bytecode through cafedude to filter out any ASM crashing data.
+                // We always do this step since there are ASM crashes targeting both reading and writing steps
+                ClassFileReader cfr = new ClassFileReader();
+                cfr.setDropForwardVersioned(true);
+                cfr.setDropEofAttributes(true);
+                ClassFile cf = cfr.read(data);
+                new IllegalStrippingTransformer(cf).transform();
+                ClassFileWriter cfw = new ClassFileWriter();
+                byte[] fixedData = cfw.write(cf);
+                // Should be compliant now unless a new crash is discovered.
+                // Check for updates or open an issue on the CAFED00D project if this occurs
+                ClassReader reader = new ClassReader(fixedData);
+                ClassNode node = new ClassNode();
+                reader.accept(node, ClassReader.SKIP_FRAMES);
                 readers.put(node, reader);
                 setConstantPool(node, new ConstantPool(reader));
 
