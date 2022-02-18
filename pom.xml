@@ -7,6 +7,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.asm>9.1</version.asm>
+        <version.dude>1.9.1</version.dude>
     </properties>
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
@@ -188,7 +189,7 @@
         <dependency>
             <groupId>com.github.Col-E</groupId>
             <artifactId>CAFED00D</artifactId>
-            <version>1.9.0</version>
+            <version>${version.dude}</version>
         </dependency>
     </dependencies>
 </project>
