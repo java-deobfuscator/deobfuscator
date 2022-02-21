@@ -7,7 +7,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.asm>9.1</version.asm>
-        <version.dude>1.9.3</version.dude>
+        <version.dude>1.9.4</version.dude>
     </properties>
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
