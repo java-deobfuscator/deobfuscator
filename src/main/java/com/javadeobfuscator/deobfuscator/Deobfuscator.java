@@ -47,6 +47,7 @@ import me.coley.cafedude.transform.IllegalStrippingTransformer;
 import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -64,6 +65,7 @@ public class Deobfuscator {
 
     private final Configuration configuration;
 
+    private final Set<String> missingRefs = new HashSet<>();
     private final Map<String, ClassNode> classpath = new HashMap<>();
     private final Map<String, ClassNode> libraries = new HashMap<>();
     private final Map<String, ClassNode> classes = new HashMap<>();
@@ -480,6 +482,11 @@ public class Deobfuscator {
 
     public ClassNode assureLoaded(String ref) {
         ClassNode clazz = classpath.get(ref);
+        // Attempt to fetch from runtime, cases like 'java/awt/bla' can be loaded this way
+        if (clazz == null) {
+            clazz = pullFromRuntime(ref);
+        }
+        // Still missing, cannot recover
         if (clazz == null) {
             throw new NoClassInPathException(ref);
         }
@@ -494,6 +501,23 @@ public class Deobfuscator {
             return null;
         }
         return clazz;
+    }
+
+    private ClassNode pullFromRuntime(String ref) {
+        try {
+            if (!missingRefs.contains(ref)) {
+                // Realistically we do not need the method bodies at all, can skip.
+                ClassNode node = new ClassNode(Opcodes.ASM9);
+                new ClassReader(ref).accept(node, ClassReader.SKIP_CODE);
+                classpath.put(ref, node);
+                return node;
+            }
+        } catch (IOException ex) {
+            // Ignored, plenty of cases where ref will not exist at runtime.
+            // Cache missing value so that we don't try again later.
+            missingRefs.add(ref);
+        }
+        return null;
     }
 
     public void loadHierachy() {
