@@ -280,18 +280,19 @@ public class Deobfuscator {
             }
 
             try {
-                // Pass the bytecode through cafedude to filter out any ASM crashing data.
-                // We always do this step since there are ASM crashes targeting both reading and writing steps
-                ClassFileReader cfr = new ClassFileReader();
-                cfr.setDropForwardVersioned(true);
-                cfr.setDropEofAttributes(true);
-                ClassFile cf = cfr.read(data);
-                new IllegalStrippingTransformer(cf).transform();
-                ClassFileWriter cfw = new ClassFileWriter();
-                byte[] fixedData = cfw.write(cf);
+                // Patching optional, disabling useful for ensuring that output problems related to patch process.
+                if (configuration.isPatchAsm()) {
+                    ClassFileReader cfr = new ClassFileReader();
+                    cfr.setDropForwardVersioned(true);
+                    cfr.setDropEofAttributes(true);
+                    ClassFile cf = cfr.read(data);
+                    new IllegalStrippingTransformer(cf).transform();
+                    ClassFileWriter cfw = new ClassFileWriter();
+                    data = cfw.write(cf);
+                }
                 // Should be compliant now unless a new crash is discovered.
                 // Check for updates or open an issue on the CAFED00D project if this occurs
-                ClassReader reader = new ClassReader(fixedData);
+                ClassReader reader = new ClassReader(data);
                 ClassNode node = new ClassNode();
                 reader.accept(node, ClassReader.SKIP_FRAMES);
                 readers.put(node, reader);
@@ -319,11 +320,13 @@ public class Deobfuscator {
                 } else {
                     classpath.put(node.name, node);
                 }
-            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException | InvalidClassException x) {
-                if (this.configuration.isParamorphismV2()) {
+            } catch (IllegalArgumentException | IndexOutOfBoundsException | InvalidClassException x) {
+                if (configuration.isParamorphismV2()) {
                     invalidClasses.put(name, data);
+                } else  if (!configuration.isPatchAsm()) {
+                    logger.error("Could not parse {} (Try adding \"patchAsm: true\" to the config?)", name, x);
                 } else {
-                    logger.error("Could not parse {} (is it a class file?)", name, x);
+                    logger.error("Could not parse {} (Is it a class file?)", name, x);
                 }
             }
         }
@@ -382,13 +385,13 @@ public class Deobfuscator {
 	                if (message == null) {
 	                    continue;
 	                }
-	
+
 	                logger.info("");
 	                logger.info("{}: {}", rule.getClass().getSimpleName(), rule.getDescription());
 	                logger.info("\t{}", message);
 	                logger.info("Recommend transformers:");
 	                logger.info("(Choose one transformer. If there are multiple, it's recommended to try the transformer listed first)");
-	
+
 	                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
 	                if (recommended == null) {
 	                    logger.info("\tNone");
@@ -410,14 +413,14 @@ public class Deobfuscator {
 
         logger.info("Computing callers");
         computeCallers();
-        
+
         if (configuration.isDeleteUselessClasses()) {
         	logger.warn("Warning: You have enabled the option \"delete useless classes\".");
         	logger.warn("This option will delete any classes whose superclasses or interfaces cannot be resolved for certain transformers.");
         	logger.warn("This feature is only to be used when your file contains trash classes that prevent transformers from working.");
         	logger.warn("All libraries must be added for this to work properly.");
         }
-        
+
         if (configuration.isSmartRedo()) {
         	logger.warn("You have enabled \"smart redo\". For some transformers, this may result in an infinite loop.");
         }

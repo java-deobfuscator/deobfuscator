@@ -51,6 +51,12 @@ public class Configuration {
     private boolean detect;
 
     /**
+     * Allows patching of ASM-crashing exploits.
+     */
+    @JsonProperty
+    private boolean patchAsm;
+
+    /**
      * Must enable for paramorphism obfuscated files.
      */
     @JsonProperty
@@ -134,6 +140,14 @@ public class Configuration {
 
     public void setDetect(boolean detect) {
         this.detect = detect;
+    }
+
+    public boolean isPatchAsm() {
+        return patchAsm;
+    }
+
+    public void setPatchAsm(boolean patchAsm) {
+        this.patchAsm = patchAsm;
     }
 
     public boolean isSmartRedo() {
