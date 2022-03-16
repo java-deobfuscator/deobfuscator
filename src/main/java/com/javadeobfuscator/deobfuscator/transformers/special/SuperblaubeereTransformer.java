@@ -432,11 +432,26 @@ public class SuperblaubeereTransformer extends Transformer<SuperblaubeereTransfo
                     continue;
                 }
                 MethodNode refMethod = TransformerHelper.findMethodNode(classNode, ((MethodInsnNode) first).name, "()V");
-                AbstractInsnNode thirdInsn = refMethod.instructions.getFirst().getNext().getNext();
-                if (!TransformerHelper.isPutStatic(thirdInsn, null, null, "[Ljava/lang/String;")) {
-                    continue;
+                AbstractInsnNode possPutStaticInsn = refMethod.instructions.getFirst().getNext().getNext();
+                if (!TransformerHelper.isPutStatic(possPutStaticInsn, null, null, "[Ljava/lang/String;")) {
+                    possPutStaticInsn = Utils.getPrevious(refMethod.instructions.getLast());
+                    if (!TransformerHelper.isPutStatic(possPutStaticInsn, null, null, "[Ljava/lang/String;")) {
+                        continue;
+                    }
+                    AbstractInsnNode prev = Utils.getPrevious(possPutStaticInsn);
+                    if (!TransformerHelper.isInvokeVirtual(prev, "java/lang/String", "split", "(Ljava/lang/String;)[Ljava/lang/String;")) {
+                        continue;
+                    }
+                    AbstractInsnNode firstReal = refMethod.instructions.getFirst();
+                    if (!Utils.isInstruction(firstReal)) {
+                        firstReal = Utils.getNext(firstReal);
+                    }
+                    AbstractInsnNode insn7 = Utils.getNext(firstReal, 6);
+                    if (!TransformerHelper.isInvokeVirtual(insn7, "java/lang/StackTraceElement", "getFileName","()Ljava/lang/String;")) {
+                        continue;
+                    }
                 }
-                FieldInsnNode insnNode = (FieldInsnNode) thirdInsn;
+                FieldInsnNode insnNode = (FieldInsnNode) possPutStaticInsn;
                 FieldNode field = TransformerHelper.findFieldNode(classNode, insnNode.name, insnNode.desc);
                 Context context = new Context(provider);
                 context.dictionary = classpath;
