@@ -2,7 +2,9 @@ package com.javadeobfuscator.deobfuscator.rules.special;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 
+import com.google.common.base.Joiner;
 import com.javadeobfuscator.deobfuscator.Deobfuscator;
 import com.javadeobfuscator.deobfuscator.rules.Rule;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
@@ -18,10 +20,29 @@ import org.objectweb.asm.tree.MethodNode;
 
 public class RuleSuperblaubeereObfuscation implements Rule {
 
+	private static final Joiner COMMA_JOINER = Joiner.on(", ");
+
 	@Override
 	public String getDescription() {
 		return "Superblaubeere obfuscator uses a variety of methods. It can obfuscate numbers, add redundant ifs, encrypt strings, pool numbers & strings into an " +
 			   "array per class and obfuscate method calls with invokedynamic instructions.";
+	}
+
+	private enum Detection {
+		NUMBER_POOL("number pool"),
+		STRING_ENC("string encryption"),
+		STRING_POOL("string pool"),
+		INVOKEDYN("invokedynamic");
+		private final String msg;
+
+		Detection(String msg) {
+			this.msg = msg;
+		}
+
+		@Override
+		public String toString() {
+			return msg;
+		}
 	}
 
 	@Override
@@ -35,6 +56,7 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 			if (first == null) {
 				continue;
 			}
+			EnumSet<Detection> detections = EnumSet.noneOf(Detection.class);
 			// Number pool
 			numberPool:
 			{
@@ -57,7 +79,8 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 				for (MethodNode method : classNode.methods) {
 					for (AbstractInsnNode ain : method.instructions.toArray()) {
 						if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc) && Utils.isInteger(ain.getNext())) {
-							return "Found potential number pool in class " + classNode.name;
+							detections.add(Detection.NUMBER_POOL);
+							break numberPool;
 						}
 					}
 				}
@@ -87,7 +110,8 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 				for (MethodNode method : classNode.methods) {
 					for (AbstractInsnNode ain : method.instructions.toArray()) {
 						if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc) && Utils.isInteger(ain.getNext())) {
-							return "Found potential string encryption in class " + classNode.name;
+							detections.add(Detection.STRING_ENC);
+							break stringEncrypt;
 						}
 					}
 				}
@@ -130,7 +154,8 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 				for (MethodNode method : classNode.methods) {
 					for (AbstractInsnNode ain : method.instructions.toArray()) {
 						if (TransformerHelper.isGetStatic(ain, classNode.name, field.name, field.desc) && Utils.isInteger(ain.getNext())) {
-							return "Found potential string pool in class " + classNode.name;
+							detections.add(Detection.STRING_POOL);
+							break stringPool;
 						}
 					}
 				}
@@ -174,9 +199,13 @@ public class RuleSuperblaubeereObfuscation implements Rule {
 				for (MethodNode method : classNode.methods) {
 					for (AbstractInsnNode ain : method.instructions.toArray()) {
 						if (TransformerHelper.isInvokeDynamic(ain, null, null, classNode.name, bootstrap.name, bootstrap.desc, 0)) {
-							return "Found potential invokedynamic obfuscation in class " + classNode.name;
+							detections.add(Detection.INVOKEDYN);
+							break invokedyn;
 						}
 					}
+				}
+				if (!detections.isEmpty()) {
+					return "Found potential " + COMMA_JOINER.join(detections) + " in class " + classNode.name;
 				}
 			}
 		}
