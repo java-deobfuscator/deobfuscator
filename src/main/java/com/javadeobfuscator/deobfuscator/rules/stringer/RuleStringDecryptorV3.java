@@ -36,8 +36,18 @@ public class RuleStringDecryptorV3 implements Rule {
     public String test(Deobfuscator deobfuscator) {
         for (ClassNode classNode : deobfuscator.getClasses().values()) {
             for (MethodNode methodNode : classNode.methods) {
-                if (!TransformerHelper.basicType(methodNode.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;")
-                	|| !Modifier.isStatic(methodNode.access) || methodNode.instructions == null) {
+                String basicType;
+                try {
+                    basicType = TransformerHelper.basicType(methodNode.desc);
+                } catch (IllegalArgumentException ex) {
+                    if (deobfuscator.getConfig().isDebugRulesAnalyzer()) {
+                        String message = "Encountered illegal method desc at " + classNode.name + " " + methodNode.name + methodNode.desc;
+                        new IllegalArgumentException(message, ex).printStackTrace();
+                    }
+                    continue;
+                }
+                if (!basicType.equals("(Ljava/lang/Object;III)Ljava/lang/Object;")
+                    || !Modifier.isStatic(methodNode.access) || methodNode.instructions == null) {
                     continue;
                 }
 

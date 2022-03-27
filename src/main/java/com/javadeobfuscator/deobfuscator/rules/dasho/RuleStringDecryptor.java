@@ -39,7 +39,16 @@ public class RuleStringDecryptor implements Rule {
             for (MethodNode methodNode : classNode.methods) {
                 boolean isDashO = true;
 
-                Type[] argTypes = Type.getArgumentTypes(methodNode.desc);
+                Type[] argTypes;
+                try {
+                    argTypes = Type.getArgumentTypes(methodNode.desc);
+                } catch (IllegalArgumentException ex) {
+                    if (deobfuscator.getConfig().isDebugRulesAnalyzer()) {
+                        String message = "Encountered illegal method desc at " + classNode.name + " " + methodNode.name + methodNode.desc;
+                        new IllegalArgumentException(message, ex).printStackTrace();
+                    }
+                    continue;
+                }
 
                 isDashO = isDashO && TransformerHelper.hasArgumentTypes(argTypes, Type.INT_TYPE, Type.getObjectType("java/lang/String"));
                 isDashO = isDashO && TransformerHelper.containsInvokeVirtual(methodNode, "java/lang/String", "toCharArray", "()[C");
