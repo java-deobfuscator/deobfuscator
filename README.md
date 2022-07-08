@@ -48,8 +48,8 @@ Otherwise, check out [this guide](CUSTOMTRANSFORMER.md) on how to implement your
 [DashO](https://www.preemptive.com/products/dasho/overview)  
 [DexGuard](https://www.guardsquare.com/dexguard)    
 [ClassGuard](https://www.zenofx.com/classguard/)  
-[Smoke](https://newtownia.net/smoke)  
-SkidSuite2 (dead, some forks are listed [here](https://github.com/tetratec/SkidSuite2/network/members))
+Smoke (dead, website archive [here](https://web.archive.org/web/20170918112921/https://newtownia.net/smoke/)  )
+SkidSuite2 (dead, archive [here](https://github.com/GenericException/SkidSuite/tree/master/archive/skidsuite-2))
 
 ## List of Transformers
 
