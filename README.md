@@ -42,14 +42,14 @@ Otherwise, check out [this guide](CUSTOMTRANSFORMER.md) on how to implement your
 
 ## Supported Obfuscators
 
-[Zelix Klassmaster](http://www.zelix.com/)  
-[Stringer](https://jfxstore.com/stringer/)  
-[Allatori](http://www.allatori.com/)  
-[DashO](https://www.preemptive.com/products/dasho/overview)  
-[DexGuard](https://www.guardsquare.com/dexguard)    
-[ClassGuard](https://www.zenofx.com/classguard/)  
-Smoke (dead, website archive [here](https://web.archive.org/web/20170918112921/https://newtownia.net/smoke/)  )
-SkidSuite2 (dead, archive [here](https://github.com/GenericException/SkidSuite/tree/master/archive/skidsuite-2))
+* [Zelix Klassmaster](http://www.zelix.com/)  
+* [Stringer](https://jfxstore.com/stringer/)  
+* [Allatori](http://www.allatori.com/)  
+* [DashO](https://www.preemptive.com/products/dasho/overview)  
+* [DexGuard](https://www.guardsquare.com/dexguard)    
+* [ClassGuard](https://www.zenofx.com/classguard/)  
+* Smoke (dead, website archive [here](https://web.archive.org/web/20170918112921/https://newtownia.net/smoke/))   
+* SkidSuite2 (dead, archive [here](https://github.com/GenericException/SkidSuite/tree/master/archive/skidsuite-2))
 
 ## List of Transformers
 
