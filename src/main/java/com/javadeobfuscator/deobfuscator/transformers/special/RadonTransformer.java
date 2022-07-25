@@ -548,7 +548,11 @@ public class RadonTransformer extends Transformer<RadonConfig> {
                                 args.add(JavaValue.valueOf(dyn.name)); //dyn method name
                                 args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
                                 for (Object o : dyn.bsmArgs) {
-                                    args.add(JavaValue.valueOf(o));
+                                    if (o instanceof Integer) {
+                                        args.add(new JavaInteger((Integer) o));
+                                    } else {
+                                        args.add(JavaValue.valueOf(o));
+                                    }
                                 }
                                 try {
                                     MethodInsnNode replacement = null;
@@ -614,7 +618,11 @@ public class RadonTransformer extends Transformer<RadonConfig> {
                                 args.add(JavaValue.valueOf(dyn.name)); //dyn method name
                                 args.add(new JavaObject(null, "java/lang/invoke/MethodType")); //dyn method type
                                 for (Object o : dyn.bsmArgs) {
-                                    args.add(JavaValue.valueOf(o));
+                                    if (o instanceof Integer) {
+                                        args.add(new JavaInteger((Integer) o));
+                                    } else {
+                                        args.add(JavaValue.valueOf(o));
+                                    }
                                 }
                                 try {
                                     context.clearStackTrace();
@@ -720,13 +728,13 @@ public class RadonTransformer extends Transformer<RadonConfig> {
                 }
             }
         }
-        indyBootstrap.entrySet().forEach(e -> e.getValue().forEach(m -> e.getKey().methods.remove(m)));
-        indyBootstrap1.entrySet().forEach(e -> {
-            classes.remove(e.getKey().name);
-            classpath.remove(e.getKey().name);
+        indyBootstrap.forEach((key, value) -> value.forEach(m -> key.methods.remove(m)));
+        indyBootstrap1.forEach((key, value) -> {
+            classes.remove(key.name);
+            classpath.remove(key.name);
         });
-        stringDecrypt.entrySet().forEach(e -> e.getValue().forEach(m -> e.getKey().methods.remove(m)));
-        stringDecryptField.entrySet().forEach(e -> e.getValue().forEach(m -> e.getKey().fields.remove(m)));
+        stringDecrypt.forEach((key, value) -> value.forEach(m -> key.methods.remove(m)));
+        stringDecryptField.forEach((key, value) -> value.forEach(m -> key.fields.remove(m)));
         stringDecryptClass.forEach(e -> {
             classes.remove(e.name);
             classpath.remove(e.name);
