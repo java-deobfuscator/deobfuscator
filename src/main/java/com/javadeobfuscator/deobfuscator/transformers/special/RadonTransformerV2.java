@@ -371,7 +371,7 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                             && ain.getPrevious() != null && ain.getPrevious() instanceof LabelNode) {
                             TryCatchBlockNode nullCatch = null;
                             for (TryCatchBlockNode tcbn : method.tryCatchBlocks) {
-                                if (tcbn.type.equals("java/lang/NullPointerException")
+                                if ("java/lang/NullPointerException".equals(tcbn.type)
                                     && tcbn.start == ain.getPrevious() && tcbn.end == ain.getNext().getNext()
                                     && tcbn.handler == ain.getNext().getNext().getNext().getNext()) {
                                     nullCatch = tcbn;
@@ -390,7 +390,7 @@ public class RadonTransformerV2 extends Transformer<RadonV2Config> {
                                    && ain.getPrevious().getPrevious() != null && ain.getPrevious().getPrevious() instanceof LabelNode) {
                             TryCatchBlockNode nullCatch = null;
                             for (TryCatchBlockNode tcbn : method.tryCatchBlocks) {
-                                if (tcbn.type.equals("java/lang/NullPointerException")
+                                if ("java/lang/NullPointerException".equals(tcbn.type)
                                     && tcbn.start == ain.getPrevious().getPrevious() && tcbn.end == ain.getNext().getNext()
                                     && tcbn.handler == ain.getNext().getNext().getNext().getNext()) {
                                     nullCatch = tcbn;
